@@ -331,8 +331,9 @@ What only the owner does: create the registry, set or change the password, autho
 driver's phone, add or edit counterparties, migrate to a new owner. Each operation is signed with the
 owner's key and sent through the relayer, which pays the gas as for the drivers.
 
-- **Demo**: scripts in `scripts/` run by the owner on a computer (for example
-  `node scripts/add-operator.js <phone address>`), signing with the owner's encrypted key file.
+- **Demo**: `scripts/owner.js` run on a computer (for example `node scripts/owner.js add-phone <address>`),
+  signing with the owner's encrypted key file; until the relayer exists, ChainIntegrate's key sends the
+  signed operations and pays the gas. Guide: `docs/owner-tools.md`.
 - **Later**: an owner web page that connects with UP Modal or UP Wallet, lists operators and
   counterparties, and signs in the owner's wallet. Same signed operations, same relayer.
 
@@ -377,7 +378,8 @@ docs/        guides
    ERC-1271, optimistic concurrency, migration.
 2. ✅ **Shared library** (`shared/`): encryption, key wraps (password and 24-word recovery code, English or
    Italian words), ids, padding, plaintext formats, with test vectors checked against Node's own crypto.
-3. **Owner tools** (scripts, section 8.5): create a registry, set the password, add an operator, add counterparties.
+3. ✅ **Owner tools** (`scripts/owner.js`, guide in `docs/owner-tools.md`): create a registry, set and change
+   the password, recover it with the 24 words, add phones, add counterparties.
 4. **Relayer**: checks, limits, sending, e-mail.
 5. **App**: setup, scanning, states, documents, offline queue, both languages.
 6. **Demo on LUKSO mainnet** with Argonia Gas Tecnici's data replaced by the real supplier's only in

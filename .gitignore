@@ -152,3 +152,7 @@ vite.config.ts.timestamp-*
 artifacts/
 cache/
 typechain-types/
+
+# Owner tools: local files that may hold keys or real names, never committed
+*.keystore.json
+gcr-registry*.json

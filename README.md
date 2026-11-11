@@ -3,9 +3,10 @@
 Tracking of technical gas cylinders on LUKSO: one LSP8 token per cylinder, data encrypted on-chain, a
 scanning app for drivers and a gasless relayer.
 
-**Status: milestones 1 and 2 of the [design](DESIGN.md).** The contracts (registry and factory) and the
-shared library (encryption, key wraps, identifiers, formats) are written and tested on a local chain;
-nothing is deployed yet. The owner tools, relayer and app follow.
+**Status: milestones 1 to 3 of the [design](DESIGN.md).** The contracts (registry and factory), the
+shared library (encryption, key wraps, identifiers, formats) and the owner tools
+([guide](docs/owner-tools.md)) are written and tested on a local chain; nothing is deployed yet. The
+relayer and the app follow.
 
 ## Development
 
@@ -14,6 +15,8 @@ npm install
 npx hardhat compile        # solc 0.8.28 from npm (solc-js), no compiler download
 npx hardhat test
 npx hardhat run scripts/gas-report.js
+node scripts/export-abi.js   # after changing the contracts: ABIs for the tools, relayer and app
+node scripts/owner.js help   # owner tools
 ```
 
 ## In short
