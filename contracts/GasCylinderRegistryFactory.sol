@@ -26,9 +26,12 @@ contract GasCylinderRegistryFactory is Ownable {
         _transferOwnership(initialOwner);
     }
 
-    /// @notice Creates a registry owned by `registryOwner` (an EOA or a Universal Profile).
+    /// @notice Creates a registry owned by `registryOwner` (an EOA or a Universal Profile), at the address
+    /// `predictRegistryAddress(salt)`: the owner tools need that address before creation, because the
+    /// wrapped data key written at creation is bound to it.
     /// @param initialDataKeys ERC725Y data written at creation, typically the wrapped data key slots.
     function createRegistry(
+        bytes32 salt,
         address registryOwner,
         string calldata name,
         string calldata symbol,
@@ -36,7 +39,7 @@ contract GasCylinderRegistryFactory is Ownable {
         bytes[] calldata initialDataValues
     ) external onlyOwner returns (address registry) {
         if (registryOwner == address(0)) revert InvalidOwner();
-        registry = Clones.clone(implementation);
+        registry = Clones.cloneDeterministic(implementation, salt);
         GasCylinderRegistry(payable(registry)).initialize(
             name,
             symbol,
@@ -47,6 +50,11 @@ contract GasCylinderRegistryFactory is Ownable {
         isRegistry[registry] = true;
         _registries.push(registry);
         emit RegistryCreated(registry, registryOwner, name, symbol);
+    }
+
+    /// @notice The address `createRegistry` will use for `salt`.
+    function predictRegistryAddress(bytes32 salt) external view returns (address) {
+        return Clones.predictDeterministicAddress(implementation, salt);
     }
 
     function registryCount() external view returns (uint256) {

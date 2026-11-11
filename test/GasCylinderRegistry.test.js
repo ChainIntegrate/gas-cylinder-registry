@@ -18,7 +18,7 @@ describe("GasCylinderRegistry", function () {
   async function createRegistry(registryOwner, keys = [], values = []) {
     const tx = await factory
       .connect(chainIntegrate)
-      .createRegistry(registryOwner, "Argonia Gas Tecnici cylinders", "ARGCYL", keys, values);
+      .createRegistry(ethers.hexlify(ethers.randomBytes(32)), registryOwner, "Argonia Gas Tecnici cylinders", "ARGCYL", keys, values);
     const receipt = await tx.wait();
     const log = receipt.logs.map((l) => factory.interface.parseLog(l)).find((l) => l && l.name === "RegistryCreated");
     return ethers.getContractAt("GasCylinderRegistry", log.args.registry);
@@ -96,7 +96,7 @@ describe("GasCylinderRegistry", function () {
     });
 
     it("lets only its owner create registries", async function () {
-      await expect(factory.connect(stranger).createRegistry(stranger.address, "x", "X", [], [])).to.be.revertedWith(
+      await expect(factory.connect(stranger).createRegistry(ethers.ZeroHash, stranger.address, "x", "X", [], [])).to.be.revertedWith(
         "Ownable: caller is not the owner"
       );
     });
@@ -111,6 +111,14 @@ describe("GasCylinderRegistry", function () {
       const lookalike = await ethers.deployContract("GasCylinderRegistry");
       expect(await factory.isRegistry(await lookalike.getAddress())).to.equal(false);
     });
+  });
+
+  it("creates registries at the predicted address, once per salt", async function () {
+    const salt = ethers.id("argonia-1");
+    const predicted = await factory.predictRegistryAddress(salt);
+    await factory.connect(chainIntegrate).createRegistry(salt, owner.address, "x", "X", [], []);
+    expect(await factory.isRegistry(predicted)).to.equal(true);
+    await expect(factory.connect(chainIntegrate).createRegistry(salt, owner.address, "x", "X", [], [])).to.be.reverted;
   });
 
   describe("operators, signed by the owner and sent by the relayer", function () {

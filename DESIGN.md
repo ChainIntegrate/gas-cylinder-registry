@@ -59,10 +59,11 @@ Per-token data (LSP8 `getDataForTokenId`), each value encrypted (section 5):
 | Data key | Plaintext content | Changes |
 |---|---|---|
 | `GCRInfo` | serial, gas, capacity (optional), owner of the cylinder (`supplier` or a counterparty id), registered at | Rarely (registration, correction) |
-| `GCRState` | location, condition, last movement type, counterparty id, document id, scan time (device clock), operator | Every movement |
+| `GCRState` | location (with the counterparty id), condition, lifecycle, last movement type, scan time (device clock) | Every movement |
 
 Every change emits LSP8's `TokenIdDataChanged` with the encrypted value, so the **full history** of a
-cylinder is rebuilt from the logs; nothing else stores it.
+cylinder is rebuilt from the logs; nothing else stores it. The document and the signer of a change are
+not repeated in the state: the `DocumentRecorded` event of the same transaction carries both.
 
 ### 4.2 State
 
@@ -117,8 +118,9 @@ movements made under it. It is recorded once, in the same transaction as its mov
 
 Public: that a registry exists, how many cylinders it has, when documents are recorded and how many
 cylinders each touches, which operator key signed. Not public: serials, gases, customers, document
-numbers, locations, conditions. Value lengths are padded to fixed buckets so that a ciphertext's length
-does not reveal its content.
+numbers, locations, conditions. Every info and state value has the same encrypted size (221 bytes),
+so its length reveals nothing (not even whether a cylinder is at the depot or at a customer); other
+values are padded to fixed buckets.
 
 ## 5. Encryption
 
@@ -212,10 +214,12 @@ is a new factory, and registries are migrated explicitly.
 - Nonces are a bitmap per signer; the app uses random 256-bit nonces, so queued operations never collide.
 - The EIP-712 types and the payload encoding are in `shared/eip712.js`; a test checks that the library
   and the contract hash payloads identically.
-- **Gas** (`scripts/gas-report.js`, local network, 96-byte encrypted values, 512-byte document): a new
-  cylinder costs about 275,000 gas (mint plus two values), a movement of a known cylinder about 34,000.
-  A document of 40 new cylinders uses about 11 million gas, a quarter of a LUKSO block: the app splits
-  documents at 40 cylinders by default.
+- **Gas** (`scripts/gas-report.js`, local network, 221-byte encrypted values, 512-byte document): a new
+  cylinder costs about 460,000 gas (mint plus two values), a movement of a known cylinder about 60,000.
+  A document of 25 new cylinders uses about 11.5 million gas. Recent Ethereum forks cap a transaction
+  at 16.7 million gas, so the app splits documents at **25 cylinders** by default.
+- Registries are created at an address known in advance (`predictRegistryAddress(salt)`), because the
+  wrapped data key written at creation is bound to the registry's address.
 
 ## 7. Signed operations and the relayer
 
@@ -369,9 +373,10 @@ docs/        guides
 
 ## 11. Milestones
 
-1. **Contracts** and their tests on a local chain: registry, factory, signed operations, nonces,
+1. ✅ **Contracts** and their tests on a local chain: registry, factory, signed operations, nonces,
    ERC-1271, optimistic concurrency, migration.
-2. **Shared library**: encryption, key wrap, ids, padding, with test vectors shared by app and scripts.
+2. ✅ **Shared library** (`shared/`): encryption, key wraps (password and 24-word recovery code, English or
+   Italian words), ids, padding, plaintext formats, with test vectors checked against Node's own crypto.
 3. **Owner tools** (scripts, section 8.5): create a registry, set the password, add an operator, add counterparties.
 4. **Relayer**: checks, limits, sending, e-mail.
 5. **App**: setup, scanning, states, documents, offline queue, both languages.
