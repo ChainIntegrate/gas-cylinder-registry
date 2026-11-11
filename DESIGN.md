@@ -210,7 +210,8 @@ in the service fee. The relayer alerts when its wallet runs low.
 
 Sent by the relayer, so that there is a record that it left:
 
-- the app sends, with the operation, the recipients (from the encrypted directory) and the plaintext
+- the app sends, with the operation, the recipients (from the encrypted directory, plus at most three
+  typed by the driver for that document) and the plaintext
   summary over HTTPS; the relayer binds it to the operation's hash and sends it **only after the
   transaction is confirmed**;
 - content: supplier, counterparty, document number and date, delivered and collected cylinders per
@@ -236,10 +237,13 @@ Android, built with Capacitor; Italian and English with a language switch in the
 
 ### 8.2 A document
 
-1. **New document**: counterparty (from the decrypted directory) and document number.
+1. **New document**: the counterparty, picked from the owner's list. The document number can be typed
+   now or at any time before closing.
 2. **Scan loop**, continuous camera, one beep per accepted code. For each barcode:
    - the app normalizes it, computes the tokenId and reads `GCRInfo` / `GCRState` (one RPC call);
-   - **unknown cylinder**: asks the gas (and optional capacity, ownership) and queues a registration;
+   - **unknown cylinder**: asks the gas (and optional capacity, ownership), registers it at the depot and
+     proposes `delivery`; the driver can switch to `collection` (a cylinder never seen before, found at
+     the customer);
    - **known cylinder**: shows gas and last state and proposes the movement:
      at the depot → `delivery`; at this customer → `collection` (asks the condition: empty by default,
      full, defective);
@@ -247,9 +251,19 @@ Android, built with Capacitor; Italian and English with a language switch in the
      recorded at another customer; delivering one already at a customer; delivering a customer-owned
      cylinder to someone else; a retired cylinder; the same code scanned twice.
 3. **Summary per gas**: delivered and collected, to compare with the printed DDT lines.
-4. **Close**: the app builds the operation (registrations, state updates with expected previous states,
+4. **Document number**, if not typed yet, and **e-mail recipients**: the counterparty's addresses and
+   the owner's are filled in from the directory; the driver can add up to three more addresses for this
+   document only (they are not saved).
+5. **Close**: the app builds the operation (registrations, state updates with expected previous states,
    the encrypted document), signs it, sends it to the relayer with the e-mail, and shows the outcome.
    Large documents are split into several operations under the same `docId` (`part i of n`).
+
+### 8.2b Stock count
+
+A separate mode registers the cylinders already at a counterparty when the system starts (or when one
+is found that was never registered): pick the counterparty, scan, give gas and condition. Each cylinder
+is registered with that counterparty as its location; the count is recorded as a document of type
+`stock count`, with no delivery note and no e-mail unless asked.
 
 ### 8.3 Offline
 
@@ -272,6 +286,21 @@ owner's key and sent through the relayer, which pays the gas as for the drivers.
   `node scripts/add-operator.js <phone address>`), signing with the owner's encrypted key file.
 - **Later**: an owner web page that connects with UP Modal or UP Wallet, lists operators and
   counterparties, and signs in the owner's wallet. Same signed operations, same relayer.
+
+### 8.6 The demo, step by step
+
+1. **Before**: the owner creates the registry, sets the password, adds two customers and the owner's
+   e-mail, and authorizes the phone (scripts, 8.5).
+2. **Stock count**: at the demo customer's site, the cylinders already there are scanned in stock-count
+   mode (8.2b), leaving one out to show how an unknown cylinder is handled.
+3. **The driver arrives**: new document for that customer.
+   - Full cylinders unloaded: unknown, so the app asks the gas and proposes `delivery`.
+   - Empty cylinders taken back: known, so the app proposes `collection` from this customer; the
+     cylinder left out of the count is unknown and is registered on the spot.
+4. **Close**: the delivery note number, the preset recipients plus an address typed on the spot,
+   **Send**. One transaction, paid by the relayer; the e-mail arrives with the summary per gas and the
+   link to the transaction.
+5. **Afterwards**: scanning any of those cylinders again shows its new state, read from the chain.
 
 ## 9. Scalability
 
