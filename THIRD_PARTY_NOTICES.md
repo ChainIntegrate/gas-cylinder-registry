@@ -1,12 +1,28 @@
 # Third-party notices
 
-No third-party code is included in this repository yet. The components below are planned; each will be
-listed here with its version and license text when it is added.
+This project uses the following third-party components. Each remains under its own license; the full
+license texts are in the packages themselves (`node_modules/<package>/LICENSE` after `npm install`).
+
+## Compiled into the contracts
+
+| Component | Version | Use | License |
+|---|---|---|---|
+| `@lukso/lsp8-contracts` (with `@lukso/lsp1`, `lsp2`, `lsp4`, `lsp17` contracts and `@erc725/smart-contracts`) | 0.18.1 | LSP8 collection, ERC725Y data, ownership | Apache-2.0 |
+| `@lukso/lsp4-contracts` | 0.17.3 | LSP4 constants | Apache-2.0 |
+| `@openzeppelin/contracts` | 4.9.6 | Clones, Ownable, ECDSA, SignatureChecker (ERC-1271) | MIT |
+| `@openzeppelin/contracts-upgradeable` | 4.9.6 | EIP-712 for clones | MIT |
+
+## Development tools
+
+| Component | Version | Use | License |
+|---|---|---|---|
+| `hardhat`, `@nomicfoundation/hardhat-toolbox` | 2.x, 5.x | Compilation, tests | MIT |
+| `solc` | 0.8.28 | Solidity compiler (solc-js) | MIT |
+| `ethers` | 6.x | Signing and encoding (tests, shared library) | MIT |
+
+## Planned
 
 | Component | Use | License |
 |---|---|---|
-| `@lukso/lsp8-contracts`, `@lukso/lsp-smart-contracts` | LSP8 collection, ERC725Y data, ownership | Apache-2.0 |
-| `@openzeppelin/contracts` | ECDSA, ERC-1271 and EIP-712 helpers | MIT |
-| `ethers` | Signing, encoding, RPC (app, relayer, scripts) | MIT |
 | `@capacitor/core` and plugins | Android app shell | MIT |
 | `@capacitor-mlkit/barcode-scanning` | Barcode scanning (Google ML Kit) | Apache-2.0 |

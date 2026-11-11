@@ -195,6 +195,28 @@ is a new factory, and registries are migrated explicitly.
   a look-alike contract cannot spend the relayer's gas.
 - The factory owner has no rights inside a registry.
 
+### 6.3 Implementation notes (milestone 1)
+
+- Registries are **EIP-1167 clones** of one implementation deployed by the factory: creating a registry
+  is cheap and the factory stays small. Clones cannot be upgraded or initialized twice.
+- `recordDocument(payload, signer, nonce, deadline, signature)` takes the whole document part: `mints`
+  (new token IDs, minted to the owner), `updates` (writes of `GCRInfo` / `GCRState`, each with the hash
+  it expects to replace, `keccak256("")` for a new value), the encrypted `document`, and `corrects`
+  (the id of an earlier document, or zero). Part `i of n` of a document can be recorded once.
+- Owner operations: `setOperatorSigned`, `setDataSigned` (key wraps, counterparties, LSP4 metadata; the
+  LSP4 name, symbol, token type and the LSP8 token ID format stay read-only), `transferOwnershipSigned`
+  and `acceptOwnershipSigned` (two steps). An owner with LYX may also call `setOperator`,
+  `transferOwnership` and `acceptOwnership` directly. `renounceOwnership` is disabled.
+- `syncHolders(tokenIds)`: anyone may call it; it moves tokens only from a former owner to the current
+  owner. Every other transfer reverts.
+- Nonces are a bitmap per signer; the app uses random 256-bit nonces, so queued operations never collide.
+- The EIP-712 types and the payload encoding are in `shared/eip712.js`; a test checks that the library
+  and the contract hash payloads identically.
+- **Gas** (`scripts/gas-report.js`, local network, 96-byte encrypted values, 512-byte document): a new
+  cylinder costs about 275,000 gas (mint plus two values), a movement of a known cylinder about 34,000.
+  A document of 40 new cylinders uses about 11 million gas, a quarter of a LUKSO block: the app splits
+  documents at 40 cylinders by default.
+
 ## 7. Signed operations and the relayer
 
 ### 7.1 Signatures

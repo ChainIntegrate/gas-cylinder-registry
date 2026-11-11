@@ -3,7 +3,17 @@
 Tracking of technical gas cylinders on LUKSO: one LSP8 token per cylinder, data encrypted on-chain, a
 scanning app for drivers and a gasless relayer.
 
-**Status: design.** Nothing is implemented yet; the structure is in [DESIGN.md](DESIGN.md).
+**Status: milestone 1 of the [design](DESIGN.md).** The contracts (registry and factory) are written and
+tested on a local chain; nothing is deployed yet. The shared library, owner tools, relayer and app follow.
+
+## Development
+
+```bash
+npm install
+npx hardhat compile        # solc 0.8.28 from npm (solc-js), no compiler download
+npx hardhat test
+npx hardhat run scripts/gas-report.js
+```
 
 ## In short
 
