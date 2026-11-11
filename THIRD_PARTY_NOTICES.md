@@ -12,6 +12,13 @@ license texts are in the packages themselves (`node_modules/<package>/LICENSE` a
 | `@openzeppelin/contracts` | 4.9.6 | Clones, Ownable, ECDSA, SignatureChecker (ERC-1271) | MIT |
 | `@openzeppelin/contracts-upgradeable` | 4.9.6 | EIP-712 for clones | MIT |
 
+## Relayer
+
+| Component | Version | Use | License |
+|---|---|---|---|
+| `ethers` | 6.17.0 | RPC, signatures | MIT |
+| `nodemailer` | 10.0.13 | E-mail through SMTP | MIT-0 |
+
 ## Development tools
 
 | Component | Version | Use | License |

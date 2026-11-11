@@ -47,6 +47,8 @@ Options
   --network lukso|lukso-testnet|local  Default: the config's, else lukso.
   --chainintegrate-keystore <file>   Default: the config's, else chainintegrate.keystore.json.
   --owner-keystore <file>            Default: the config's.
+  --relayer <url>                    Send owner operations through the relayer (default: the config's
+                                     "relayer"; without one, ChainIntegrate's key sends and pays).
 `;
 
 // ------------------------------------------------------------------------------------------------
@@ -232,10 +234,14 @@ async function main() {
   // The commands below work on the config's registry.
   if (!config.registry) throw new Error("no registry in the config: run create-registry first");
   const readCtx = () => O.context({ provider, registry: config.registry, fromBlock: config.registryBlock || 0 });
+  const relayerUrl = args.relayer || config.relayer;
   const writeCtx = async () => {
     const owner = await openKeystore(ownerKeystore, "the owner's", provider);
-    const ci = await openKeystore(ciKeystore, "ChainIntegrate (sender)", provider);
-    return O.context({ provider, registry: config.registry, owner, submit: O.directSubmitter(ci), fromBlock: config.registryBlock || 0 });
+    // Through the relayer when one is configured; otherwise ChainIntegrate's key sends and pays.
+    const submit = relayerUrl
+      ? O.relayerSubmitter(relayerUrl, provider)
+      : O.directSubmitter(await openKeystore(ciKeystore, "ChainIntegrate (sender)", provider));
+    return O.context({ provider, registry: config.registry, owner, submit, fromBlock: config.registryBlock || 0 });
   };
   const unlock = async (ctx) => (await O.unlockWithPassword(ctx, await ask("Data password: ", { hidden: true }))).keys;
   const done = (receipt) => console.log(`Done: ${explorerTx(network, receipt)}`);

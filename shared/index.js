@@ -4,4 +4,5 @@ module.exports = {
   ...require("./eip712"),
   ...require("./crypto"),
   ...require("./schema"),
+  ...require("./mail"),
 };

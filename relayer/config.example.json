@@ -1,0 +1,15 @@
+{
+  "keyFile": "/etc/gcr-relayer/relayer.key",
+  "listen": { "host": "127.0.0.1", "port": 8789 },
+  "rpc": "https://rpc.mainnet.lukso.network",
+  "chainId": 42,
+  "factory": "0x0000000000000000000000000000000000000000",
+  "allowedOrigins": ["https://localhost", "capacitor://localhost"],
+  "minBalanceWarn": "0.5",
+  "limits": {
+    "perIpPerMinute": 20,
+    "perRegistryPerDay": 300,
+    "maxMints": 25,
+    "maxUpdates": 60
+  }
+}

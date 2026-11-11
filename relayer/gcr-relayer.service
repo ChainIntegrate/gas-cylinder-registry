@@ -1,0 +1,32 @@
+# systemd unit for the gas-cylinder-registry relayer. Install: see relayer/README.md.
+[Unit]
+Description=gas-cylinder-registry relayer (LUKSO)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=gcr-relayer
+Group=gcr-relayer
+WorkingDirectory=/opt/gas-cylinder-registry/relayer
+# shared/ (outside this folder) resolves ethers from the relayer's own node_modules.
+Environment=NODE_PATH=/opt/gas-cylinder-registry/relayer/node_modules
+# SMTP settings: the same values as the other ChainIntegrate services, in a file only this user reads.
+EnvironmentFile=-/etc/gcr-relayer/smtp.env
+ExecStart=/usr/bin/env node relay.js serve --config /etc/gcr-relayer/config.json
+Restart=on-failure
+RestartSec=5
+# Hardening: the service reads its code and its config, and writes nothing.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

@@ -16,6 +16,7 @@
     "@lukso/lsp4-contracts": "^0.17.3",
     "@lukso/lsp8-contracts": "^0.18.1",
     "@openzeppelin/contracts": "^4.9.6",
-    "@openzeppelin/contracts-upgradeable": "^4.9.6"
+    "@openzeppelin/contracts-upgradeable": "^4.9.6",
+    "ethers": "^6.17.0"
   }
 }

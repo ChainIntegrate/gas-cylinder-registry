@@ -241,7 +241,8 @@ is a new factory, and registries are migrated explicitly.
 Node.js, stateless apart from its logs. Built from the experience of Cross_Chain's relayer and
 cross-chain-sponsor's limits.
 
-1. `POST /v1/operations` with `{ registry, operation, signature, mail? }`.
+1. `POST /gcr/document` (phones) or `POST /gcr/owner` (owner operations) with the signed operation and,
+   for a document, the e-mail with the phone's signature over it (`shared/mail.js`).
 2. Checks: the registry comes from the factory; the signer is the owner or an operator (read from the
    chain); the operation simulates successfully; per-registry limits (operations per day, cylinders
    per operation).
@@ -259,6 +260,8 @@ in the service fee. The relayer alerts when its wallet runs low.
 
 Sent by the relayer, so that there is a record that it left:
 
+- the phone signs the e-mail together with the operation's signature, so the relayer sends only the
+  e-mail written by the document's signer, for that document only;
 - the app sends, with the operation, the recipients (from the encrypted directory, plus at most three
   typed by the driver for that document) and the plaintext
   summary over HTTPS; the relayer binds it to the operation's hash and sends it **only after the
@@ -380,7 +383,8 @@ docs/        guides
    Italian words), ids, padding, plaintext formats, with test vectors checked against Node's own crypto.
 3. ✅ **Owner tools** (`scripts/owner.js`, guide in `docs/owner-tools.md`): create a registry, set and change
    the password, recover it with the 24 words, add phones, add counterparties.
-4. **Relayer**: checks, limits, sending, e-mail.
+4. ✅ **Relayer** (`relayer/`, install guide in `relayer/README.md`): checks, limits, sending, e-mail signed
+   by the phone and sent after confirmation; runs on Cross_Chain's server under `/gcr/`.
 5. **App**: setup, scanning, states, documents, offline queue, both languages.
 6. **Demo on LUKSO mainnet** with Argonia Gas Tecnici's data replaced by the real supplier's only in
    the deployed registry, never in this repository.

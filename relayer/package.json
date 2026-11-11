@@ -1,0 +1,13 @@
+{
+  "name": "gas-cylinder-registry-relayer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Relayer of gas-cylinder-registry: sends signed operations on LUKSO, pays the gas, sends the documents' e-mails.",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "main": "relay.js",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "ethers": "6.17.0",
+    "nodemailer": "10.0.13"
+  }
+}

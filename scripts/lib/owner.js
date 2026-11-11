@@ -26,6 +26,32 @@ function directSubmitter(wallet) {
   };
 }
 
+/**
+ * A submitter that hands signed operations to the relayer (`url`, for example
+ * https://crosschain-lukso.chainintegrate.it) and waits for the receipt on `provider`.
+ */
+function relayerSubmitter(url, provider) {
+  const base = url.replace(/\/+$/, "");
+  return async (registryAddress, method, args) => {
+    const res = await fetch(`${base}/gcr/owner`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ registry: registryAddress, method, args }, (k, v) => (typeof v === "bigint" ? v.toString() : v)),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(`relayer: ${body.error || res.status}`);
+    for (let i = 0; i < 300; i++) {
+      const receipt = await provider.getTransactionReceipt(body.hash);
+      if (receipt) {
+        if (receipt.status !== 1) throw new Error(`transaction ${body.hash} failed`);
+        return receipt;
+      }
+      await new Promise((r) => setTimeout(r, i < 20 ? 100 : 2000));
+    }
+    throw new Error(`transaction ${body.hash} not confirmed yet: check it on the explorer`);
+  };
+}
+
 // ------------------------------------------------------------------------------------------------
 // Context
 // ------------------------------------------------------------------------------------------------
@@ -264,6 +290,7 @@ module.exports = {
   REGISTRY_ABI,
   FACTORY_ABI,
   directSubmitter,
+  relayerSubmitter,
   context,
   deployFactory,
   prepareRegistry,
