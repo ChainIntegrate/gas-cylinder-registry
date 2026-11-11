@@ -94,7 +94,11 @@ Customers and refill plants share one encrypted directory, stored in the registr
 (one entry per counterparty, so adding one never rewrites the others):
 
 - key: LSP2 Mapping `GCRCounterparty:<bytes20 id>`, with `id = HMAC(idKey, "cp:" + uuid)` truncated;
-- value: encrypted `{ type: customer|refill, name, address, vat, emails[], notes }`.
+- value: encrypted `{ type: customer|refill, name, emails[] }`: only the heading the driver needs to
+  recognize the counterparty, and the optional addresses that receive the e-mail. Nothing else is kept.
+
+Counterparties are managed **by the owner only**, with the owner tools (section 8.5); the driver picks
+from the list and cannot add one. The demo has two customers.
 
 ### 4.5 Documents
 
@@ -258,6 +262,17 @@ The barcode format is not known yet. Recognition uses ML Kit (all common 1D and 
 normalization (trim, case, allowed characters, length) is a per-registry setting, so that it can be
 fixed when the labels are known without changing the contracts.
 
+### 8.5 Owner tools
+
+What only the owner does: create the registry, set or change the password, authorize or revoke a
+driver's phone, add or edit counterparties, migrate to a new owner. Each operation is signed with the
+owner's key and sent through the relayer, which pays the gas as for the drivers.
+
+- **Demo**: scripts in `scripts/` run by the owner on a computer (for example
+  `node scripts/add-operator.js <phone address>`), signing with the owner's encrypted key file.
+- **Later**: an owner web page that connects with UP Modal or UP Wallet, lists operators and
+  counterparties, and signs in the owner's wallet. Same signed operations, same relayer.
+
 ## 9. Scalability
 
 - One transaction per document, split by a configurable maximum number of cylinders per transaction.
@@ -283,7 +298,7 @@ docs/        guides
 1. **Contracts** and their tests on a local chain: registry, factory, signed operations, nonces,
    ERC-1271, optimistic concurrency, migration.
 2. **Shared library**: encryption, key wrap, ids, padding, with test vectors shared by app and scripts.
-3. **Owner tools** (scripts): create a registry, set the password, add an operator, add counterparties.
+3. **Owner tools** (scripts, section 8.5): create a registry, set the password, add an operator, add counterparties.
 4. **Relayer**: checks, limits, sending, e-mail.
 5. **App**: setup, scanning, states, documents, offline queue, both languages.
 6. **Demo on LUKSO mainnet** with Argonia Gas Tecnici's data replaced by the real supplier's only in
@@ -295,7 +310,5 @@ docs/        guides
 
 - **Barcode format** of the labels (section 8.4).
 - **Refill plant documents**: what accompanies a cylinder sent to and back from refilling.
-- **Owner tools in the demo**: scripts run by ChainIntegrate (the demo owner) are proposed; a web page
-  comes with the move to a Universal Profile.
 - **Emergency role**: whether ChainIntegrate keeps any recovery power over a registry (proposed: none).
 - **Retention**: whether retired cylinders and old counterparties should ever be hidden from the app.
