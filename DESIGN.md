@@ -124,11 +124,14 @@ does not reveal its content.
 
 - **Data key (DEK)**: 32 random bytes per registry, created by the owner. Two subkeys are derived with
   HKDF-SHA256: `encKey` (AES-256-GCM) and `idKey` (HMAC for tokenIds, counterparty ids, document ids).
-- **Password wrap**: the owner's password, through PBKDF2-SHA256 (600,000 iterations, random salt,
-  registry address as context), gives a key-encryption key that wraps the DEK. The wrapped DEK is
-  stored on-chain in the registry's data (`GCRKeyWrap:<slot>`). Changing the password rewrites only the
-  wrap; a new owner (the supplier taking over) gets the same DEK wrapped with *their* password, and all
-  history stays readable.
+- **Password wrap** (slot 0): the owner's password, through PBKDF2-SHA256 (600,000 iterations, random
+  salt, registry address as context), gives a key-encryption key that wraps the DEK. The wrapped DEK is
+  stored on-chain in the registry's data (`GCRKeyWrap:<slot>`). The password is typed only in the owner
+  tools and once per phone at enrollment; it never reaches the relayer. The owner tools refuse a weak
+  password and suggest a phrase.
+- **Recovery code** (slot 1): when the registry is created, the owner tools generate a random recovery
+  code (24 words, 256 bits) and wrap the same DEK with it. The owner prints it and keeps it in a safe
+  place. Being random and long, it cannot be guessed offline the way a chosen password could.
 - **Every value**: `version (1) | IV (12) | ciphertext | tag (16)`, AES-256-GCM, with the registry
   address, the tokenId (or entry id) and the data key name as associated data, so a ciphertext cannot
   be moved to another cylinder or field without failing.
@@ -137,9 +140,28 @@ does not reveal its content.
   by fingerprint or PIN (the same approach as UP Wallet's phone key). The driver uses the app, never
   the password.
 - **Limits, stated plainly.** Encrypted data on a public chain can be copied and attacked offline
-  forever: the password must be long (a phrase). Revoking an operator stops it from writing, but a
-  phone that held the DEK could still read; if a phone is compromised, the owner rotates the DEK
-  (new key, current states re-encrypted; older history stays under the old key).
+  forever: the password must be long. Nobody, ChainIntegrate included, keeps a copy of the DEK: with
+  both the password and the recovery code lost, the data cannot be read again.
+
+### 5.1 Password lifecycle
+
+| Case | What happens |
+|---|---|
+| **Change** (the old password is known) | The owner tools unwrap the DEK with the old password and write a new slot 0. Phones are not affected. The old wrap stays in the chain's history, so this is a change, not a protection against someone who knew the old password. |
+| **Lost** | The owner tools unwrap the DEK with the recovery code and write a new slot 0 with a new password. Phones are not affected. |
+| **Lost, with no recovery code** | The data cannot be read again; the registry keeps working only on phones still enrolled, and a new registry is the way out. |
+| **Leaked** | The data is not sensitive, so this is a rare case: the owner tools can rotate the DEK (new key, current states and directory re-encrypted, new password and recovery code, phones enrolled again). History already written stays under the old key. |
+| **Phone lost, or an employee leaves** | The owner revokes the operator: from then on the phone cannot write. Reading what it already had stays possible only by unlocking the phone; for this data, revocation is enough. |
+
+### 5.2 A new owner
+
+When the demo ends and the supplier starts for real, it **starts from scratch**: a new registry from the
+factory, with its own DEK, password and recovery code. Nothing is copied from the demo registry, which
+stays on-chain as it is.
+
+The same cylinder in two registries has two unrelated tokenIds, because each registry derives them with
+its own key: no collision, and nobody can tell that the two are the same cylinder. Token IDs are only
+unique within one contract anyway.
 
 ## 6. Contracts
 
@@ -152,8 +174,9 @@ is a new factory, and registries are migrated explicitly.
   (name, description, images) editable by the owner.
 - **Owner**: the company's EOA or UP (LSP14 two-step ownership).
 - **Operators**: a set of addresses authorized by the owner.
-- **Tokens**: minted to the owner; not transferable, except by the owner to a new owner during a
-  migration (in chunks, with `force = true` so that an EOA can receive them).
+- **Tokens**: minted to the owner; not transferable, except by the owner to its own new account (for
+  example the same company moving from an EOA to a Universal Profile), in chunks, with `force = true`
+  so that an EOA can receive them. A different company starts a new registry instead (5.2).
 - **Writes** go through signed operations only (section 7); anyone may submit them, the signature
   decides who acts:
   - operator or owner: `registerCylinders`, `recordDocument` (mints + state updates + the document event
