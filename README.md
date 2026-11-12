@@ -3,10 +3,11 @@
 Tracking of technical gas cylinders on LUKSO: one LSP8 token per cylinder, data encrypted on-chain, a
 scanning app for drivers and a gasless relayer.
 
-**Status: milestones 1 to 4 of the [design](DESIGN.md).** The contracts (registry and factory), the
+**Status: milestones 1 to 5 of the [design](DESIGN.md).** The contracts (registry and factory), the
 shared library (encryption, key wraps, identifiers, formats), the owner tools
-([guide](docs/owner-tools.md)) and the relayer ([install](relayer/README.md)) are written and tested on
-a local chain; nothing is deployed yet. The app follows.
+([guide](docs/owner-tools.md)), the relayer ([install](relayer/README.md)) and the drivers' Android app
+([guide](docs/app.md)) are written and tested on a local chain; nothing is deployed yet. Next: the demo
+on LUKSO mainnet.
 
 ## Development
 

@@ -5,7 +5,10 @@
   "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "compile": "hardhat compile",
-    "test": "hardhat test"
+    "test": "hardhat test",
+    "build:app": "node scripts/build-app.js",
+    "sync": "node scripts/build-app.js && npx cap sync android",
+    "test:ui": "node test/ui/ui-demo.js"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.2",

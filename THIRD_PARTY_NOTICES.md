@@ -27,9 +27,14 @@ license texts are in the packages themselves (`node_modules/<package>/LICENSE` a
 | `solc` | 0.8.28 | Solidity compiler (solc-js) | MIT |
 | `ethers` | 6.x | Signing and encoding (tests, shared library) | MIT |
 
-## Planned
+## App
 
-| Component | Use | License |
-|---|---|---|
-| `@capacitor/core` and plugins | Android app shell | MIT |
-| `@capacitor-mlkit/barcode-scanning` | Barcode scanning (Google ML Kit) | Apache-2.0 |
+| Component | Version | Use | License |
+|---|---|---|---|
+| `@capacitor/core`, `@capacitor/android`, `@capacitor/cli` | 8.5.2 | Android app shell | MIT |
+| `@capacitor-mlkit/barcode-scanning` | 8.2.1 | Barcode scanning (Google ML Kit's code scanner) | Apache-2.0 |
+| `ethers` | 6.17.0 | Signing, encoding, reading (bundled) | MIT |
+| `esbuild` | 0.28.2 | Bundling | MIT |
+| `androidx.biometric:biometric` | 1.1.0 | Fingerprint prompt | Apache-2.0 |
+| `org.bouncycastle:bcprov-jdk18on` | 1.78.1 | secp256k1 and Keccak-256 | MIT (Bouncy Castle licence) |
+| `qrcode-generator` | 1.4.4 | The setup code's QR in the owner tools | MIT |

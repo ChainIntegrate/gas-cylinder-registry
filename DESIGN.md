@@ -385,7 +385,8 @@ docs/        guides
    the password, recover it with the 24 words, add phones, add counterparties.
 4. ✅ **Relayer** (`relayer/`, install guide in `relayer/README.md`): checks, limits, sending, e-mail signed
    by the phone and sent after confirmation; runs on Cross_Chain's server under `/gcr/`.
-5. **App**: setup, scanning, states, documents, offline queue, both languages.
+5. ✅ **App** (`app/`, `android/`, guide in `docs/app.md`): setup, scanning, states, documents, refill,
+   stock count, offline queue, both languages; built and signed by GitHub Actions.
 6. **Demo on LUKSO mainnet** with Argonia Gas Tecnici's data replaced by the real supplier's only in
    the deployed registry, never in this repository.
 7. **Later**: owner on a Universal Profile; an owner web page (UP Modal / UP Wallet) replacing the

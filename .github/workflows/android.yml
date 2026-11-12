@@ -1,0 +1,119 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # used only by the Release step, on tags
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install
+        run: npm ci
+
+      # Contracts, shared library, owner tools, relayer and the app's logic, on a local chain.
+      - name: Tests
+        timeout-minutes: 10
+        run: npx hardhat test
+
+      # The app's interface in Chromium against a local chain and the relayer (the demo, step by step).
+      - name: Interface test
+        timeout-minutes: 15
+        run: |
+          npx --yes playwright@1.56.1 install --with-deps chromium
+          npm install --no-save playwright@1.56.1
+          npx hardhat node > hardhat-node.log 2>&1 &
+          sleep 8
+          node test/ui/ui-demo.js
+
+      - name: Web content and copy into the Android project
+        run: |
+          node scripts/build-app.js
+          npx cap sync android
+
+      # The release key comes from the repository's secrets (GCR_KEYSTORE_B64: the PKCS#12 file in
+      # base64; GCR_KEYSTORE_PASSWORD; optional GCR_KEY_ALIAS, default "gascylinders"). Without them a
+      # debug APK is built with a throwaway key, named "-debug".
+      - name: Release key
+        env:
+          KEY_B64: ${{ secrets.GCR_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEY_B64" ]; then
+            umask 077
+            printf '%s' "$KEY_B64" | base64 -d > "$RUNNER_TEMP/gascylinders.p12"
+            echo "GCR_KEYSTORE_FILE=$RUNNER_TEMP/gascylinders.p12" >> "$GITHUB_ENV"
+          else
+            echo "No release key in the secrets: building a debug APK."
+          fi
+
+      # The phone key's signatures (Secp256k1.java) against vectors made with ethers.
+      - name: Java unit tests
+        working-directory: android
+        timeout-minutes: 10
+        run: ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Build the APK
+        working-directory: android
+        env:
+          GCR_KEYSTORE_PASSWORD: ${{ secrets.GCR_KEYSTORE_PASSWORD }}
+          GCR_KEY_ALIAS: ${{ secrets.GCR_KEY_ALIAS }}
+        run: |
+          if [ -n "$GCR_KEYSTORE_FILE" ]; then ./gradlew assembleRelease --no-daemon
+          else ./gradlew assembleDebug --no-daemon; fi
+
+      - name: Name the APK after the commit
+        run: |
+          if [ -n "$GCR_KEYSTORE_FILE" ]; then cp android/app/build/outputs/apk/release/app-release.apk "bombole-${GITHUB_SHA::7}.apk"
+          else cp android/app/build/outputs/apk/debug/app-debug.apk "bombole-${GITHUB_SHA::7}-debug.apk"; fi
+
+      - name: Signer of the APK
+        run: |
+          f=$(ls bombole-*.apk)
+          signer=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          certs=$("$signer" verify --print-certs "$f")
+          fp=$(echo "$certs" | grep -m1 'certificate SHA-256 digest' | sed 's/.*digest: //')
+          owner=$(echo "$certs" | grep -m1 'certificate DN' | sed 's/.*DN: //')
+          if [ -n "$GCR_KEYSTORE_FILE" ]; then echo "::notice title=Release key::$f signed by $owner, SHA-256 $fp"
+          else echo "::warning title=Debug key::$f signed by a throwaway debug key ($owner): it cannot update an installed release"; fi
+
+      - name: Remove the release key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/gascylinders.p12"
+
+      - name: Release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(grep -m1 'versionName' android/app/build.gradle | sed 's/.*"\(.*\)".*/\1/')
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then echo "::error::tag $GITHUB_REF_NAME does not match versionName $version"; exit 1; fi
+          if [ -z "$GCR_KEYSTORE_FILE" ]; then echo "::error::no release key: a debug APK is not published"; exit 1; fi
+          f=$(ls bombole-*.apk)
+          mv "$f" "bombole-$GITHUB_REF_NAME.apk"
+          gh release upload "$GITHUB_REF_NAME" "bombole-$GITHUB_REF_NAME.apk" --clobber
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bombole-apk
+          path: bombole-*.apk
+          retention-days: 30

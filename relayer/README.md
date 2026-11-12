@@ -33,7 +33,8 @@ read it; `DocumentPartAlreadyRecorded`: the same document number was sent before
 - Documents signed by the registry's owner or an authorized phone, with at most 25 new cylinders and
   60 data updates per operation, a document of at most 16 KB, values of at most 1 KB.
 - Operations that succeed in simulation; the registry's error is returned otherwise and nothing is
-  sent. Gas limit: the estimate plus 25%, never more than 16 million.
+  sent. Gas limit: the estimate plus 25%, never more than 16 million (when a node's estimate fails
+  after a successful simulation, the 16 million cap; only the gas used is paid).
 - The same signed operation again returns the same transaction (and sends no second e-mail).
 - Limits: requests per IP per minute, operations per registry per day; requests up to 700 KB; a
   browser `Origin`, when present, must be in `allowedOrigins` (the app's).

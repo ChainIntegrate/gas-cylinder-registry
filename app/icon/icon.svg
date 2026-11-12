@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">
+  <!-- A gas cylinder: the app's icon (foreground of the adaptive icon: keep it inside the central 66 x 66). -->
+  <rect x="47" y="22" width="14" height="8" rx="2" fill="#16202a"/>
+  <rect x="44" y="28" width="20" height="5" rx="2" fill="#16202a"/>
+  <path d="M41 42 Q41 33 54 33 Q67 33 67 42 L67 82 Q67 86 63 86 L45 86 Q41 86 41 82 Z" fill="#0b5cad"/>
+  <rect x="41" y="44" width="26" height="6" fill="#ffffff" opacity="0.9"/>
+</svg>

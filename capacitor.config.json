@@ -1,0 +1,7 @@
+{
+  "appId": "it.chainintegrate.gascylinders",
+  "appName": "Bombole",
+  "webDir": "app/www",
+  "server": { "androidScheme": "https" },
+  "android": { "allowMixedContent": false, "webContentsDebuggingEnabled": false }
+}
