@@ -34,7 +34,10 @@ const BUCKETS = [64, 128, 256, 512, 1024];
  * so that, for example, a cylinder at the depot (no counterparty id) cannot be told apart from one at
  * a customer by the length of its state.
  */
-const MIN_SIZE = { info: 192, state: 192, counterparty: 512 };
+const MIN_SIZE = { info: 192, state: 192, counterparty: 512, settings: 512 };
+
+/** ERC725Y data key of the registry's encrypted settings (company name, the supplier's e-mails); also its entry id. */
+const SETTINGS_DATA_KEY = id("GCRSettings");
 
 const KEY_WRAP_PASSWORD = 0x01;
 const KEY_WRAP_RECOVERY = 0x02;
@@ -326,6 +329,7 @@ module.exports = {
   PBKDF2_ITERATIONS,
   MIN_SIZE,
   KEY_WRAP_DATA_KEYS,
+  SETTINGS_DATA_KEY,
   COUNTERPARTY_KEY_PREFIX,
   DEFAULT_SERIAL_RULES,
   generateDataKey,

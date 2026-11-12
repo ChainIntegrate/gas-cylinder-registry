@@ -16,6 +16,7 @@ const { Wallet, JsonRpcProvider, Contract, getAddress, isAddress, keccak256, for
 const REGISTRY_ABI = require("../shared/abi/GasCylinderRegistry.json");
 const FACTORY_ABI = require("../shared/abi/GasCylinderRegistryFactory.json");
 const { validateMail, mailDigest } = require("../shared/mail");
+const { recordDocumentDigest } = require("../shared/eip712");
 
 const OWNER_METHODS = ["setOperatorSigned", "setDataSigned", "transferOwnershipSigned", "acceptOwnershipSigned"];
 const ERC1271_ABI = ["function isValidSignature(bytes32 hash, bytes signature) view returns (bytes4)"];
@@ -113,8 +114,8 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
     return v;
   }
 
-  async function checkMailSignature(registry, signer, opSignature, mail, mailSignature) {
-    const digest = getBytes(mailDigest(registry, opSignature, mail));
+  async function checkMailSignature(registry, signer, operationDigest, mail, mailSignature) {
+    const digest = getBytes(mailDigest(registry, operationDigest, mail));
     hexBytes("mailSignature", mailSignature, 2048);
     let ok = false;
     try {
@@ -152,16 +153,25 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
     if (byOperation.has(opKey)) return { hash: byOperation.get(opKey), repeated: true };
 
     const reg = new Contract(registry, REGISTRY_ABI, wallet);
-    let gas;
+    let gas = null;
     try {
-      await reg[method].staticCall(...args);
-      gas = await reg[method].estimateGas(...args);
+      // Simulated within the per-transaction cap, so that an operation too large for one transaction is
+      // refused here rather than by the network.
+      const cap = { gasLimit: BigInt(limits.gasLimitCap) };
+      await reg[method].staticCall(...args, cap);
+      try {
+        gas = await reg[method].estimateGas(...args, cap);
+      } catch {
+        // The simulation within the cap succeeded, but some nodes' estimates overshoot large writes
+        // (seen on the local test network): use the cap, only the gas actually used is paid.
+        gas = null;
+      }
     } catch (e) {
       const r = decodeRevert(e);
       throw new Refused(`refused by the registry: ${r.error}`, 400, r);
     }
-    const gasLimit = (gas * 125n) / 100n > BigInt(limits.gasLimitCap) ? BigInt(limits.gasLimitCap) : (gas * 125n) / 100n;
-    if (gas > BigInt(limits.gasLimitCap)) throw new Refused("operation too large for one transaction: split it", 400);
+    const capGas = BigInt(limits.gasLimitCap);
+    const gasLimit = gas === null || (gas * 125n) / 100n > capGas ? capGas : (gas * 125n) / 100n;
 
     // One transaction at a time, so that the relayer's nonces never collide.
     const send = queue.then(async () => {
@@ -263,7 +273,6 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
       } catch (e) {
         throw new Refused(e.message);
       }
-      await checkMailSignature(registry, body.signer, signature, mail, body.mailSignature);
     }
 
     const payload = {
@@ -275,6 +284,15 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
       updates: p.updates.map((u) => ({ tokenId: u.tokenId, dataKey: u.dataKey, expectedHash: u.expectedHash, newValue: u.newValue })),
       document: p.document || "0x",
     };
+    if (mail) {
+      let digest;
+      try {
+        digest = recordDocumentDigest(registry, config.chainId, getAddress(body.signer), payload, BigInt(body.nonce), BigInt(body.deadline));
+      } catch {
+        throw new Refused("payload: malformed");
+      }
+      await checkMailSignature(registry, body.signer, digest, mail, body.mailSignature);
+    }
     return relay(registry, "recordDocument", [payload, getAddress(body.signer), BigInt(body.nonce), BigInt(body.deadline), signature], signature, mail);
   }
 

@@ -53,7 +53,8 @@ describe("relayer", function () {
     const nonce = S.randomNonce();
     const deadline = BigInt(now + 3600);
     const signature = await phone.signTypedData(ctx.domain, { RecordDocument: S.TYPES.RecordDocument }, { signer: phone.address, payloadHash: S.hashPayload(payload), nonce, deadline });
-    return { registry: ctx.address, payload, signer: phone.address, nonce, deadline, signature, lines };
+    const digest = S.recordDocumentDigest(ctx.address, ctx.chainId, phone.address, payload, nonce, deadline);
+    return { registry: ctx.address, payload, signer: phone.address, nonce, deadline, signature, lines, digest };
   }
 
   beforeEach(async function () {
@@ -103,7 +104,7 @@ describe("relayer", function () {
   it("relays a document and sends its e-mail after the confirmation", async function () {
     const op = await delivery(3, "DDT 2026/118");
     const mail = { to: ["demo@example.com", "Owner@Example.com", "demo@example.com"], subject: "Consegna DDT 2026/118", text: "3 argon consegnate." };
-    const mailSignature = await S.signMail(phone, ctx.address, op.signature, mail);
+    const mailSignature = await S.signMail(phone, ctx.address, op.digest, mail);
     const { status, body } = await post("/gcr/document", { ...op, mail, mailSignature });
     expect(status, JSON.stringify(body)).to.equal(200);
     const st = await waitFor(body.hash);
@@ -124,7 +125,7 @@ describe("relayer", function () {
     const op = await delivery(1);
     const pdf = Buffer.from("%PDF-1.4\n% test\n").toString("base64");
     const mail = { to: ["demo@example.com"], subject: "Consegna", text: "Allegato il riepilogo.", attachment: { filename: "consegna.pdf", base64: pdf } };
-    const { body } = await post("/gcr/document", { ...op, mail, mailSignature: await S.signMail(phone, ctx.address, op.signature, mail) });
+    const { body } = await post("/gcr/document", { ...op, mail, mailSignature: await S.signMail(phone, ctx.address, op.digest, mail) });
     expect((await waitFor(body.hash)).mail).to.equal("sent");
     expect(mails[0].attachments[0]).to.include({ filename: "consegna.pdf", contentType: "application/pdf" });
   });
@@ -133,9 +134,9 @@ describe("relayer", function () {
     const op = await delivery(1);
     const mail = { to: ["demo@example.com"], subject: "Consegna", text: "ok" };
     const stranger = ethers.Wallet.createRandom();
-    let r = await post("/gcr/document", { ...op, mail, mailSignature: await S.signMail(stranger, ctx.address, op.signature, mail) });
+    let r = await post("/gcr/document", { ...op, mail, mailSignature: await S.signMail(stranger, ctx.address, op.digest, mail) });
     expect(r.status).to.equal(403);
-    const signed = await S.signMail(phone, ctx.address, op.signature, mail);
+    const signed = await S.signMail(phone, ctx.address, op.digest, mail);
     r = await post("/gcr/document", { ...op, mail: { ...mail, to: ["someone@else.com"] }, mailSignature: signed });
     expect(r.status).to.equal(403);
     expect(mails).to.have.length(0);

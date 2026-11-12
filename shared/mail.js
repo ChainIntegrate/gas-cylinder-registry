@@ -1,8 +1,11 @@
 "use strict";
 // The e-mail that goes with a document. The phone signs it with the same key that signed the
 // document, so that the relayer sends only the e-mail its author meant, for that operation only.
+// It is bound to the operation's EIP-712 digest (not to its signature), so the phone signs the
+// document and the e-mail together, with one fingerprint.
 
-const { keccak256, toUtf8Bytes, getAddress, getBytes } = require("ethers");
+const { keccak256, toUtf8Bytes, getAddress, getBytes, decodeBase64 } = require("ethers");
+// No Buffer: this file also runs in the app's WebView.
 
 const LIMITS = { maxRecipients: 10, maxSubject: 200, maxText: 20000, maxAttachmentBytes: 400 * 1024 };
 const EMAIL = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/;
@@ -25,35 +28,35 @@ function validateMail(m) {
     const { filename, base64 } = m.attachment;
     if (typeof filename !== "string" || !/^[\w .()-]{1,80}\.pdf$/i.test(filename)) throw new Error("mail: the attachment must be a .pdf file name");
     if (typeof base64 !== "string" || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) throw new Error("mail: attachment is not base64");
-    const bytes = Buffer.from(base64, "base64");
+    const bytes = decodeBase64(base64);
     if (bytes.length > LIMITS.maxAttachmentBytes) throw new Error("mail: attachment too large");
-    if (bytes.subarray(0, 5).toString("latin1") !== "%PDF-") throw new Error("mail: the attachment is not a PDF");
+    if (String.fromCharCode(...bytes.slice(0, 5)) !== "%PDF-") throw new Error("mail: the attachment is not a PDF");
     out.attachment = { filename, base64 };
   }
   return out;
 }
 
 /**
- * What the phone signs (with `signMessage`): the hash of the registry, the operation's signature and
- * the e-mail. Bound to the operation, the e-mail cannot be reused with another one.
+ * What the phone signs (as a personal message): the hash of the registry, the operation's EIP-712
+ * digest and the e-mail. Bound to the operation, the e-mail cannot be reused with another one.
  */
-function mailDigest(registry, operationSignature, mail) {
+function mailDigest(registry, operationDigest, mail) {
   const m = validateMail(mail);
   const canonical = JSON.stringify({
     v: 1,
     registry: getAddress(registry).toLowerCase(),
-    operation: keccak256(operationSignature),
+    operation: String(operationDigest).toLowerCase(),
     to: m.to,
     subject: m.subject,
     text: m.text,
-    attachment: m.attachment ? { filename: m.attachment.filename, hash: keccak256(Buffer.from(m.attachment.base64, "base64")) } : null,
+    attachment: m.attachment ? { filename: m.attachment.filename, hash: keccak256(decodeBase64(m.attachment.base64)) } : null,
   });
   return keccak256(toUtf8Bytes(canonical));
 }
 
-/** Signs the e-mail with the phone's wallet. */
-async function signMail(wallet, registry, operationSignature, mail) {
-  return wallet.signMessage(getBytes(mailDigest(registry, operationSignature, mail)));
+/** Signs the e-mail with a wallet (tests, tools); the app signs `hashMessage(mailDigest)` natively. */
+async function signMail(wallet, registry, operationDigest, mail) {
+  return wallet.signMessage(getBytes(mailDigest(registry, operationDigest, mail)));
 }
 
 module.exports = { MAIL_LIMITS: LIMITS, validateMail, mailDigest, signMail };

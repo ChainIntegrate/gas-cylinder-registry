@@ -249,6 +249,23 @@ async function listCounterparties(ctx, keys) {
 }
 
 // ------------------------------------------------------------------------------------------------
+// Settings
+// ------------------------------------------------------------------------------------------------
+
+/** The registry's settings ({ v, company, emails }), or null when they were never set. */
+async function readSettings(ctx, keys) {
+  const raw = await ctx.registry.getData(S.SETTINGS_DATA_KEY);
+  return raw === "0x" ? null : S.validateSettings(await S.decryptValue(keys, S.SETTINGS_DATA_KEY, "settings", raw));
+}
+
+/** Sets the company name and/or the supplier's e-mails (fields not given keep their value). */
+async function writeSettings(ctx, keys, fields) {
+  const current = (await readSettings(ctx, keys)) || { v: 1, company: "", emails: [] };
+  const value = S.validateSettings({ ...current, ...fields, v: 1 });
+  return setData(ctx, [S.SETTINGS_DATA_KEY], [await S.encryptValue(keys, S.SETTINGS_DATA_KEY, "settings", value)]);
+}
+
+// ------------------------------------------------------------------------------------------------
 // Reading
 // ------------------------------------------------------------------------------------------------
 
@@ -306,5 +323,7 @@ module.exports = {
   readCounterparty,
   listCounterparties,
   listOperators,
+  readSettings,
+  writeSettings,
   status,
 };

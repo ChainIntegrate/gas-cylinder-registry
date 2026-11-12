@@ -2,7 +2,7 @@
 // EIP-712 types and payload encoding of GasCylinderRegistry's signed operations.
 // Shared by the tests, the owner scripts, the relayer and the app: they must hash exactly as the contract.
 
-const { AbiCoder, keccak256, id } = require("ethers");
+const { AbiCoder, keccak256, id, TypedDataEncoder } = require("ethers");
 
 const DOMAIN_NAME = "GasCylinderRegistry";
 const DOMAIN_VERSION = "1";
@@ -55,6 +55,16 @@ function hashPayload(payload) {
   return keccak256(AbiCoder.defaultAbiCoder().encode([PAYLOAD_TUPLE], [payload]));
 }
 
+/** The EIP-712 digest a signer signs for one document part. */
+function recordDocumentDigest(registry, chainId, signer, payload, nonce, deadline) {
+  return TypedDataEncoder.hash(domain(registry, chainId), { RecordDocument: TYPES.RecordDocument }, {
+    signer,
+    payloadHash: hashPayload(payload),
+    nonce,
+    deadline,
+  });
+}
+
 /** keccak256(abi.encode(bytes[])), the dataValuesHash of SetData. */
 function hashDataValues(values) {
   return keccak256(AbiCoder.defaultAbiCoder().encode(["bytes[]"], [values]));
@@ -62,7 +72,8 @@ function hashDataValues(values) {
 
 /** A random 256-bit nonce: nonces are unordered, so queued operations need no sequence. */
 function randomNonce() {
-  return BigInt("0x" + Buffer.from(require("crypto").randomBytes(32)).toString("hex"));
+  const b = globalThis.crypto.getRandomValues(new Uint8Array(32));
+  return BigInt("0x" + Array.from(b, (x) => x.toString(16).padStart(2, "0")).join(""));
 }
 
 module.exports = {
@@ -75,6 +86,7 @@ module.exports = {
   PAYLOAD_TUPLE,
   domain,
   hashPayload,
+  recordDocumentDigest,
   hashDataValues,
   randomNonce,
 };

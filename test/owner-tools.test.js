@@ -70,6 +70,15 @@ describe("owner tools", function () {
     expect(Buffer.from(raw.slice(2), "hex").toString("latin1")).to.not.include("Officina");
   });
 
+  it("keeps the company name and the supplier's e-mails, encrypted", async function () {
+    expect(await O.readSettings(ctx, keys)).to.equal(null);
+    await O.writeSettings(ctx, keys, { company: "Argonia Gas Tecnici", emails: ["ufficio@example.com"] });
+    await O.writeSettings(ctx, keys, { emails: ["ufficio@example.com", "magazzino@example.com"] });
+    expect(await O.readSettings(ctx, keys)).to.deep.equal({ v: 1, company: "Argonia Gas Tecnici", emails: ["ufficio@example.com", "magazzino@example.com"] });
+    const raw = await ctx.registry.getData(S.SETTINGS_DATA_KEY);
+    expect(Buffer.from(raw.slice(2), "hex").toString("latin1")).to.not.include("Argonia");
+  });
+
   it("changes the password, and recovers a lost one with the recovery code", async function () {
     const { dek } = await O.unlockWithPassword(ctx, password);
     await O.changePassword(ctx, dek, "una nuova frase per il registro");

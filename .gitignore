@@ -156,3 +156,9 @@ typechain-types/
 # Owner tools: local files that may hold keys or real names, never committed
 *.keystore.json
 gcr-registry*.json
+
+# App build output (scripts/build-app.js) and Capacitor's copies
+app/www/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json

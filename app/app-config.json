@@ -1,0 +1,5 @@
+{
+  "rpc": "https://rpc.mainnet.lukso.network",
+  "chainId": 42,
+  "relayer": "https://crosschain-lukso.chainintegrate.it"
+}

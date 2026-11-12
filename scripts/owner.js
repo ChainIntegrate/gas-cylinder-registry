@@ -31,8 +31,12 @@ ChainIntegrate (the factory's owner; also sends the owner's signed operations un
 
 Owner (signs with the owner's key file)
   status                             Registry, owner, phones, cylinders.
+  settings [--company <name>] [--email <address>]...
+                                     Show, or set, the company name shown by the app and in the e-mails, and
+                                     the supplier's own addresses (they receive every document's e-mail).
+  phone-setup                        The setup code (and its QR) the app scans at its first start.
   phones                             Authorized phones.
-  add-phone <address>                Authorize a driver's phone (the address shown by the app).
+  add-phone <code>                   Authorize a driver's phone (the code the app shows, spaces allowed).
   remove-phone <address>             Revoke a phone (lost, or its driver left).
   counterparties                     Customers and refill plants (needs the data password).
   add-customer --name <name> [--email <address>]...
@@ -247,6 +251,39 @@ async function main() {
   const done = (receipt) => console.log(`Done: ${explorerTx(network, receipt)}`);
 
   switch (command) {
+    case "settings": {
+      if (typeof args.company !== "string" && !args.email.length) {
+        const ctx = await readCtx();
+        const st = await O.readSettings(ctx, await unlock(ctx));
+        console.log(st ? `Company: ${st.company}\nE-mails: ${st.emails.join(", ") || "-"}` : "No settings yet: set them with --company and --email.");
+        return;
+      }
+      const ctx = await writeCtx();
+      const fields = {};
+      if (typeof args.company === "string") fields.company = args.company;
+      if (args.email.length) fields.emails = args.email;
+      return done(await O.writeSettings(ctx, await unlock(ctx), fields));
+    }
+    case "phone-setup": {
+      const code = S.setupCode(config.registry, config.registryBlock || 0);
+      const qr = require("qrcode-generator")(0, "M");
+      qr.addData(code);
+      qr.make();
+      const n = qr.getModuleCount();
+      const dark = (r, c) => r >= 0 && c >= 0 && r < n && c < n && qr.isDark(r, c);
+      const out = [];
+      for (let r = -2; r < n + 2; r += 2) {
+        let line = "";
+        for (let c = -2; c < n + 2; c++) {
+          const top = dark(r, c);
+          const bottom = dark(r + 1, c);
+          line += top && bottom ? " " : top ? "\u2584" : bottom ? "\u2580" : "\u2588";
+        }
+        out.push("  " + line);
+      }
+      console.log(`\nScan this with the app at its first start (or type the code):\n\n${out.join("\n")}\n\n  ${code}\n`);
+      return;
+    }
     case "status": {
       const s = await O.status(await readCtx());
       console.log(JSON.stringify(s, null, 2));
@@ -259,8 +296,10 @@ async function main() {
     }
     case "add-phone":
     case "remove-phone": {
-      const address = args._[1];
-      if (!address) throw new Error(`usage: ${command} <address>`);
+      // The app shows the phone's code in groups of four, without 0x: accept it as typed.
+      const raw = args._.slice(1).join("").replace(/\s+/g, "");
+      if (!raw) throw new Error(`usage: ${command} <phone code>`);
+      const address = raw.startsWith("0x") ? raw : "0x" + raw;
       return done(await O.setOperator(await writeCtx(), address, command === "add-phone"));
     }
     case "counterparties": {

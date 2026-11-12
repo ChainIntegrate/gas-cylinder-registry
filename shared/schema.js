@@ -141,6 +141,33 @@ function validateDocument(x) {
   });
 }
 
+/**
+ * Registry settings: { v: 1, company, emails: [] }. The company's name as the app and the e-mails show
+ * it, and the supplier's own addresses, which receive every document's e-mail.
+ */
+function validateSettings(x) {
+  if (!x || typeof x !== "object") fail("settings", "not an object");
+  version("settings", x);
+  const emails = Array.isArray(x.emails) ? x.emails.map((e) => text("settings.emails", e, 254)) : [];
+  if (emails.length > 5) fail("settings.emails", "more than 5");
+  for (const e of emails) if (!EMAIL.test(e)) fail("settings.emails", `"${e}" is not an e-mail address`);
+  return { v: 1, company: text("settings.company", x.company, 120), emails };
+}
+
+/**
+ * The setup code the owner tools show and the app scans once: "GCR1:<registry>:<creation block>".
+ */
+function parseSetupCode(code) {
+  const m = /^GCR1:(0x[0-9a-fA-F]{40}):(\d{1,12})$/.exec(String(code).trim());
+  if (!m) throw new Error("invalid setup code");
+  return { registry: m[1], fromBlock: Number(m[2]) };
+}
+
+function setupCode(registry, fromBlock) {
+  if (!HEX20.test(registry) || !Number.isInteger(fromBlock) || fromBlock < 0) throw new Error("invalid setup code fields");
+  return `GCR1:${registry}:${fromBlock}`;
+}
+
 module.exports = {
   GASES,
   LOCATIONS,
@@ -153,4 +180,7 @@ module.exports = {
   validateState,
   validateCounterparty,
   validateDocument,
+  validateSettings,
+  parseSetupCode,
+  setupCode,
 };

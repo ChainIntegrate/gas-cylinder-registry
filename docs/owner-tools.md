@@ -40,7 +40,7 @@ node scripts/owner.js create-registry --name "Argonia Gas Tecnici cylinders" --s
 # 4. Customers, refill plants, phones
 node scripts/owner.js add-customer --name "Officina Demo" --email demo@example.com
 node scripts/owner.js add-customer --name "Cliente Due"
-node scripts/owner.js add-phone 0x...          # the address the app shows at its first start
+node scripts/owner.js add-phone "d59F 2E8B …"  # the code the app shows at its first start (spaces allowed)
 node scripts/owner.js status
 ```
 
