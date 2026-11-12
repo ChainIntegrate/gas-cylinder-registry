@@ -44,7 +44,7 @@ jobs:
           npm install --no-save playwright@1.56.1
           npx hardhat node > hardhat-node.log 2>&1 &
           sleep 8
-          node test/ui/ui-demo.js
+          node scripts/ui-demo.js
 
       - name: Web content and copy into the Android project
         run: |

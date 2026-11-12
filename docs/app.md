@@ -49,7 +49,7 @@ cd android && ./gradlew assembleDebug      # needs the Android SDK and JDK 21
 ```
 
 Tests: `npx hardhat test` (the app's logic against a local chain and the relayer) and, with
-`npx hardhat node` running, `node test/ui/ui-demo.js [screenshots-dir]` (the interface in Chromium,
+`npx hardhat node` running, `node scripts/ui-demo.js [screenshots-dir]` (the interface in Chromium,
 the demo step by step; only the fingerprint key and the camera are simulated).
 
 ## Signing

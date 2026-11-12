@@ -1,7 +1,7 @@
 "use strict";
 // Writes crypto-v1.json with Node's own crypto module, independently of shared/crypto.js,
 // so that the library is checked against a second implementation of the format.
-// Run: node test/vectors/make-crypto-v1.js
+// Run: node scripts/make-crypto-vectors.js
 const c = require("crypto");
 const fs = require("fs");
 const path = require("path");
@@ -47,5 +47,5 @@ const out = {
   infoIv: hex(iv),
   infoEncrypted: hex(Buffer.concat([Buffer.from([1]), iv, ct])),
 };
-fs.writeFileSync(path.join(__dirname, "crypto-v1.json"), JSON.stringify(out, null, 2) + "\n");
+fs.writeFileSync(path.join(__dirname, "..", "test", "vectors", "crypto-v1.json"), JSON.stringify(out, null, 2) + "\n");
 console.log(out);

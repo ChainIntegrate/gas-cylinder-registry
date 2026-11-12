@@ -5,7 +5,7 @@
 // (fingerprint key and camera), by window.__GCR_NATIVE__.
 //
 //   npx hardhat node &                      (in another terminal)
-//   node test/ui/ui-demo.js [screenshots-dir]
+//   node scripts/ui-demo.js [screenshots-dir]
 
 const fs = require("fs");
 const os = require("os");
@@ -14,9 +14,9 @@ const http = require("http");
 const { execFileSync } = require("child_process");
 const { chromium } = require("playwright");
 const { ethers } = require("ethers");
-const O = require("../../scripts/lib/owner");
-const S = require("../../shared");
-const { createRelayer } = require("../../relayer/relay");
+const O = require("./lib/owner");
+const S = require("../shared");
+const { createRelayer } = require("../relayer/relay");
 
 const RPC = process.env.RPC || "http://127.0.0.1:8545";
 const SHOTS = process.argv[2] || null;
@@ -70,8 +70,8 @@ async function main() {
   // The app, built for the local chain and relayer.
   const cfg = path.join(os.tmpdir(), `gcr-app-config-${process.pid}.json`);
   fs.writeFileSync(cfg, JSON.stringify({ rpc: RPC, chainId: Number((await provider.getNetwork()).chainId), relayer: relayerUrl }));
-  execFileSync("node", [path.join(__dirname, "..", "..", "scripts", "build-app.js")], { env: { ...process.env, GCR_APP_CONFIG: cfg }, stdio: "inherit" });
-  const web = await serve(path.join(__dirname, "..", "..", "app", "www"));
+  execFileSync("node", [path.join(__dirname, "build-app.js")], { env: { ...process.env, GCR_APP_CONFIG: cfg }, stdio: "inherit" });
+  const web = await serve(path.join(__dirname, "..", "app", "www"));
   const appUrl = `http://127.0.0.1:${web.address().port}/`;
   allowedOrigins.push(new URL(appUrl).origin);
 
@@ -226,7 +226,7 @@ async function main() {
   web.close();
   relayerServer.close();
   fs.unlinkSync(cfg);
-  execFileSync("node", [path.join(__dirname, "..", "..", "scripts", "build-app.js")], { stdio: "ignore" }); // back to the real config
+  execFileSync("node", [path.join(__dirname, "build-app.js")], { stdio: "ignore" }); // back to the real config
   process.exit(ok ? 0 : 1);
 }
 
