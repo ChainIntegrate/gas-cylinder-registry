@@ -198,6 +198,18 @@ describe("app logic", function () {
     expect(outbox.pending()).to.have.length(0);
   });
 
+  it("finds a document on the network when the relayer forgot it (restarted)", async function () {
+    const lines = [await scan("RST-1", customerB, "delivery_note")];
+    const built = await A.buildDocument({ registry: reg, operator: phone.address, counterparty: customerB, kind: "delivery_note", number: "DDT RST", lines, now });
+    const mail = A.buildMail({ lang: "it", company: "Argonia Gas Tecnici", counterparty: customerB, kind: "delivery_note", number: built.number, lines, now, recipients: ["ufficio@example.com"] });
+    const item = await A.signDocument({ registry: reg, operator: phone.address, built, mail, signDigests: signDigests(phone), meta: {} });
+    // Sent, then the relayer "restarts": every status answer is 404.
+    const forgetful = async (url, opts) => (String(url).includes("/gcr/status") ? new Response(JSON.stringify({ error: "unknown transaction" }), { status: 404 }) : fetch(url, opts));
+    const out = await A.sendItem(item, { relayer: base, provider: ethers.provider, fetchFn: forgetful, pollMs: 20 });
+    expect(out.done).to.equal(true);
+    expect(out.mail).to.equal("unknown");
+  });
+
   it("refuses a document built on an old state, and says why in plain words", async function () {
     // Two phones read the same cylinder; the second one sends after the first.
     const other = ethers.Wallet.createRandom();

@@ -376,8 +376,10 @@ class Outbox {
  * Sends an outbox item's parts in order, through the relayer, and waits for each to be recorded.
  * Updates the item in place (parts' state and hash, mail) and returns it. A network failure keeps the
  * item for later (`offline: true`); a refusal marks it `failed` with the relayer's reason.
+ * With `provider`, a transaction the relayer no longer knows (it restarted) is looked up on the network;
+ * its e-mail is then "unknown" (it may or may not have left).
  */
-async function sendItem(item, { relayer, fetchFn = fetch, pollMs = 1500, timeoutMs = 120000, onUpdate = () => {} }) {
+async function sendItem(item, { relayer, provider = null, fetchFn = fetch, pollMs = 1500, timeoutMs = 120000, onUpdate = () => {} }) {
   const base = relayer.replace(/\/+$/, "");
   for (const part of item.parts) {
     if (part.state === "confirmed") continue;
@@ -408,6 +410,11 @@ async function sendItem(item, { relayer, fetchFn = fetch, pollMs = 1500, timeout
       try {
         const r = await fetchFn(`${base}/gcr/status?hash=${part.hash}`);
         st = r.ok ? await r.json() : null;
+        if (r.status === 404 && provider) {
+          // The relayer restarted and forgot it: the network says whether it was recorded.
+          const receipt = await provider.getTransactionReceipt(part.hash);
+          if (receipt) st = { state: receipt.status === 1 ? "confirmed" : "failed", mail: part.body.mail ? "unknown" : "none" };
+        }
       } catch {
         item.offline = true;
         onUpdate(item);

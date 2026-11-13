@@ -386,8 +386,9 @@ async function sendDocument() {
 async function sendOne(item) {
   await L.sendItem(item, {
     relayer: CONFIG.relayer,
+    provider: app.provider,
     onUpdate: (i) => {
-      if (i.done && i.mail !== "failed") app.outbox.remove(i.id);
+      if (i.done && i.mail !== "failed" && i.mail !== "unknown") app.outbox.remove(i.id);
       else app.outbox.update(i);
       if (app.result && app.result.id === i.id) app.result = i;
       render();
@@ -496,7 +497,10 @@ function viewDoc() {
 function itemStatus(item) {
   const tx = t();
   if (item.failed) return { text: tx.failedReason(L.errorText(app.lang, item.failed)), cls: "error" };
-  if (item.done) return { text: tx.sentOk + (item.mail === "sent" ? " " + tx.mailSent : item.mail === "failed" ? " " + tx.mailFailed : ""), cls: item.mail === "failed" ? "warn" : "ok" };
+  if (item.done) {
+    const mail = { sent: " " + tx.mailSent, failed: " " + tx.mailFailed, unknown: " " + tx.mailUnknown }[item.mail] || "";
+    return { text: tx.sentOk + mail, cls: item.mail === "failed" || item.mail === "unknown" ? "warn" : "ok" };
+  }
   if (item.offline) return { text: tx.queued, cls: "warn" };
   return { text: tx.sending, cls: "note" };
 }
@@ -515,7 +519,7 @@ function viewResult() {
   return [
     h("h2", {}, `${item.number || tx.stockCount} · ${item.who}`),
     h("p", { class: st.cls + " big-status" }, st.text),
-    item.done && item.mail === "failed" ? h("a", { class: "button", href: mailtoLink(item) }, tx.sendFromPhone) : null,
+    item.done && (item.mail === "failed" || item.mail === "unknown") ? h("a", { class: "button", href: mailtoLink(item) }, tx.sendFromPhone) : null,
     btn(tx.close, () => setView("home"), "primary big"),
   ];
 }
@@ -536,7 +540,7 @@ function viewOutbox() {
             h("p", { class: st.cls }, st.text),
             h("div", { class: "row" },
               !it.failed ? btn(tx.sendNow, () => sendOne(it)) : null,
-              it.done && it.mail === "failed" ? h("a", { class: "button", href: mailtoLink(it) }, tx.sendFromPhone) : null,
+              it.done && (it.mail === "failed" || it.mail === "unknown") ? h("a", { class: "button", href: mailtoLink(it) }, tx.sendFromPhone) : null,
               btn(tx.discard, () => {
                 app.outbox.remove(it.id);
                 render();
