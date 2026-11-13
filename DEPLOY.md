@@ -6,7 +6,7 @@ service on port 8789). The steps are in order; each says where it runs.
 
 | Part | Where | Port |
 |---|---|---|
-| Admin page | nginx, root `/opt/gas-cylinder-registry/admin/www` | none (static) |
+| Admin page | nginx, root `/var/www/gas-cylinder-registry/admin/www` | none (static) |
 | Relayer | systemd `gcr-relayer`, `127.0.0.1:8789`, nginx `/gcr/` | 8789 (local only) |
 | Already on the server | Cross_Chain relayer 8787, sponsor service 8788, up-onboarding creation service 8811 | |
 
@@ -59,15 +59,15 @@ step a new app release (tag `v0.2.0`) gives the drivers the APK that talks to ga
 
 ```bash
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin gcr-relayer
-sudo git clone --filter=blob:none --no-checkout https://github.com/ChainIntegrate/gas-cylinder-registry.git /opt/gas-cylinder-registry
-cd /opt/gas-cylinder-registry
+sudo git clone --filter=blob:none --no-checkout https://github.com/ChainIntegrate/gas-cylinder-registry.git /var/www/gas-cylinder-registry
+cd /var/www/gas-cylinder-registry
 sudo git sparse-checkout set --no-cone '/relayer/' '/shared/' '/admin/www/' '/tools/nginx/'
 sudo git checkout main
 cd relayer && sudo npm ci --omit=dev
 
 sudo install -d -m 700 -o gcr-relayer -g gcr-relayer /etc/gcr-relayer
-sudo -u gcr-relayer node /opt/gas-cylinder-registry/relayer/relay.js new-key /etc/gcr-relayer/relayer.key   # prints the relayer's address
-sudo install -m 600 -o gcr-relayer -g gcr-relayer /opt/gas-cylinder-registry/relayer/config.example.json /etc/gcr-relayer/config.json
+sudo -u gcr-relayer node /var/www/gas-cylinder-registry/relayer/relay.js new-key /etc/gcr-relayer/relayer.key   # prints the relayer's address
+sudo install -m 600 -o gcr-relayer -g gcr-relayer /var/www/gas-cylinder-registry/relayer/config.example.json /etc/gcr-relayer/config.json
 sudo nano /etc/gcr-relayer/config.json            # "factory": the address from step 2
 ```
 
@@ -78,7 +78,7 @@ only the service reads; or LUKSO's public node (`https://rpc.mainnet.lukso.netwo
 sudo install -m 600 -o gcr-relayer -g gcr-relayer /dev/null /etc/gcr-relayer/rpc-url
 sudo nano /etc/gcr-relayer/rpc-url                # one line: the RPC URL
 sudo install -m 600 -o gcr-relayer -g gcr-relayer /etc/crosschain-relayer/smtp.env /etc/gcr-relayer/smtp.env
-sudo cp /opt/gas-cylinder-registry/relayer/gcr-relayer.service /etc/systemd/system/
+sudo cp /var/www/gas-cylinder-registry/relayer/gcr-relayer.service /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl enable --now gcr-relayer
 sudo journalctl -u gcr-relayer -n 5               # "relayer 0x… on chain 42, …, mail on", "listening on http://127.0.0.1:8789"
 curl -s http://127.0.0.1:8789/gcr/info
@@ -91,13 +91,13 @@ Send the relayer's address a few LYX (it pays every operation; it e-mails when b
 Certificate first: nginx refuses an `ssl` server without it, so first the port 80 block alone.
 
 ```bash
-sudo sed -n '/^server {/,/^}/p;/^}/q' /opt/gas-cylinder-registry/tools/nginx/gastrace.chainintegrate.it.conf | sudo tee /etc/nginx/sites-available/gastrace.chainintegrate.it
+sudo sed -n '/^server {/,/^}/p;/^}/q' /var/www/gas-cylinder-registry/tools/nginx/gastrace.chainintegrate.it.conf | sudo tee /etc/nginx/sites-available/gastrace.chainintegrate.it
 sudo ln -sf /etc/nginx/sites-available/gastrace.chainintegrate.it /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
-sudo certbot certonly --webroot -w /opt/gas-cylinder-registry/admin/www -d gastrace.chainintegrate.it
+sudo certbot certonly --webroot -w /var/www/gas-cylinder-registry/admin/www -d gastrace.chainintegrate.it
 
-sudo cp /opt/gas-cylinder-registry/tools/nginx/gastrace-security-headers.conf /etc/nginx/snippets/
-sudo cp /opt/gas-cylinder-registry/tools/nginx/gastrace.chainintegrate.it.conf /etc/nginx/sites-available/gastrace.chainintegrate.it
+sudo cp /var/www/gas-cylinder-registry/tools/nginx/gastrace-security-headers.conf /etc/nginx/snippets/
+sudo cp /var/www/gas-cylinder-registry/tools/nginx/gastrace.chainintegrate.it.conf /etc/nginx/sites-available/gastrace.chainintegrate.it
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
@@ -126,7 +126,7 @@ and its update on the owner's computer. Until then the extension does not serve 
 ## Every update
 
 ```bash
-cd /opt/gas-cylinder-registry && sudo git pull --ff-only
+cd /var/www/gas-cylinder-registry && sudo git pull --ff-only
 (cd relayer && sudo npm ci --omit=dev) && sudo systemctl restart gcr-relayer      # when relayer/ or shared/ changed
 ```
 

@@ -54,14 +54,14 @@ read it; `DocumentPartAlreadyRecorded`: the same document number was sent before
 
 The whole sequence, with the admin page and the site, is in [DEPLOY.md](../DEPLOY.md). The relayer's part:
 
-Like Cross_Chain's relayer: its own clone outside the web root, its key and configuration in `/etc`.
+Its own clone in `/var/www/gas-cylinder-registry`, as up-onboarding's (nginx serves only `admin/www` from it), its key and configuration in `/etc`.
 
 **1. User and a clone with only `relayer/` and `shared/`.**
 
 ```bash
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin gcr-relayer
-sudo git clone --filter=blob:none --no-checkout https://github.com/ChainIntegrate/gas-cylinder-registry.git /opt/gas-cylinder-registry
-cd /opt/gas-cylinder-registry
+sudo git clone --filter=blob:none --no-checkout https://github.com/ChainIntegrate/gas-cylinder-registry.git /var/www/gas-cylinder-registry
+cd /var/www/gas-cylinder-registry
 sudo git sparse-checkout set --no-cone '/relayer/' '/shared/' '/admin/www/' '/tools/nginx/'
 sudo git checkout main
 cd relayer && sudo npm ci --omit=dev
@@ -71,8 +71,8 @@ cd relayer && sudo npm ci --omit=dev
 
 ```bash
 sudo install -d -m 700 -o gcr-relayer -g gcr-relayer /etc/gcr-relayer
-sudo -u gcr-relayer node /opt/gas-cylinder-registry/relayer/relay.js new-key /etc/gcr-relayer/relayer.key
-sudo install -m 600 -o gcr-relayer -g gcr-relayer /opt/gas-cylinder-registry/relayer/config.example.json /etc/gcr-relayer/config.json
+sudo -u gcr-relayer node /var/www/gas-cylinder-registry/relayer/relay.js new-key /etc/gcr-relayer/relayer.key
+sudo install -m 600 -o gcr-relayer -g gcr-relayer /var/www/gas-cylinder-registry/relayer/config.example.json /etc/gcr-relayer/config.json
 sudo nano /etc/gcr-relayer/config.json        # factory: the address from the owner tools' deploy-factory
 sudo install -m 600 -o gcr-relayer -g gcr-relayer /dev/null /etc/gcr-relayer/rpc-url
 sudo nano /etc/gcr-relayer/rpc-url            # one line: the RPC URL (ChainIntegrate's node with its key, or LUKSO's public one)
@@ -93,7 +93,7 @@ sudo install -m 600 -o gcr-relayer -g gcr-relayer /etc/crosschain-relayer/smtp.e
 **5. Service.**
 
 ```bash
-sudo cp /opt/gas-cylinder-registry/relayer/gcr-relayer.service /etc/systemd/system/
+sudo cp /var/www/gas-cylinder-registry/relayer/gcr-relayer.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now gcr-relayer
 journalctl -u gcr-relayer -n 20     # "relayer 0x… on chain 42, balance …, mail on" and "listening on http://127.0.0.1:8789"
@@ -134,7 +134,7 @@ to deploy the factory and create registries.
 ## Update, logs, stop
 
 ```bash
-cd /opt/gas-cylinder-registry && sudo git pull && (cd relayer && sudo npm ci --omit=dev) && sudo systemctl restart gcr-relayer
+cd /var/www/gas-cylinder-registry && sudo git pull && (cd relayer && sudo npm ci --omit=dev) && sudo systemctl restart gcr-relayer
 journalctl -u gcr-relayer -f
 sudo systemctl stop gcr-relayer
 ```
