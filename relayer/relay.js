@@ -10,6 +10,12 @@
 
 const fs = require("fs");
 const http = require("http");
+const path = require("path");
+
+// shared/ (outside this folder) requires ethers: resolve it from the relayer's own node_modules, also when
+// the script is run by hand (the systemd unit sets NODE_PATH; a plain "node relay.js …" does not).
+process.env.NODE_PATH = [path.join(__dirname, "node_modules"), process.env.NODE_PATH].filter(Boolean).join(path.delimiter);
+require("module").Module._initPaths();
 const { URL } = require("url");
 const { Wallet, JsonRpcProvider, Contract, getAddress, isAddress, keccak256, formatEther, parseEther, getBytes, verifyMessage, hashMessage } =
   require("ethers");
