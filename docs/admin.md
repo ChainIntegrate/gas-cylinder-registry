@@ -43,6 +43,14 @@ The data password opens the register's data **in the page only**: it is never se
 the page forgets it. "I lost the password" opens the data with the 24-word recovery code and sets a new
 password.
 
+## The users' guide
+
+`guida.html` (Italian) and `guide.html` (English), linked from the page's footer: the owner's page and the
+drivers' app in plain words, for Argonia's office and drivers (sign-in, password and recovery code,
+settings, customers, phones; installing the app, setup, delivery and collection, stock count, refill,
+"To send", the e-mail, updates; common problems). Static pages with no script, in `admin/`, copied to
+`admin/www` by the build. When the app's or the page's wording changes, change the guide with it.
+
 ## The operator page (ChainIntegrate only)
 
 `https://gastrace.chainintegrate.it/operator.html` (not indexed): ChainIntegrate creates a supplier's

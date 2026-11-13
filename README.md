@@ -40,6 +40,7 @@ How they fit together:
 | Relayer | https://gastrace.chainintegrate.it/gcr/info |
 | Factory | [`0xA128e7162fa8Dc779bf31EF569F06B53a499A50e`](https://explorer.execution.mainnet.lukso.network/address/0xA128e7162fa8Dc779bf31EF569F06B53a499A50e) (block 8774243, source verified), owned by ChainIntegrate's Universal Profile `0x4a26…8c27` |
 | Operator page | https://gastrace.chainintegrate.it/operator.html (ChainIntegrate only) |
+| Users' guide | https://gastrace.chainintegrate.it/guida.html (Italian), [guide.html](https://gastrace.chainintegrate.it/guide.html) (English): the owner's page and the drivers' app in plain words |
 | Register implementation | [`0x3075ED17F09E0006cECC0D7e67Fe7E7A4Dc95b00`](https://explorer.execution.mainnet.lukso.network/address/0x3075ED17F09E0006cECC0D7e67Fe7E7A4Dc95b00) (source verified; registers are its clones) |
 | Demo register | [`0xEae1a8B84977694e5c9925028a23599bc345b801`](https://explorer.execution.mainnet.lukso.network/address/0xEae1a8B84977694e5c9925028a23599bc345b801), owned by Argonia Gas Tecnici's ChainIntegrate account `0xC335…D773` |
 | App | [Releases](https://github.com/ChainIntegrate/gas-cylinder-registry/releases) (`gastrace-v<version>.apk`) |
@@ -53,7 +54,7 @@ contracts/   GasCylinderRegistry.sol, GasCylinderRegistryFactory.sol (and a test
 shared/      encryption, identifiers, formats, EIP-712, e-mail; used by the app, the page, the relayer, the tools
 app/         the drivers' app: logic, interface, native bridge, icon (built into app/www)
 android/     the Capacitor Android project: the phone key plugin (DeviceKeyPlugin), signing
-admin/       the admin and operator pages (src/), their build (www/, committed: the server serves it as is)
+admin/       the admin and operator pages (src/), the users' guide (guida.html, guide.html), their build (www/, committed)
 relayer/     the relayer service, its systemd unit and configuration example
 scripts/     ChainIntegrate's tools, builds, the browser tests (ui-demo, admin-demo), source verification
 test/        contract, library, relayer, owner tools and app logic tests (Hardhat)

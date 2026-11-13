@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <title>Guida di GasTrace</title>
+  <link rel="icon" href="favicon.ico">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body class="guide">
+<div id="app">
+  <header class="top">
+    <div class="brand">
+      <img class="mark" src="logo.png" alt="">
+      <div><div class="name">Guida di GasTrace</div><div class="tagline">La pagina del titolare e l'app degli autisti, passo per passo.</div></div>
+    </div>
+    <div class="top-actions">
+      <a class="button ghost" href="guide.html" lang="en">English</a>
+      <a class="button primary" href="./">Vai alla pagina</a>
+    </div>
+  </header>
+
+  <main>
+    <nav class="panel toc">
+      <h2>In questa guida</h2>
+      <ol>
+        <li><a href="#come-funziona">Come funziona</a></li>
+        <li><a href="#titolare">Per il titolare</a>
+          <ol>
+            <li><a href="#primo-accesso">Primo accesso</a></li>
+            <li><a href="#password">Password dei dati e codice di recupero</a></li>
+            <li><a href="#impostazioni">Impostazioni</a></li>
+            <li><a href="#clienti">Clienti e centri di ricarica</a></li>
+            <li><a href="#telefoni">Telefoni degli autisti</a></li>
+            <li><a href="#consultare">Bombole e documenti</a></li>
+          </ol>
+        </li>
+        <li><a href="#autista">Per l'autista</a>
+          <ol>
+            <li><a href="#installare">Installare l'app</a></li>
+            <li><a href="#configurare">Configurare il telefono</a></li>
+            <li><a href="#consegna">Consegna e ritiro</a></li>
+            <li><a href="#giacenze">Giacenze</a></li>
+            <li><a href="#ricarica">Ricarica</a></li>
+            <li><a href="#controlla">Controllare una bombola</a></li>
+            <li><a href="#senza-rete">Senza rete: "Da inviare"</a></li>
+            <li><a href="#mail">La mail del documento</a></li>
+            <li><a href="#aggiornare">Aggiornare l'app</a></li>
+          </ol>
+        </li>
+        <li><a href="#problemi">Problemi frequenti</a></li>
+      </ol>
+    </nav>
+
+    <section class="panel" id="come-funziona">
+      <h2>Come funziona</h2>
+      <p>Ogni bombola ha la sua scheda: gas, dove si trova, se è piena, vuota o difettosa, e tutti i suoi movimenti. Le schede si aggiornano da sole a ogni documento dell'autista.</p>
+      <ul>
+        <li><strong>Il titolare</strong> usa la pagina <a href="./">gastrace.chainintegrate.it</a> dal computer: vede le bombole e i documenti, gestisce clienti, telefoni e impostazioni.</li>
+        <li><strong>L'autista</strong> usa l'app GasTrace sul telefono Android: inquadra il codice a barre delle bombole alla consegna e al ritiro.</li>
+        <li>Dopo ogni documento parte una <strong>mail</strong> al cliente e all'azienda.</li>
+        <li>I dati sono <strong>cifrati</strong>: si leggono solo con la password dei dati del titolare. Nessun costo per operazione a carico dell'azienda: lo gestisce ChainIntegrate.</li>
+      </ul>
+    </section>
+
+    <h2 class="part" id="titolare">Per il titolare</h2>
+
+    <section class="panel" id="primo-accesso">
+      <h3>Primo accesso</h3>
+      <p>Serve il <strong>computer</strong> su cui hai installato l'estensione <strong>ChainIntegrate Account</strong> nel browser, con l'account dell'azienda.</p>
+      <ol>
+        <li>Apri <a href="./">gastrace.chainintegrate.it</a> e premi <strong>Accedi con ChainIntegrate Account</strong>.</li>
+        <li>Si apre la finestra dell'estensione: controlla che il sito sia <code>gastrace.chainintegrate.it</code> e conferma.</li>
+        <li>La pagina trova da sola il registro delle bombole dell'azienda. Se ne hai più di uno, scegli quello giusto.</li>
+        <li>Scrivi la <strong>password dei dati</strong> e premi <strong>Apri</strong>. Ci vuole qualche secondo.</li>
+      </ol>
+      <p class="note">Se la pagina dice che non trova l'estensione, installala da <a href="https://account.chainintegrate.it/" target="_blank" rel="noopener">account.chainintegrate.it</a> o apri la pagina con il browser in cui è già installata.</p>
+      <p>Ogni modifica (un cliente, un telefono, le impostazioni) si conferma nella finestra dell'estensione. Se premi Annulla lì, non cambia niente.</p>
+    </section>
+
+    <section class="panel" id="password">
+      <h3>Password dei dati e codice di recupero</h3>
+      <ul>
+        <li>La <strong>password dei dati</strong> apre i dati delle bombole. Resta nella pagina, non viene inviata a nessuno, e chiudendo la pagina viene dimenticata.</li>
+        <li>Il <strong>codice di recupero</strong> è di 24 parole e ti è stato consegnato una volta sola alla creazione del registro. Tienilo stampato in un posto sicuro, lontano dal computer. Non fotografarlo e non mandarlo per mail.</li>
+        <li>Se perdi la password: nella schermata della password premi <strong>Ho perso la password</strong>, scrivi le 24 parole e scegli una nuova password.</li>
+        <li>Per cambiarla: <strong>Impostazioni → Cambia password</strong>. I telefoni già configurati continuano a funzionare.</li>
+      </ul>
+      <p class="warn">Senza password e senza codice di recupero nessuno, nemmeno ChainIntegrate, può più leggere i dati.</p>
+      <p>Una buona password è una frase di almeno 20 caratteri, oppure almeno 14 caratteri mescolando minuscole, maiuscole, cifre e simboli.</p>
+    </section>
+
+    <section class="panel" id="impostazioni">
+      <h3>Impostazioni (da fare per prime)</h3>
+      <ul>
+        <li><strong>Nome dell'azienda</strong>: compare nell'app e nell'oggetto delle mail. Finché manca, l'app avvisa l'autista.</li>
+        <li><strong>Email dell'azienda</strong>: le caselle dell'azienda (ufficio, magazzino…) che ricevono una copia di ogni documento, di tutti i clienti. Separale con una virgola.</li>
+      </ul>
+    </section>
+
+    <section class="panel" id="clienti">
+      <h3>Clienti e centri di ricarica</h3>
+      <ul>
+        <li><strong>Clienti → Aggiungi cliente</strong>: nome e mail. Le mail del cliente ricevono ogni documento che lo riguarda.</li>
+        <li><strong>Aggiungi centro di ricarica</strong>: il centro dove mandate le bombole a ricaricare.</li>
+        <li><strong>Modifica</strong> cambia nome o mail; <strong>Togli</strong> lo toglie dall'elenco dell'app, ma i documenti già registrati restano.</li>
+      </ul>
+      <p>L'autista vede l'elenco aggiornato alla prossima apertura dell'app.</p>
+    </section>
+
+    <section class="panel" id="telefoni">
+      <h3>Telefoni degli autisti</h3>
+      <p>Ogni telefono va autorizzato una volta, con l'autista accanto. La sezione <strong>Telefoni</strong> mostra il codice QR di configurazione.</p>
+      <ol>
+        <li>L'autista installa l'app (<a href="#installare">vedi sotto</a>) e la apre: inquadra il QR sullo schermo del computer.</li>
+        <li>L'app gli fa creare la chiave del telefono con l'impronta o il PIN, poi mostra il <strong>codice del telefono</strong> (gruppi di 4 caratteri).</li>
+        <li>Tu scrivi quel codice in <strong>Autorizza un telefono</strong>, premi <strong>Autorizza</strong> e confermi nell'estensione.</li>
+        <li>L'app se ne accorge da sola e chiede la <strong>password dei dati</strong>: la scrivi tu sul telefono, una volta sola. Il telefono non la conserva.</li>
+      </ol>
+      <p><strong>Revoca</strong> un telefono perso, rubato o di un autista che non lavora più con voi: da quel momento non può più registrare niente.</p>
+    </section>
+
+    <section class="panel" id="consultare">
+      <h3>Bombole e documenti</h3>
+      <ul>
+        <li><strong>Panoramica</strong>: quante bombole in deposito, dai clienti, in ricarica, difettose; per gas; gli ultimi documenti.</li>
+        <li><strong>Bombole</strong>: cerca per codice, gas o cliente. Clicca una bombola per vedere tutta la sua storia, movimento per movimento.</li>
+        <li><strong>Documenti</strong>: DDT, giacenze e documenti di ricarica, con le bombole e le segnalazioni confermate dall'autista.</li>
+      </ul>
+      <p><strong>Aggiorna</strong> ricarica i dati dopo un nuovo documento.</p>
+    </section>
+
+    <h2 class="part" id="autista">Per l'autista</h2>
+
+    <section class="panel" id="installare">
+      <h3>Installare l'app</h3>
+      <p>L'app GasTrace è per telefoni <strong>Android</strong>. Non è sul Play Store: si scarica dal sito di GitHub.</p>
+      <ol>
+        <li>Sul telefono apri <a href="https://github.com/ChainIntegrate/gas-cylinder-registry/releases/latest" target="_blank" rel="noopener">l'ultima versione di GasTrace</a> e tocca il file <code>gastrace-v….apk</code> per scaricarlo.</li>
+        <li>Apri il file scaricato. <strong>La prima volta</strong> Android dice che non può installare app da questa fonte: tocca <strong>Impostazioni</strong>, attiva <strong>Consenti da questa fonte</strong>, torna indietro e l'installazione prosegue.</li>
+        <li>Può comparire <strong>Play Protect</strong>, che propone di controllare l'app perché non viene dal Play Store: accetta il controllo, oppure tocca <strong>Altri dettagli → Installa comunque</strong>. È il controllo di Google sulle app che non passano dal suo negozio, non un problema dell'app.</li>
+      </ol>
+      <p>Il telefono deve avere un <strong>blocco schermo</strong> (impronta, PIN o sequenza): senza, l'app non può proteggere la sua chiave.</p>
+      <p class="warn">Non disinstallare mai l'app e non cancellarne i dati: la chiave del telefono andrebbe persa e il telefono andrebbe configurato di nuovo con il titolare.</p>
+    </section>
+
+    <section class="panel" id="configurare">
+      <h3>Configurare il telefono (una volta, con il titolare)</h3>
+      <ol>
+        <li>Apri GasTrace e tocca <strong>Inquadra il codice</strong>: inquadra il QR che il titolare ti mostra nella sua pagina.</li>
+        <li>Tocca <strong>Crea la chiave</strong> e conferma con l'impronta o il PIN.</li>
+        <li>L'app mostra il <strong>codice di questo telefono</strong>: dallo al titolare (puoi usare <strong>Copia</strong>).</li>
+        <li>Quando il titolare l'ha autorizzato, l'app chiede la <strong>password dei dati</strong>: la scrive il titolare.</li>
+      </ol>
+      <p>Da quel momento apri l'app con <strong>Sblocca con impronta o PIN</strong>.</p>
+    </section>
+
+    <section class="panel" id="consegna">
+      <h3>Consegna e ritiro</h3>
+      <ol>
+        <li>Tocca <strong>Consegna / ritiro</strong> e scegli il cliente.</li>
+        <li>Tocca <strong>Inquadra bombola</strong> per ogni bombola, quelle che lasci e quelle che ritiri. Se il codice non si legge, usa <strong>Scrivi il codice</strong>.</li>
+        <li>L'app propone da sola il movimento:
+          <ul>
+            <li>una bombola in deposito, o mai vista prima, è una <strong>consegna</strong> (piena);</li>
+            <li>una bombola che era già da questo cliente è un <strong>ritiro</strong> (vuota; puoi scegliere piena o difettosa).</li>
+          </ul>
+        </li>
+        <li>Per una <strong>bombola nuova</strong> scegli il gas (e se vuoi i litri).</li>
+        <li>Se compare una <strong>segnalazione</strong> (per esempio "Risulta presso un altro cliente"), controlla e tocca <strong>Confermo le segnalazioni</strong>: finiscono anche nella mail.</li>
+        <li>Scrivi il <strong>numero del DDT</strong>, controlla il riepilogo e a chi va la mail (puoi aggiungere un indirizzo), poi <strong>Invia</strong> e conferma con l'impronta o il PIN.</li>
+      </ol>
+      <p>"Registrato" vuol dire che il documento è salvato; poi l'app dice se la mail è partita.</p>
+    </section>
+
+    <section class="panel" id="giacenze">
+      <h3>Giacenze</h3>
+      <p>Si usa all'inizio, per registrare le bombole che si trovano già dai clienti o nei centri di ricarica, e ogni volta che serve un conteggio.</p>
+      <ol>
+        <li>Tocca <strong>Giacenze</strong> e scegli il cliente o il centro.</li>
+        <li>Inquadra tutte le bombole presenti e per quelle nuove scegli il gas.</li>
+        <li><strong>Invia</strong>. Non serve il numero di documento e non parte nessuna mail, a meno che tu non aggiunga un indirizzo.</li>
+      </ol>
+    </section>
+
+    <section class="panel" id="ricarica">
+      <h3>Ricarica</h3>
+      <p>Tocca <strong>Ricarica</strong> e scegli il centro di ricarica. Inquadra le bombole: quelle in deposito risultano <strong>inviate a ricarica</strong>, quelle che erano in quel centro risultano <strong>rientrate da ricarica</strong>. Scrivi il numero del documento e invia.</p>
+    </section>
+
+    <section class="panel" id="controlla">
+      <h3>Controllare una bombola</h3>
+      <p><strong>Controlla una bombola</strong>: inquadra il codice e vedi gas, dove si trova, condizione e ultimo movimento. Non registra niente.</p>
+    </section>
+
+    <section class="panel" id="senza-rete">
+      <h3>Senza rete: "Da inviare"</h3>
+      <p>Se non c'è segnale, il documento viene salvato sul telefono e parte da solo appena torna la rete. Nella schermata iniziale compare <strong>Da inviare (n)</strong>: lì puoi vederli, mandarli con <strong>Invia ora</strong> o scartarli.</p>
+      <p>Se intanto un'altra persona ha registrato una delle stesse bombole, l'app dice "Una bombola è cambiata nel frattempo": rifai il documento.</p>
+    </section>
+
+    <section class="panel" id="mail">
+      <h3>La mail del documento</h3>
+      <p>Dopo ogni DDT o documento di ricarica parte una mail alle mail del cliente, a quelle dell'azienda e agli indirizzi aggiunti nel documento. Se l'app dice che la mail non è partita, o che non sa se è partita, tocca <strong>Manda dal telefono</strong>: si apre la tua app di posta con il testo già pronto.</p>
+    </section>
+
+    <section class="panel" id="aggiornare">
+      <h3>Aggiornare l'app</h3>
+      <p>Quando esce una nuova versione, nella schermata iniziale compare <strong>"È disponibile una nuova versione di GasTrace"</strong>. Tocca <strong>Scarica</strong>, apri il file scaricato e conferma: la nuova versione si installa sopra quella vecchia e il telefono resta configurato. La versione installata è scritta in fondo alla schermata iniziale.</p>
+    </section>
+
+    <h2 class="part" id="problemi">Problemi frequenti</h2>
+
+    <section class="panel faq">
+      <h3>"Una bombola è cambiata nel frattempo"</h3>
+      <p>Qualcuno ha registrato la stessa bombola dopo che l'hai inquadrata. Rifai il documento: l'app ripropone i movimenti aggiornati.</p>
+      <h3>"Questo documento risulta già registrato"</h3>
+      <p>Lo stesso numero di documento è già stato inviato. Controlla in "Da inviare" o chiedi al titolare di guardare in Documenti.</p>
+      <h3>"Questo telefono non è più autorizzato"</h3>
+      <p>Il titolare l'ha revocato. Se è un errore, va configurato di nuovo.</p>
+      <h3>Telefono perso, rubato o cambiato</h3>
+      <p>Il titolare lo revoca subito da <strong>Telefoni</strong>. Il telefono nuovo si configura da capo, come la prima volta.</p>
+      <h3>L'impronta non va più, o è stato tolto il blocco schermo</h3>
+      <p>Android cancella la chiave dell'app quando si toglie il blocco schermo. Rimetti il blocco schermo e configura di nuovo il telefono con il titolare; il titolare revoca il vecchio codice.</p>
+      <h3>La pagina non trova l'estensione</h3>
+      <p>Apri la pagina nel browser dove è installata ChainIntegrate Account, oppure installala da <a href="https://account.chainintegrate.it/" target="_blank" rel="noopener">account.chainintegrate.it</a>.</p>
+      <h3>"Password non corretta"</h3>
+      <p>Controlla maiuscole e tastiera. Se l'hai persa, usa <strong>Ho perso la password</strong> con il codice di recupero.</p>
+      <h3>Altro</h3>
+      <p>Scrivi a ChainIntegrate indicando cosa stavi facendo e il messaggio che hai visto.</p>
+    </section>
+  </main>
+
+  <footer>GasTrace è un servizio di ChainIntegrate.</footer>
+</div>
+</body>
+</html>

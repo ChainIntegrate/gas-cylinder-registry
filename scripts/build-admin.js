@@ -3,7 +3,7 @@
 // Builds the GasTrace admin page and the operator page into admin/www (static files for the web server):
 //   admin.js, operator.js   admin/src/*.js bundled with esbuild (ethers, shared/, the owner tools' logic)
 //   index.html, operator.html with the Content-Security-Policy allowing only the configured RPC and relayer
-//   admin.css, logo.png, favicon.ico
+//   admin.css, logo.png, favicon.ico, and the users' guide (guida.html in Italian, guide.html in English)
 // GCR_ADMIN_CONFIG=<file> uses another configuration (the browser test points it at a local chain).
 const fs = require("fs");
 const path = require("path");
@@ -37,7 +37,7 @@ for (const k of ["rpc", "chainId", "relayer", "factory"]) if (config[k] === unde
     const html = fs.readFileSync(path.join(DIR, page), "utf8").replace(/connect-src [^;]+;/, `connect-src ${connect};`);
     fs.writeFileSync(path.join(OUT, page), html);
   }
-  for (const f of ["admin.css", "logo.png", "favicon.ico"]) fs.copyFileSync(path.join(DIR, f), path.join(OUT, f));
+  for (const f of ["admin.css", "logo.png", "favicon.ico", "guida.html", "guide.html"]) fs.copyFileSync(path.join(DIR, f), path.join(OUT, f));
   console.log(`admin/www built (admin.js ${(fs.statSync(path.join(OUT, "admin.js")).size / 1024).toFixed(0)} KB, connect-src ${connect})`);
 })().catch((e) => {
   console.error(e);

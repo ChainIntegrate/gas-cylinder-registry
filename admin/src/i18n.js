@@ -122,6 +122,7 @@ const T = {
     locations: { depot: "In deposito", customer: (n) => `Presso ${n}`, refill: (n) => `In ricarica presso ${n}` },
     retired: "Dismessa",
     footer: "GasTrace è un servizio di ChainIntegrate.",
+    guide: "Guida",
   },
   en: {
     lang: "Italiano",
@@ -232,6 +233,7 @@ const T = {
     locations: { depot: "At the depot", customer: (n) => `At ${n}`, refill: (n) => `Being refilled at ${n}` },
     retired: "Retired",
     footer: "GasTrace is a ChainIntegrate service.",
+    guide: "Guide",
   },
 };
 

@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <title>GasTrace guide</title>
+  <link rel="icon" href="favicon.ico">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body class="guide">
+<div id="app">
+  <header class="top">
+    <div class="brand">
+      <img class="mark" src="logo.png" alt="">
+      <div><div class="name">GasTrace guide</div><div class="tagline">The owner's page and the drivers' app, step by step.</div></div>
+    </div>
+    <div class="top-actions">
+      <a class="button ghost" href="guida.html" lang="it">Italiano</a>
+      <a class="button primary" href="./">Go to the page</a>
+    </div>
+  </header>
+
+  <main>
+    <nav class="panel toc">
+      <h2>In this guide</h2>
+      <ol>
+        <li><a href="#how-it-works">How it works</a></li>
+        <li><a href="#owner">For the owner</a>
+          <ol>
+            <li><a href="#first-sign-in">First sign-in</a></li>
+            <li><a href="#password">Data password and recovery code</a></li>
+            <li><a href="#settings">Settings</a></li>
+            <li><a href="#customers">Customers and refill plants</a></li>
+            <li><a href="#phones">Drivers' phones</a></li>
+            <li><a href="#browsing">Cylinders and documents</a></li>
+          </ol>
+        </li>
+        <li><a href="#driver">For the driver</a>
+          <ol>
+            <li><a href="#install">Installing the app</a></li>
+            <li><a href="#setup">Setting up the phone</a></li>
+            <li><a href="#delivery">Delivery and collection</a></li>
+            <li><a href="#stock-count">Stock count</a></li>
+            <li><a href="#refill">Refill</a></li>
+            <li><a href="#check">Checking a cylinder</a></li>
+            <li><a href="#offline">No network: "To send"</a></li>
+            <li><a href="#email">The document's e-mail</a></li>
+            <li><a href="#update">Updating the app</a></li>
+          </ol>
+        </li>
+        <li><a href="#problems">Common problems</a></li>
+      </ol>
+    </nav>
+
+    <section class="panel" id="how-it-works">
+      <h2>How it works</h2>
+      <p>Each cylinder has its own record: gas, where it is, whether it is full, empty or defective, and all its movements. The records update themselves with each of the driver's documents.</p>
+      <ul>
+        <li><strong>The owner</strong> uses the page <a href="./">gastrace.chainintegrate.it</a> on a computer: sees cylinders and documents, manages customers, phones and settings.</li>
+        <li><strong>The driver</strong> uses the GasTrace app on an Android phone: scans the cylinders' barcodes at delivery and collection.</li>
+        <li>After each document an <strong>e-mail</strong> goes to the customer and to the company.</li>
+        <li>The data is <strong>encrypted</strong>: only the owner's data password opens it. The company pays nothing per operation: ChainIntegrate takes care of it.</li>
+      </ul>
+    </section>
+
+    <h2 class="part" id="owner">For the owner</h2>
+
+    <section class="panel" id="first-sign-in">
+      <h3>First sign-in</h3>
+      <p>Use the <strong>computer</strong> where the <strong>ChainIntegrate Account</strong> extension is installed in the browser, with the company's account.</p>
+      <ol>
+        <li>Open <a href="./">gastrace.chainintegrate.it</a> and press <strong>Sign in with ChainIntegrate Account</strong>.</li>
+        <li>The extension's window opens: check that the site is <code>gastrace.chainintegrate.it</code> and confirm.</li>
+        <li>The page finds the company's cylinder register by itself. If there is more than one, choose the right one.</li>
+        <li>Type the <strong>data password</strong> and press <strong>Open</strong>. It takes a few seconds.</li>
+      </ol>
+      <p class="note">If the page cannot find the extension, install it from <a href="https://account.chainintegrate.it/" target="_blank" rel="noopener">account.chainintegrate.it</a>, or open the page in the browser where it is installed.</p>
+      <p>Each change (a customer, a phone, the settings) is confirmed in the extension's window. Pressing Cancel there changes nothing.</p>
+    </section>
+
+    <section class="panel" id="password">
+      <h3>Data password and recovery code</h3>
+      <ul>
+        <li>The <strong>data password</strong> opens the cylinders' data. It stays in the page, is never sent anywhere, and is forgotten when the page closes.</li>
+        <li>The <strong>recovery code</strong> is 24 words, handed to you once when the register was created. Keep it printed in a safe place, away from the computer. Do not photograph it or e-mail it.</li>
+        <li>Lost the password: on the password screen press <strong>I lost the password</strong>, type the 24 words and choose a new password.</li>
+        <li>To change it: <strong>Settings → Change password</strong>. Phones already set up keep working.</li>
+      </ul>
+      <p class="warn">Without the password and the recovery code nobody, ChainIntegrate included, can read the data any more.</p>
+      <p>A good password is a sentence of at least 20 characters, or at least 14 characters mixing lower case, upper case, digits and symbols.</p>
+    </section>
+
+    <section class="panel" id="settings">
+      <h3>Settings (do these first)</h3>
+      <ul>
+        <li><strong>Company name</strong>: shown in the app and in the e-mails' subject. Until it is set, the app warns the driver.</li>
+        <li><strong>Your company's e-mails</strong>: the company's mailboxes (office, warehouse…) that receive a copy of every document, for all customers. Separate them with commas.</li>
+      </ul>
+    </section>
+
+    <section class="panel" id="customers">
+      <h3>Customers and refill plants</h3>
+      <ul>
+        <li><strong>Customers → Add customer</strong>: name and e-mails. The customer's e-mails receive each document about them.</li>
+        <li><strong>Add refill plant</strong>: where the cylinders go to be refilled.</li>
+        <li><strong>Edit</strong> changes the name or e-mails; <strong>Remove</strong> takes it off the app's list, but documents already recorded stay.</li>
+      </ul>
+      <p>The driver sees the updated list the next time the app is opened.</p>
+    </section>
+
+    <section class="panel" id="phones">
+      <h3>Drivers' phones</h3>
+      <p>Each phone is authorized once, with the driver next to you. The <strong>Phones</strong> section shows the setup QR code.</p>
+      <ol>
+        <li>The driver installs the app (<a href="#install">see below</a>) and opens it: scans the QR on the computer's screen.</li>
+        <li>The app has the driver create the phone's key with fingerprint or PIN, then shows the <strong>phone's code</strong> (groups of 4 characters).</li>
+        <li>You type that code in <strong>Authorize a phone</strong>, press <strong>Authorize</strong> and confirm in the extension.</li>
+        <li>The app notices by itself and asks for the <strong>data password</strong>: you type it on the phone, once. The phone does not keep it.</li>
+      </ol>
+      <p><strong>Revoke</strong> a phone that is lost, stolen, or belongs to a driver who no longer works with you: from then on it cannot record anything.</p>
+    </section>
+
+    <section class="panel" id="browsing">
+      <h3>Cylinders and documents</h3>
+      <ul>
+        <li><strong>Overview</strong>: how many cylinders at the depot, at customers, being refilled, defective; by gas; the latest documents.</li>
+        <li><strong>Cylinders</strong>: search by code, gas or customer. Click a cylinder to see its whole history, movement by movement.</li>
+        <li><strong>Documents</strong>: delivery notes, stock counts and refill notes, with their cylinders and the warnings the driver confirmed.</li>
+      </ul>
+      <p><strong>Refresh</strong> reloads the data after a new document.</p>
+    </section>
+
+    <h2 class="part" id="driver">For the driver</h2>
+
+    <section class="panel" id="install">
+      <h3>Installing the app</h3>
+      <p>The GasTrace app is for <strong>Android</strong> phones. It is not on the Play Store: it is downloaded from GitHub.</p>
+      <ol>
+        <li>On the phone open <a href="https://github.com/ChainIntegrate/gas-cylinder-registry/releases/latest" target="_blank" rel="noopener">the latest version of GasTrace</a> and tap the <code>gastrace-v….apk</code> file to download it.</li>
+        <li>Open the downloaded file. <strong>The first time</strong> Android says it cannot install apps from this source: tap <strong>Settings</strong>, turn on <strong>Allow from this source</strong>, go back and the installation goes on.</li>
+        <li><strong>Play Protect</strong> may offer to scan the app because it does not come from the Play Store: accept the scan, or tap <strong>More details → Install anyway</strong>. It is Google's check of apps that do not go through its store, not a problem of the app.</li>
+      </ol>
+      <p>The phone needs a <strong>screen lock</strong> (fingerprint, PIN or pattern): without it the app cannot protect its key.</p>
+      <p class="warn">Never uninstall the app or clear its data: the phone's key would be lost and the phone would have to be set up again with the owner.</p>
+    </section>
+
+    <section class="panel" id="setup">
+      <h3>Setting up the phone (once, with the owner)</h3>
+      <ol>
+        <li>Open GasTrace and tap <strong>Scan the code</strong>: scan the QR the owner shows on the page.</li>
+        <li>Tap <strong>Create the key</strong> and confirm with fingerprint or PIN.</li>
+        <li>The app shows <strong>this phone's code</strong>: give it to the owner (you can use <strong>Copy</strong>).</li>
+        <li>Once the owner has authorized it, the app asks for the <strong>data password</strong>: the owner types it.</li>
+      </ol>
+      <p>From then on open the app with <strong>Unlock with fingerprint or PIN</strong>.</p>
+    </section>
+
+    <section class="panel" id="delivery">
+      <h3>Delivery and collection</h3>
+      <ol>
+        <li>Tap <strong>Delivery / collection</strong> and choose the customer.</li>
+        <li>Tap <strong>Scan cylinder</strong> for each cylinder, those you leave and those you take back. If the code cannot be read, use <strong>Type the code</strong>.</li>
+        <li>The app proposes the movement by itself:
+          <ul>
+            <li>a cylinder at the depot, or never seen before, is a <strong>delivery</strong> (full);</li>
+            <li>a cylinder that was already at this customer is a <strong>collection</strong> (empty; full or defective can be chosen).</li>
+          </ul>
+        </li>
+        <li>For a <strong>new cylinder</strong> choose the gas (and the litres if you like).</li>
+        <li>If a <strong>warning</strong> appears (for example "Recorded at another customer"), check it and tap <strong>I confirm the warnings</strong>: they are listed in the e-mail too.</li>
+        <li>Type the <strong>delivery note number</strong>, check the summary and who gets the e-mail (you can add an address), then <strong>Send</strong> and confirm with fingerprint or PIN.</li>
+      </ol>
+      <p>"Recorded" means the document is saved; then the app says whether the e-mail left.</p>
+    </section>
+
+    <section class="panel" id="stock-count">
+      <h3>Stock count</h3>
+      <p>Used at the start, to record the cylinders already at customers or refill plants, and whenever a count is needed.</p>
+      <ol>
+        <li>Tap <strong>Stock count</strong> and choose the customer or plant.</li>
+        <li>Scan all the cylinders there; for new ones choose the gas.</li>
+        <li><strong>Send</strong>. No document number is needed and no e-mail leaves, unless you add an address.</li>
+      </ol>
+    </section>
+
+    <section class="panel" id="refill">
+      <h3>Refill</h3>
+      <p>Tap <strong>Refill</strong> and choose the refill plant. Scan the cylinders: those at the depot are <strong>sent to refill</strong>, those that were at that plant are <strong>back from refill</strong>. Type the document number and send.</p>
+    </section>
+
+    <section class="panel" id="check">
+      <h3>Checking a cylinder</h3>
+      <p><strong>Check a cylinder</strong>: scan the code and see the gas, where it is, its condition and last movement. It records nothing.</p>
+    </section>
+
+    <section class="panel" id="offline">
+      <h3>No network: "To send"</h3>
+      <p>Without signal the document is saved on the phone and leaves by itself when the network returns. The home screen shows <strong>To send (n)</strong>: there you can see them, send them with <strong>Send now</strong> or discard them.</p>
+      <p>If meanwhile someone else recorded one of the same cylinders, the app says "A cylinder changed in the meantime": make the document again.</p>
+    </section>
+
+    <section class="panel" id="email">
+      <h3>The document's e-mail</h3>
+      <p>After each delivery note or refill note an e-mail goes to the customer's e-mails, the company's e-mails and any address added in the document. If the app says the e-mail did not leave, or it does not know whether it left, tap <strong>Send from the phone</strong>: your e-mail app opens with the text ready.</p>
+    </section>
+
+    <section class="panel" id="update">
+      <h3>Updating the app</h3>
+      <p>When a new version is out, the home screen shows <strong>"A new version of GasTrace is available"</strong>. Tap <strong>Download</strong>, open the downloaded file and confirm: the new version installs over the old one and the phone stays set up. The installed version is written at the bottom of the home screen.</p>
+    </section>
+
+    <h2 class="part" id="problems">Common problems</h2>
+
+    <section class="panel faq">
+      <h3>"A cylinder changed in the meantime"</h3>
+      <p>Someone recorded the same cylinder after you scanned it. Make the document again: the app proposes the updated movements.</p>
+      <h3>"This document is already recorded"</h3>
+      <p>The same document number was already sent. Look in "To send", or ask the owner to look in Documents.</p>
+      <h3>"This phone is no longer authorized"</h3>
+      <p>The owner revoked it. If that was a mistake, it has to be set up again.</p>
+      <h3>Phone lost, stolen or replaced</h3>
+      <p>The owner revokes it at once in <strong>Phones</strong>. The new phone is set up from scratch, like the first time.</p>
+      <h3>The fingerprint no longer works, or the screen lock was removed</h3>
+      <p>Android deletes the app's key when the screen lock is removed. Set the screen lock again and set up the phone again with the owner; the owner revokes the old code.</p>
+      <h3>The page cannot find the extension</h3>
+      <p>Open the page in the browser where ChainIntegrate Account is installed, or install it from <a href="https://account.chainintegrate.it/" target="_blank" rel="noopener">account.chainintegrate.it</a>.</p>
+      <h3>"Wrong password"</h3>
+      <p>Check upper case and the keyboard. If it is lost, use <strong>I lost the password</strong> with the recovery code.</p>
+      <h3>Anything else</h3>
+      <p>Write to ChainIntegrate saying what you were doing and the message you saw.</p>
+    </section>
+  </main>
+
+  <footer>GasTrace is a ChainIntegrate service.</footer>
+</div>
+</body>
+</html>

@@ -673,7 +673,7 @@ function render() {
       header(),
       st.msg ? h("div", { class: "msg " + st.msg.cls, role: "status" }, st.msg.text) : null,
       h("main", {}, (views[st.view] || viewConnect)()),
-      h("footer", {}, tx.footer),
+      h("footer", {}, tx.footer, " · ", h("a", { href: st.lang === "it" ? "guida.html" : "guide.html", target: "_blank", rel: "noopener" }, tx.guide)),
       st.busy ? h("div", { class: "busy", role: "status" }, h("span", { class: "spin" }), st.busy) : null,
     ].filter(Boolean)
   );
