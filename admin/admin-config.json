@@ -2,6 +2,6 @@
   "rpc": "https://rpc.mainnet.lukso.network",
   "chainId": 42,
   "relayer": "https://gastrace.chainintegrate.it",
-  "factory": "0x0000000000000000000000000000000000000000",
-  "factoryBlock": 0
+  "factory": "0xA128e7162fa8Dc779bf31EF569F06B53a499A50e",
+  "factoryBlock": 8774243
 }
