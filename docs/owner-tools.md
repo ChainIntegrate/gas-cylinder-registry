@@ -1,7 +1,8 @@
 # ChainIntegrate's command-line tools
 
 `scripts/owner.js`: what ChainIntegrate does once per network and once per supplier (the factory, the
-registers, the source verification), and the owner operations for an owner that uses a key file instead
+registers, the source verification; registers can also be created from the operator page, see
+[admin.md](admin.md#the-operator-page-chainintegrate-only)), and the owner operations for an owner that uses a key file instead
 of a ChainIntegrate account. A supplier with a ChainIntegrate account manages its register from the
 admin page ([admin.md](admin.md)), not from here.
 
@@ -31,7 +32,10 @@ node scripts/owner.js new-key chainintegrate.keystore.json
 node scripts/owner.js deploy-factory --network lukso
 npx hardhat run --network luksoMainnet scripts/verify-lukso.js     # source on LUKSO's explorer (needs npm ci)
 
-# Per supplier: the register, owned by the supplier's ChainIntegrate account
+# Once, when the operator page is used: the factory to ChainIntegrate's Universal Profile
+node scripts/owner.js transfer-factory 0x<ChainIntegrate's profile>
+
+# Per supplier, from the command line (or from the operator page, see admin.md):
 node scripts/owner.js create-registry --network lukso --name "Argonia Gas Tecnici" --symbol ARGCYL \
   --owner 0x<the account's address> --language it
 ```
@@ -51,6 +55,7 @@ address and a new recovery code), and save an existing one with `use-registry <a
 | `status` | The register: name, owner, phones, cylinders, key wraps |
 | `phone-setup` | The setup code and its QR in the terminal (the admin page shows the same) |
 | `use-registry <address>` | Save a register created earlier into `gcr-registry.json` |
+| `transfer-factory <address>` | Hand the factory over to ChainIntegrate's Universal Profile, in one final step: the address must answer as a profile (LSP0), and you retype its last six characters |
 
 For an owner with a key file (`--owner-keystore` at creation), the owner operations are here too:
 `settings`, `counterparties`, `add-customer`, `add-refill-plant`, `edit-counterparty`,

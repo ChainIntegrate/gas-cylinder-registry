@@ -54,6 +54,11 @@ jobs:
           git clone --depth 1 https://github.com/ChainIntegrate/up-onboarding ../up-onboarding
           UPONBOARDING_DIR=../up-onboarding node scripts/admin-demo.js
 
+      # The operator page: ChainIntegrate creates a register from the browser.
+      - name: Operator page test
+        timeout-minutes: 10
+        run: node scripts/operator-demo.js
+
       - name: Web content and copy into the Android project
         run: |
           node scripts/build-app.js

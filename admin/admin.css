@@ -110,3 +110,18 @@ code.phone { font-size: 15px; letter-spacing: .03em; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
 footer { text-align: center; color: var(--dim); font-size: 12.5px; margin-top: 36px; }
+
+/* Operator page: the recovery code, and its printout (only the words and the register's name). */
+.words { columns: 4; column-gap: 24px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 15px; padding-left: 28px; }
+.words li { padding: 3px 0; }
+@media (max-width: 640px) { .words { columns: 2; } }
+.panel.code { border: 2px solid var(--warn); }
+.print-only { display: none; }
+select { width: 100%; font: inherit; color: var(--text); background: var(--field); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-top: 6px; }
+@media print {
+  body * { visibility: hidden; }
+  .printable, .printable * { visibility: visible; }
+  .printable { position: absolute; left: 0; top: 0; width: 100%; color: #000; }
+  .print-only { display: block; font-weight: 700; margin-bottom: 12px; }
+}
+.panel > .qr { max-width: 200px; margin-top: 14px; }

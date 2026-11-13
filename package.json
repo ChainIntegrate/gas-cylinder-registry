@@ -11,7 +11,8 @@
     "test:ui": "node scripts/ui-demo.js",
     "build:admin": "node scripts/build-admin.js",
     "test:admin": "node scripts/admin-demo.js",
-    "verify:lukso": "hardhat run --network luksoMainnet scripts/verify-lukso.js"
+    "verify:lukso": "hardhat run --network luksoMainnet scripts/verify-lukso.js",
+    "test:operator": "node scripts/operator-demo.js"
   },
   "devDependencies": {
     "@capacitor-mlkit/barcode-scanning": "^8.2.1",

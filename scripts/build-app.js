@@ -8,6 +8,7 @@
 const fs = require("fs");
 const path = require("path");
 const esbuild = require("esbuild");
+const allWordlists = require("./lib/esbuild-wordlists");
 
 const ROOT = path.join(__dirname, "..");
 const APP = path.join(ROOT, "app");
@@ -27,7 +28,7 @@ for (const k of ["rpc", "chainId", "relayer"]) if (!config[k]) throw new Error(`
     target: ["chrome100"],
     outfile: path.join(OUT, "app.js"),
     // The configuration is bundled in place of app/app-config.json.
-    plugins: [{
+    plugins: [allWordlists, {
       name: "app-config",
       setup(b) {
         b.onResolve({ filter: /app-config\.json$/ }, () => ({ path: configFile }));

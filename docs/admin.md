@@ -43,11 +43,31 @@ The data password opens the register's data **in the page only**: it is never se
 the page forgets it. "I lost the password" opens the data with the 24-word recovery code and sets a new
 password.
 
+## The operator page (ChainIntegrate only)
+
+`https://gastrace.chainintegrate.it/operator.html` (not indexed): ChainIntegrate creates a supplier's
+register from the browser instead of the command line.
+
+- **Sign-in** with the wallet of ChainIntegrate's Universal Profile, the factory's owner: LUKSO's
+  Universal Profile extension or UP Wallet, found through EIP-6963. The ChainIntegrate Account extension
+  is left out on purpose: it never signs ChainIntegrate's own administration. The page checks that the
+  account is the factory's owner.
+- **Registers created**: name, owner, number of cylinders, each linked to the explorer.
+- **New register**: the company's name and symbol, the supplier's ChainIntegrate account (checked to be a
+  Universal Profile), the data password (typed in the page, checked, never sent) and the language of the
+  recovery code. The page makes the data key and its two wraps, shows the **24 words once** (with a print
+  button that prints only the words and the register's name), asks for two of them, then sends
+  `createRegistry` through the wallet: ChainIntegrate's profile signs and pays. At the end: the register's
+  address and the admin page's link and QR for the supplier.
+
+The factory must first belong to ChainIntegrate's profile: `node scripts/owner.js transfer-factory
+<profile address>` ([owner-tools.md](owner-tools.md)), once.
+
 ## Build and publish
 
 ```bash
 # admin/admin-config.json: rpc, chainId, relayer, factory and the factory's deployment block
-node scripts/build-admin.js      # admin/www: index.html, admin.js, admin.css, logo, favicon
+node scripts/build-admin.js      # admin/www: index.html, operator.html, their scripts, admin.css, logo, favicon
 ```
 
 `admin/www` is committed: the server serves it from its clone (`/var/www/gas-cylinder-registry`) with no
@@ -61,7 +81,13 @@ Content-Security-Policy allows nothing else).
 ```bash
 npx hardhat node &
 UPONBOARDING_DIR=../up-onboarding node scripts/admin-demo.js [screenshots-dir]
+node scripts/operator-demo.js [screenshots-dir]
 ```
+
+The operator test creates a register from the page with a simulated ChainIntegrate wallet (the
+ChainIntegrate Account extension announced too, and ignored), refuses a weak password, an owner that is
+not a profile and wrong check words, and checks that the register is the factory's, owned by the
+supplier, and opened both by the password and by the 24 words shown.
 
 The test runs the page in Chromium with a simulated extension whose account is a contract that validates
 signatures with ERC-1271, as a ChainIntegrate account does, and checks every request against the

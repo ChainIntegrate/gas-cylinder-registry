@@ -25,6 +25,9 @@ Keys
 
 ChainIntegrate (the factory's owner; also sends the owner's signed operations until the relayer exists)
   deploy-factory                     Deploy the factory; writes its address to the config file.
+  transfer-factory <address>         Hand the factory over to ChainIntegrate's Universal Profile, so that
+                                     registers are created from the operator page. One step, final: the
+                                     address must be a Universal Profile, and you retype its end.
   create-registry --name <name> --symbol <symbol> (--owner <address> | --owner-keystore <file>) [--language en|it]
                                      The owner is an account address (a ChainIntegrate Account, managed from
                                      the GasTrace admin page) or, for an owner using these tools, a key file.
@@ -236,6 +239,47 @@ async function main() {
     const r = await O.createRegistry({ factory, prepared, owner, name: args.name, symbol: args.symbol, log: console.log });
     saveConfig(configFile, { ...config, network, registry: r.address, registryBlock: r.block, ...(typeof args.owner === "string" ? { owner } : { ownerKeystore }) });
     console.log(`Registry: ${r.address} (block ${r.block}), saved to ${configFile}`);
+    return;
+  }
+
+  if (command === "transfer-factory") {
+    // The factory's ownership moves in one step (OpenZeppelin Ownable): checked twice before it is sent.
+    if (!config.factory) throw new Error("no factory in the config");
+    const raw = args._[1];
+    if (!raw) throw new Error("usage: transfer-factory <address>");
+    const target = getAddress(raw); // refuses a mixed-case address with a wrong checksum
+    if ((await provider.getCode(target)) === "0x") throw new Error(`${target} has no code: not a Universal Profile`);
+    const LSP0 = "0x24871b3d";
+    let isProfile = false;
+    try {
+      isProfile = await new Contract(target, ["function supportsInterface(bytes4) view returns (bool)"], provider).supportsInterface(LSP0);
+    } catch {
+      isProfile = false;
+    }
+    if (!isProfile) throw new Error(`${target} is not a Universal Profile (no LSP0 interface)`);
+    const ci = await openKeystore(ciKeystore, "ChainIntegrate", provider);
+    const factory = new Contract(config.factory, O.FACTORY_ABI, ci);
+    const current = await factory.owner();
+    if (getAddress(current) !== getAddress(ci.address)) throw new Error(`the factory's owner is ${current}, not this key`);
+    if (getAddress(current) === target) throw new Error("the factory already belongs to that address");
+    console.log(`\nThe factory ${config.factory} will belong to the Universal Profile ${target}.`);
+    console.log("This cannot be undone from this key: from then on only that profile creates registers.");
+    const typed = (await ask(`Type the last 6 characters of the address to confirm: `)).trim().toLowerCase();
+    if (typed !== target.slice(-6).toLowerCase()) throw new Error("not confirmed: nothing sent");
+    const tx = await factory.transferOwnership(target);
+    console.log(`Sent: ${explorerTx(network, tx)}`);
+    for (let i = 0; i < 60; i++) {
+      try {
+        if (getAddress(await factory.owner()) === target) break;
+      } catch {
+        /* slow node: try again */
+      }
+      await new Promise((r) => setTimeout(r, 5000));
+    }
+    const now = getAddress(await factory.owner());
+    if (now !== target) throw new Error(`not confirmed yet: check the factory's owner later (now ${now})`);
+    saveConfig(configFile, { ...config, factoryOwner: target });
+    console.log(`The factory belongs to ${target}. Create registers from the operator page.`);
     return;
   }
 

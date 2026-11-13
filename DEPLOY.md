@@ -64,6 +64,18 @@ npx hardhat run --network luksoMainnet scripts/verify-lukso.js
 It verifies the registry implementation and the factory (registries are clones of the implementation: the
 explorer shows them as its proxies) and prints their explorer pages.
 
+### Hand the factory to ChainIntegrate's profile (once, for the operator page)
+
+```bash
+cd ~/gastrace-tools && git pull
+node scripts/owner.js transfer-factory 0x4a2605796e0d91A9667d6E30365aEEC384C48c27
+```
+
+It checks that the address is a Universal Profile and asks for its last six characters; the step is final.
+From then on registers are created at `https://gastrace.chainintegrate.it/operator.html`, signed and paid
+by ChainIntegrate's profile in its wallet (LUKSO's extension or UP Wallet); `create-registry` no longer
+works with the key file.
+
 ## 3. The factory into the page and the app (in this repository)
 
 `admin/admin-config.json`: `factory` and `factoryBlock` from `gcr-registry.json`. Then:

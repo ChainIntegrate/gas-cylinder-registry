@@ -16,7 +16,8 @@ the register from a web page; nobody at the supplier ever holds LYX.
 | **Drivers' app "GasTrace"** | Android (Capacitor): scan, deliver, collect, stock count, refill; signs with a key kept on the phone | `app/`, `android/` | [docs/app.md](docs/app.md) |
 | **Admin page "GasTrace"** | The supplier's web page: overview, cylinders and their history, documents, customers, phones, settings; signed in with the ChainIntegrate Account extension | `admin/` | [docs/admin.md](docs/admin.md) |
 | **Relayer** | Sends the signed operations, pays the gas, sends each document's e-mail | `relayer/` | [relayer/README.md](relayer/README.md) |
-| **ChainIntegrate's tools** | Command line: deploy the factory, create registers, verify the source, and owner operations for an owner using a key file | `scripts/` | [docs/owner-tools.md](docs/owner-tools.md) |
+| **Operator page** | ChainIntegrate's page to create a supplier's register from the browser (`operator.html`), signed by ChainIntegrate's Universal Profile | `admin/` | [docs/admin.md](docs/admin.md#the-operator-page-chainintegrate-only) |
+| **ChainIntegrate's tools** | Command line: deploy the factory, hand it to ChainIntegrate's profile, create registers, verify the source, owner operations for an owner using a key file | `scripts/` | [docs/owner-tools.md](docs/owner-tools.md) |
 
 How they fit together:
 
@@ -51,7 +52,7 @@ contracts/   GasCylinderRegistry.sol, GasCylinderRegistryFactory.sol (and a test
 shared/      encryption, identifiers, formats, EIP-712, e-mail; used by the app, the page, the relayer, the tools
 app/         the drivers' app: logic, interface, native bridge, icon (built into app/www)
 android/     the Capacitor Android project: the phone key plugin (DeviceKeyPlugin), signing
-admin/       the admin page (src/), its build (www/, committed: the server serves it as is)
+admin/       the admin and operator pages (src/), their build (www/, committed: the server serves it as is)
 relayer/     the relayer service, its systemd unit and configuration example
 scripts/     ChainIntegrate's tools, builds, the browser tests (ui-demo, admin-demo), source verification
 test/        contract, library, relayer, owner tools and app logic tests (Hardhat)
@@ -68,6 +69,7 @@ npx hardhat test                    # contracts, library, tools, relayer, app lo
 npx hardhat node &                  # then the two browser tests:
 node scripts/ui-demo.js [shots]     #   the app's interface, the demo step by step
 node scripts/admin-demo.js [shots]  #   the admin page, checked against the extension's catalog
+node scripts/operator-demo.js [shots] # the operator page: a register created from the browser
 node scripts/build-app.js           # app/www
 node scripts/build-admin.js         # admin/www
 node scripts/export-abi.js          # after changing the contracts: ABIs for the tools, relayer, app, page
