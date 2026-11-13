@@ -32,4 +32,22 @@ module.exports = {
       accounts: process.env.DEPLOYER_KEY ? [process.env.DEPLOYER_KEY] : [],
     },
   },
+  // Source verification on LUKSO's Blockscout explorers (scripts/verify-lukso.js). Blockscout needs no API
+  // key, but hardhat-verify wants the field.
+  etherscan: {
+    apiKey: { luksoMainnet: "no-api-key-needed", luksoTestnet: "no-api-key-needed" },
+    customChains: [
+      {
+        network: "luksoMainnet",
+        chainId: 42,
+        urls: { apiURL: "https://explorer.execution.mainnet.lukso.network/api", browserURL: "https://explorer.execution.mainnet.lukso.network" },
+      },
+      {
+        network: "luksoTestnet",
+        chainId: 4201,
+        urls: { apiURL: "https://explorer.execution.testnet.lukso.network/api", browserURL: "https://explorer.execution.testnet.lukso.network" },
+      },
+    ],
+  },
+  sourcify: { enabled: false },
 };

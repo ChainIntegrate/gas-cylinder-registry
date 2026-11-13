@@ -43,6 +43,19 @@ node scripts/owner.js create-registry --network lukso --name "<the company's nam
 - The data password is asked twice; the 24-word recovery code is shown once: write it down.
 - `gcr-registry.json` now holds the factory's address and block: they go into the page and the app (step 3).
 
+### Publish the contracts' source on LUKSO's explorer (once, after the factory)
+
+Anyone can then check that the deployed contracts are this repository's. It needs the development
+dependencies (the compiler) in the owner tools' folder:
+
+```bash
+cd ~/gastrace-tools && git pull && npm ci
+npx hardhat run --network luksoMainnet scripts/verify-lukso.js
+```
+
+It verifies the registry implementation and the factory (registries are clones of the implementation: the
+explorer shows them as its proxies) and prints their explorer pages.
+
 ## 3. The factory into the page and the app (in this repository)
 
 `admin/admin-config.json`: `factory` and `factoryBlock` from `gcr-registry.json`. Then:
