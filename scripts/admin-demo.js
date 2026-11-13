@@ -157,8 +157,10 @@ async function main() {
 
   // Settings, customers, a refill plant.
   await click("Impostazioni");
+  await see("Nome dell'azienda");
   await page.getByLabel("Nome dell'azienda").fill("Argonia Gas Tecnici");
   await page.getByLabel("Email dell'azienda (separate da virgola)").fill("ufficio@example.com, magazzino@example.com");
+  await shot("settings");
   await click("Salva");
   await done();
   await click("Clienti");

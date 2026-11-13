@@ -144,5 +144,11 @@ select { width: 100%; font: inherit; color: var(--text); background: var(--field
 .guide .toc ol ol { margin: 2px 0 6px; }
 .guide p.note { border-left: 3px solid var(--slate); padding: 6px 12px; background: var(--field); }
 .guide p.warn { border-left: 3px solid var(--warn); padding: 6px 12px; background: var(--field); font-weight: 600; }
+.guide .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 16px 0 4px; }
+.guide .shots.phones { grid-template-columns: repeat(auto-fit, minmax(150px, 180px)); }
+.guide figure { margin: 0; }
+.guide figure img { display: block; width: 100%; height: auto; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+.guide figure.phone img { border-radius: 14px; }
+.guide figcaption { color: var(--dim); font-size: 13px; margin-top: 6px; }
 @media print { .guide .top-actions, .guide .toc { display: none; } .guide .panel { box-shadow: none; break-inside: avoid; } }
 footer a { color: var(--accent); }

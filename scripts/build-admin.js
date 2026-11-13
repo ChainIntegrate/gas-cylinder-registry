@@ -38,6 +38,8 @@ for (const k of ["rpc", "chainId", "relayer", "factory"]) if (config[k] === unde
     fs.writeFileSync(path.join(OUT, page), html);
   }
   for (const f of ["admin.css", "logo.png", "favicon.ico", "guida.html", "guide.html"]) fs.copyFileSync(path.join(DIR, f), path.join(OUT, f));
+  // The guide's pictures (screenshots of the browser tests, sample data only).
+  fs.cpSync(path.join(DIR, "guide-img"), path.join(OUT, "guide-img"), { recursive: true });
   console.log(`admin/www built (admin.js ${(fs.statSync(path.join(OUT, "admin.js")).size / 1024).toFixed(0)} KB, connect-src ${connect})`);
 })().catch((e) => {
   console.error(e);

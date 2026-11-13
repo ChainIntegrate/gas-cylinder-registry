@@ -53,10 +53,12 @@ async function main() {
 
   const mails = [];
   const allowedOrigins = []; // the page's origin, added once its server runs
+  // No release announced at first: the notice is checked at the end (step 5), when one is.
+  const relayerConfig = { chainId: Number((await provider.getNetwork()).chainId), factory: f.address, allowedOrigins, limits: { perIpPerMinute: 1000 } };
   const relayerServer = createRelayer({
     provider,
     wallet: relayerSigner,
-    config: { chainId: Number((await provider.getNetwork()).chainId), factory: f.address, allowedOrigins, limits: { perIpPerMinute: 1000 }, appRelease: NEWER },
+    config: relayerConfig,
     sendMail: async (m) => mails.push(m),
     logger: () => {},
   }).server;
@@ -122,6 +124,10 @@ async function main() {
     texts.push(text);
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `${String(++n).padStart(2, "0")}-${name}.png`), fullPage: true });
   }
+  // The screen as the driver sees it (the guide's pictures): no full-page stitching.
+  async function screen(name) {
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `${String(++n).padStart(2, "0")}-${name}.png`) });
+  }
   const click = (name) => page.getByRole("button", { name, exact: true }).click();
   const see = async (text) => {
     try {
@@ -151,8 +157,6 @@ async function main() {
   await shot("password");
   await click("Conferma");
   await see("Argonia Gas Tecnici");
-  await see("È disponibile una nuova versione di GasTrace (9.9.9)");
-  const updateLink = await page.getByText("Scarica", { exact: true }).getAttribute("href");
   await shot("home");
 
   // 2. Stock count at the customer: two cylinders, one left out on purpose.
@@ -189,6 +193,10 @@ async function main() {
   await page.getByLabel("Numero DDT").fill("DDT 2026/118");
   await page.getByPlaceholder("Aggiungi un indirizzo (facoltativo)").first().fill("titolare@example.com");
   await shot("delivery-note");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await screen("delivery-note-top");
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await screen("delivery-note-bottom");
   await click("Invia");
   await see("Mail inviata");
   await shot("delivery-note-done");
@@ -201,10 +209,18 @@ async function main() {
   await see("Presso Officina Demo");
   await shot("check");
 
-  // 5. English.
+  // 5. A new release announced by the relayer: the notice when the network returns.
+  await click("Indietro");
+  relayerConfig.appRelease = NEWER;
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await see("È disponibile una nuova versione di GasTrace (9.9.9)");
+  const updateLink = await page.getByText("Scarica", { exact: true }).getAttribute("href");
+  await shot("update");
+
+  // 6. English.
   await click("EN");
   await see("Check a cylinder");
-  await shot("check-en");
+  await shot("home-en");
 
   // Results
   const mail = mails.at(-1);

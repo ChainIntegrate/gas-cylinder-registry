@@ -50,7 +50,10 @@ password.
 drivers' app in plain words, for Argonia's office and drivers (sign-in, password and recovery code,
 settings, customers, phones; installing the app, setup, delivery and collection, stock count, refill,
 "To send", the e-mail, updates; common problems). Static pages with no script, in `admin/`, copied to
-`admin/www` by the build. When the app's or the page's wording changes, change the guide with it.
+`admin/www` by the build, with their pictures in `admin/guide-img/`: screenshots of the browser tests
+(`node scripts/ui-demo.js <dir>`, `node scripts/admin-demo.js <dir>`, sample data only), cropped and
+saved as WebP; the setup QR in the phones picture is blurred. When the app's or the page's wording
+changes, change the guide and its pictures with it.
 
 ## The operator page (ChainIntegrate only)
 
