@@ -136,10 +136,40 @@ async function prepareRegistry({ factory, password, language = "en", salt = hexl
 }
 
 /** Creates the prepared registry; `factory` must be connected to the factory's owner. */
-async function createRegistry({ factory, prepared, owner, name, symbol }) {
-  const tx = await factory.createRegistry(prepared.salt, getAddress(owner), name, symbol, prepared.dataKeys, prepared.dataValues);
-  const receipt = await tx.wait();
-  return { address: prepared.address, block: receipt.blockNumber };
+async function createRegistry({ factory, prepared, owner, name, symbol, log = () => {} }) {
+  let tx;
+  try {
+    tx = await factory.createRegistry(prepared.salt, getAddress(owner), name, symbol, prepared.dataKeys, prepared.dataValues);
+    const receipt = await tx.wait();
+    return { address: prepared.address, block: receipt.blockNumber };
+  } catch (e) {
+    // A slow node can time out after the transaction left: look for the registry before giving up.
+    if (!/timeout|TIMEOUT|network|ECONNRESET|socket/i.test(String(e.code || e.message))) throw e;
+    log("The network did not answer in time: checking whether the register was created…");
+    for (let i = 0; i < 30; i++) {
+      try {
+        if (await factory.isRegistry(prepared.address)) return findRegistry(factory, prepared.address);
+      } catch {
+        /* the node again: try later */
+      }
+      await new Promise((r) => setTimeout(r, 10000));
+    }
+    throw new Error(`no answer for 5 minutes: check later with "use-registry ${prepared.address}"`);
+  }
+}
+
+/** A registry made by `factory`: { address, block } (its creation block, from the RegistryCreated event). */
+async function findRegistry(factory, address, fromBlock = 0) {
+  const a = getAddress(address);
+  if (!(await factory.isRegistry(a))) throw new Error(`${a} is not a register of this factory`);
+  const provider = factory.runner.provider || factory.runner;
+  const latest = await provider.getBlockNumber();
+  for (let to = latest; to >= fromBlock; to -= 10000) {
+    const from = Math.max(fromBlock, to - 9999);
+    const logs = await factory.queryFilter(factory.filters.RegistryCreated(a), from, to);
+    if (logs.length) return { address: a, block: logs[0].blockNumber };
+  }
+  throw new Error(`the creation of ${a} was not found`);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -312,6 +342,7 @@ module.exports = {
   deployFactory,
   prepareRegistry,
   createRegistry,
+  findRegistry,
   unlockWithPassword,
   unlockWithRecoveryCode,
   setData,

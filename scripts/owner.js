@@ -37,6 +37,7 @@ Owner (signs with the owner's key file)
                                      Show, or set, the company name shown by the app and in the e-mails, and
                                      the supplier's own addresses (they receive every document's e-mail).
   phone-setup                        The setup code (and its QR) the app scans at its first start.
+  use-registry <address>             Save a register created earlier in the config (after a network timeout).
   phones                             Authorized phones.
   add-phone <code>                   Authorize a driver's phone (the code the app shows, spaces allowed).
   remove-phone <address>             Revoke a phone (lost, or its driver left).
@@ -232,9 +233,22 @@ async function main() {
     console.clear();
 
     console.log(`Creating "${args.name}" (${args.symbol}) for owner ${owner} at ${prepared.address}...`);
-    const r = await O.createRegistry({ factory, prepared, owner, name: args.name, symbol: args.symbol });
+    const r = await O.createRegistry({ factory, prepared, owner, name: args.name, symbol: args.symbol, log: console.log });
     saveConfig(configFile, { ...config, network, registry: r.address, registryBlock: r.block, ...(typeof args.owner === "string" ? { owner } : { ownerKeystore }) });
     console.log(`Registry: ${r.address} (block ${r.block}), saved to ${configFile}`);
+    return;
+  }
+
+  if (command === "use-registry") {
+    // A register created earlier (for example when create-registry lost the network's answer): saved in the config.
+    if (!config.factory) throw new Error("no factory in the config");
+    const address = args._[1];
+    if (!address) throw new Error("usage: use-registry <address>");
+    const factory = new Contract(config.factory, O.FACTORY_ABI, provider);
+    const r = await O.findRegistry(factory, address, config.factoryBlock || 0);
+    const owner = await new Contract(r.address, O.REGISTRY_ABI, provider).owner();
+    saveConfig(configFile, { ...config, network, registry: r.address, registryBlock: r.block, owner });
+    console.log(`Registry: ${r.address} (block ${r.block}, owner ${owner}), saved to ${configFile}`);
     return;
   }
 
