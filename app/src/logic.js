@@ -443,6 +443,27 @@ async function sendItem(item, { relayer, provider = null, fetchFn = fetch, pollM
   return item;
 }
 
+/** True when version `a` (x.y.z) is newer than `b`. */
+function isNewer(a, b) {
+  const pa = String(a).split(".").map(Number);
+  const pb = String(b).split(".").map(Number);
+  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
+  return false;
+}
+
+/** The release the relayer announces, when it is newer than `current`: { version, url } or null. */
+async function newerRelease(relayer, current, fetchFn = fetch) {
+  try {
+    const r = await fetchFn(`${relayer.replace(/\/+$/, "")}/gcr/info`);
+    if (!r.ok) return null;
+    const { app } = await r.json();
+    if (!app || !/^\d+\.\d+\.\d+$/.test(app.version) || !/^https:\/\/github\.com\/ChainIntegrate\//.test(app.url)) return null;
+    return isNewer(app.version, current) ? { version: app.version, url: app.url } : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The driver's message for a refusal or a network problem. */
 function errorText(lang, failed) {
   const t = T[lang] || T.it;
@@ -465,4 +486,6 @@ module.exports = {
   sendItem,
   errorText,
   isNetworkError,
+  isNewer,
+  newerRelease,
 };

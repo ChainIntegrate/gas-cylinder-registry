@@ -79,6 +79,16 @@ the key file and its password offline: without them no update of the installed a
 If a release's build fails, delete the release and its tag, fix `main`, and create the release again
 (the build uses the tag's commit).
 
+### Telling the phones about a new release
+
+The app shows its version at the bottom of the home screen. After a release, write its version and APK
+link in the relayer's announcement file ([relayer/README.md](../relayer/README.md#announce-a-new-app-release)):
+the phones with an older version then show "È disponibile una nuova versione di GasTrace" and a
+**Scarica** button. The driver taps it, the browser downloads the APK, and Android installs it over the
+old one (the same steps as the first install: open the downloaded file, allow the install). The data on
+the phone (its key, the unlocked register, documents waiting to be sent) stays. The notice appears from
+version 0.2.1 on: a phone with 0.2.0 is updated by hand once.
+
 ## Files
 
 | Path | What |

@@ -236,4 +236,20 @@ describe("app logic", function () {
     }
     expect(err.message).to.match(/invalid serial/);
   });
+
+  it("tells a newer released app from the current one", async function () {
+    expect(A.isNewer("0.2.1", "0.2.0")).to.equal(true);
+    expect(A.isNewer("0.10.0", "0.9.9")).to.equal(true);
+    expect(A.isNewer("1.0.0", "0.99.99")).to.equal(true);
+    expect(A.isNewer("0.2.0", "0.2.0")).to.equal(false);
+    expect(A.isNewer("0.1.9", "0.2.0")).to.equal(false);
+    const url = "https://github.com/ChainIntegrate/gas-cylinder-registry/releases/download/v0.2.1/gastrace-v0.2.1.apk";
+    const answer = (body, ok = true) => async () => ({ ok, json: async () => body });
+    expect(await A.newerRelease("https://r.example/", "0.2.0", answer({ app: { version: "0.2.1", url } }))).to.deep.equal({ version: "0.2.1", url });
+    expect(await A.newerRelease("https://r.example", "0.2.1", answer({ app: { version: "0.2.1", url } }))).to.equal(null);
+    expect(await A.newerRelease("https://r.example", "0.2.0", answer({}))).to.equal(null);
+    expect(await A.newerRelease("https://r.example", "0.2.0", answer({ app: { version: "0.2.1", url: "https://evil.example/a.apk" } }))).to.equal(null);
+    expect(await A.newerRelease("https://r.example", "0.2.0", answer({}, false))).to.equal(null);
+    expect(await A.newerRelease("https://r.example", "0.2.0", async () => { throw new TypeError("Failed to fetch"); })).to.equal(null);
+  });
 });

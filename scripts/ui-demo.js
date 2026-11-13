@@ -34,6 +34,9 @@ function serve(dir) {
   return new Promise((r) => server.listen(0, "127.0.0.1", () => r(server)));
 }
 
+// A newer app announced by the relayer: the home shows the notice and its download link.
+const NEWER = { version: "9.9.9", url: "https://github.com/ChainIntegrate/gas-cylinder-registry/releases/download/v9.9.9/gastrace-v9.9.9.apk" };
+
 async function main() {
   const provider = new ethers.JsonRpcProvider(RPC);
   const accounts = await provider.send("eth_accounts", []);
@@ -53,7 +56,7 @@ async function main() {
   const relayerServer = createRelayer({
     provider,
     wallet: relayerSigner,
-    config: { chainId: Number((await provider.getNetwork()).chainId), factory: f.address, allowedOrigins, limits: { perIpPerMinute: 1000 } },
+    config: { chainId: Number((await provider.getNetwork()).chainId), factory: f.address, allowedOrigins, limits: { perIpPerMinute: 1000 }, appRelease: NEWER },
     sendMail: async (m) => mails.push(m),
     logger: () => {},
   }).server;
@@ -148,6 +151,8 @@ async function main() {
   await shot("password");
   await click("Conferma");
   await see("Argonia Gas Tecnici");
+  await see("È disponibile una nuova versione di GasTrace (9.9.9)");
+  const updateLink = await page.getByText("Scarica", { exact: true }).getAttribute("href");
   await shot("home");
 
   // 2. Stock count at the customer: two cylinders, one left out on purpose.
@@ -204,6 +209,7 @@ async function main() {
   // Results
   const mail = mails.at(-1);
   const checks = [
+    ["update notice links the release", updateLink === NEWER.url],
     ["one e-mail", mails.length === 1],
     ["recipients", mail && mail.to === "demo@example.com, ufficio@example.com, titolare@example.com"],
     ["summary in the e-mail", mail && mail.text.includes("Consegna: 2 Argon") && /Ritiro: (?=.*1 Azoto)(?=.*1 Argon)(?=.*1 CO₂)/.test(mail.text)],

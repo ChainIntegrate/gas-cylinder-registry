@@ -18,5 +18,6 @@
     "perRegistryPerDay": 300,
     "maxMints": 25,
     "maxUpdates": 60
-  }
+  },
+  "appReleaseFile": "/etc/gcr-relayer/app-release.json"
 }

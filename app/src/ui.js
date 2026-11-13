@@ -7,6 +7,8 @@ const L = require("./logic");
 const { T } = require("./i18n");
 const { loadNative } = require("./native");
 const CONFIG = require("../app-config.json");
+// The app's version, from android/app/build.gradle (versionName), set by scripts/build-app.js.
+const APP_VERSION = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "0.0.0";
 
 // ------------------------------------------------------------------------------------------------
 // State and storage
@@ -44,6 +46,7 @@ const app = {
   result: null,
   outbox: new L.Outbox(localStorage),
   online: navigator.onLine !== false,
+  update: null, // a newer release announced by the relayer: { version, url }
 };
 const t = () => T[app.lang];
 const names = () => Object.fromEntries(app.cps.map((c) => [c.id, c.name]));
@@ -103,7 +106,9 @@ async function start() {
     app.online = true;
     render();
     flushOutbox();
+    checkUpdate();
   });
+  checkUpdate();
   window.addEventListener("offline", () => {
     app.online = false;
     render();
@@ -119,6 +124,15 @@ async function start() {
   if (setup) app.reg = new L.Registry({ provider: app.provider, address: setup.registry, fromBlock: setup.fromBlock });
   if (setup && st.exists && st.hasDataKey) return setView("unlock");
   setView("setup");
+}
+
+/** Asks the relayer for the latest released app; a newer one shows a notice with its download link. */
+async function checkUpdate() {
+  const r = await L.newerRelease(CONFIG.relayer, APP_VERSION);
+  if (r && (!app.update || app.update.version !== r.version)) {
+    app.update = r;
+    render();
+  }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -294,6 +308,7 @@ function viewHome() {
       btn(tx.checkCylinder, () => setView("check", { check: null }), "big"),
       pending ? btn(tx.outbox(pending), () => setView("outbox"), "big warn") : null
     ),
+    h("p", { class: "version" }, `GasTrace ${APP_VERSION}`),
   ];
 }
 
@@ -642,6 +657,10 @@ function render() {
       }, "lang")
     ),
     app.online ? null : h("p", { class: "banner" }, tx.offline),
+    app.update
+      ? h("div", { class: "update" }, h("span", {}, tx.updateAvailable(app.update.version)),
+          h("a", { class: "button primary", href: app.update.url, target: "_blank", rel: "noopener" }, tx.updateDownload))
+      : null,
     app.msg ? h("p", { class: "msg " + app.msg.cls }, app.msg.text) : null,
     h("main", {}, (views[app.view] || views.loading)()),
   ];

@@ -59,3 +59,6 @@ section.done { opacity: .6; }
 .actions { display: flex; gap: 8px; margin-top: 16px; }
 .actions .big { flex: 1; }
 .big-status { font-size: 20px; font-weight: 600; }
+.update { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; background: var(--ok-bg); border: 1px solid var(--ok); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+.update .button { min-height: 40px; padding: 8px 14px; }
+.version { text-align: center; color: var(--muted); font-size: 13px; margin-top: 24px; }

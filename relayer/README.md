@@ -17,7 +17,7 @@ operation.
 
 | Method and path | Body | Answer |
 |---|---|---|
-| `GET /gcr/info` | | `{ relayer, chainId, factory, balance, mail, limits }` |
+| `GET /gcr/info` | | `{ relayer, chainId, factory, balance, mail, limits, app? }`; `app: { version, url }` is the latest released app, when announced ([below](#announce-a-new-app-release)) |
 | `POST /gcr/document` | `{ registry, payload, signer, nonce, deadline, signature, mail?, mailSignature? }` | `{ hash }`, or `{ error, detail? }` with 4xx |
 | `POST /gcr/owner` | `{ registry, method, args }`, `method` one of `setOperatorSigned`, `setDataSigned`, `transferOwnershipSigned`, `acceptOwnershipSigned` | `{ hash }`, or `{ error, detail? }` |
 | `GET /gcr/status?hash=0x…` | | `{ state: pending/confirmed/failed, blockNumber, mail: none/pending/sent/failed/not_sent }` for the transactions it sent (the last 5,000) |
@@ -113,6 +113,27 @@ curl -s https://gastrace.chainintegrate.it/gcr/info
 For an owner that uses ChainIntegrate's command-line tools with a key file, set
 `"relayer": "https://gastrace.chainintegrate.it"` in their `gcr-registry.json`: owner operations then go
 through the relayer too.
+
+## Announce a new app release
+
+The app asks `/gcr/info` when it is unlocked and when the network returns; when `app.version` is newer
+than its own, it shows "A new version of GasTrace is available" with a Download button that opens the
+APK's link in the browser. The relayer reads the announcement from the file named by `appReleaseFile` in
+`config.json` (`/etc/gcr-relayer/app-release.json`), at every request: updating it needs no restart.
+
+```bash
+sudo install -m 644 -o gcr-relayer -g gcr-relayer /var/www/gas-cylinder-registry/relayer/app-release.example.json /etc/gcr-relayer/app-release.json
+sudo nano /etc/gcr-relayer/app-release.json    # version and the release's APK link
+curl -s https://gastrace.chainintegrate.it/gcr/info    # "app": { "version": …, "url": … }
+```
+
+```json
+{ "version": "0.2.1", "url": "https://github.com/ChainIntegrate/gas-cylinder-registry/releases/download/v0.2.1/gastrace-v0.2.1.apk" }
+```
+
+The relayer announces only a `x.y.z` version with a link to that version's APK in this repository's
+releases (`…/releases/download/v<version>/….apk`); anything else, a missing file or invalid JSON
+announces nothing. Write it only after the release's build has attached the APK.
 
 ## Update, logs, stop
 

@@ -17,6 +17,12 @@ const configFile = process.env.GCR_APP_CONFIG ? path.resolve(process.env.GCR_APP
 const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
 for (const k of ["rpc", "chainId", "relayer"]) if (!config[k]) throw new Error(`app config: ${k} missing`);
 
+// The app's version: versionName in android/app/build.gradle (the release tag is v<versionName>).
+const gradle = fs.readFileSync(path.join(ROOT, "android", "app", "build.gradle"), "utf8");
+const versionMatch = /versionName\s+"(\d+\.\d+\.\d+)"/.exec(gradle);
+if (!versionMatch) throw new Error("versionName not found in android/app/build.gradle");
+const VERSION = versionMatch[1];
+
 (async () => {
   fs.rmSync(OUT, { recursive: true, force: true });
   fs.mkdirSync(OUT, { recursive: true });
@@ -36,6 +42,7 @@ for (const k of ["rpc", "chainId", "relayer"]) if (!config[k]) throw new Error(`
     }],
     legalComments: "linked",
     logLevel: "warning",
+    define: { __APP_VERSION__: JSON.stringify(VERSION) },
   });
   const origin = (u) => new URL(u).origin;
   const connect = [...new Set([origin(config.rpc), origin(config.relayer)])].join(" ");
@@ -44,7 +51,7 @@ for (const k of ["rpc", "chainId", "relayer"]) if (!config[k]) throw new Error(`
   fs.writeFileSync(path.join(OUT, "index.html"), html);
   fs.copyFileSync(path.join(APP, "app.css"), path.join(OUT, "app.css"));
   const size = fs.statSync(path.join(OUT, "app.js")).size;
-  console.log(`app/www built (app.js ${(size / 1024).toFixed(0)} KB, connect-src ${connect})`);
+  console.log(`app/www built (version ${VERSION}, app.js ${(size / 1024).toFixed(0)} KB, connect-src ${connect})`);
 })().catch((e) => {
   console.error(e);
   process.exit(1);

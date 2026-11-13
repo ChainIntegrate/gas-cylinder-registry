@@ -166,3 +166,8 @@ cd /var/www/gas-cylinder-registry && sudo git pull --ff-only
 ```
 
 The page is served from the clone (`admin/www`) with `Cache-Control: no-cache`: a pull is enough.
+
+After an app release (its build attached the APK), announce it to the phones: write the version and the
+APK link in `/etc/gcr-relayer/app-release.json` ([relayer/README.md](relayer/README.md#announce-a-new-app-release)).
+The first time, also add `"appReleaseFile": "/etc/gcr-relayer/app-release.json"` to
+`/etc/gcr-relayer/config.json` and restart the relayer.

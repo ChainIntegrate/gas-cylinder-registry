@@ -94,6 +94,35 @@ describe("relayer", function () {
     expect(body.relayer).to.equal(relayerSigner.address);
     expect(body.chainId).to.equal(31337);
     expect(body.limits.maxMints).to.equal(25);
+    expect(body.app).to.equal(undefined);
+  });
+
+  it("announces the latest released app from its file, and nothing invalid", async function () {
+    const fs = require("fs");
+    const os = require("os");
+    const path = require("path");
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "gcr-")), "app-release.json");
+    await new Promise((res) => server.close(res));
+    const relayer = createRelayer({
+      provider: ethers.provider,
+      wallet: relayerSigner,
+      config: { chainId: 31337, factory: await factory.getAddress(), appReleaseFile: file },
+      logger: () => {},
+    });
+    server = relayer.server;
+    await new Promise((res) => server.listen(0, "127.0.0.1", res));
+    base = `http://127.0.0.1:${server.address().port}`;
+    const url = "https://github.com/ChainIntegrate/gas-cylinder-registry/releases/download/v0.2.1/gastrace-v0.2.1.apk";
+
+    expect((await get("/gcr/info")).body.app).to.equal(undefined); // no file yet
+    fs.writeFileSync(file, JSON.stringify({ version: "0.2.1", url }));
+    expect((await get("/gcr/info")).body.app).to.deep.equal({ version: "0.2.1", url }); // read at every request
+    fs.writeFileSync(file, JSON.stringify({ version: "0.2.2", url })); // the link is not that version's
+    expect((await get("/gcr/info")).body.app).to.equal(undefined);
+    fs.writeFileSync(file, JSON.stringify({ version: "0.2.1", url: "https://example.com/v0.2.1/a.apk" }));
+    expect((await get("/gcr/info")).body.app).to.equal(undefined);
+    fs.writeFileSync(file, "{ not json");
+    expect((await get("/gcr/info")).body.app).to.equal(undefined);
   });
 
   it("relays owner operations: the owner tools never paid gas", async function () {

@@ -247,8 +247,28 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
 
   // --- endpoints ---
 
+  // The latest released app, from a file the operator updates after each release (appReleaseFile), or the
+  // config itself (appRelease): { version: "x.y.z", url: the release's APK on GitHub }. Read at every
+  // request, so updating the file needs no restart. Anything else is not announced.
+  const APK_URL = /^https:\/\/github\.com\/ChainIntegrate\/gas-cylinder-registry\/releases\/download\/v(\d+\.\d+\.\d+)\/[\w.-]+\.apk$/;
+  function appRelease() {
+    let a = config.appRelease || null;
+    if (!a && config.appReleaseFile) {
+      try {
+        a = JSON.parse(fs.readFileSync(config.appReleaseFile, "utf8"));
+      } catch {
+        return null;
+      }
+    }
+    if (!a || !/^\d+\.\d+\.\d+$/.test(String(a.version))) return null;
+    const m = APK_URL.exec(String(a.url));
+    if (!m || m[1] !== a.version) return null;
+    return { version: a.version, url: a.url };
+  }
+
   async function info() {
     const balance = await provider.getBalance(wallet.address);
+    const app = appRelease();
     return {
       relayer: wallet.address,
       chainId: Number(config.chainId),
@@ -256,6 +276,7 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
       balance: formatEther(balance),
       mail: Boolean(sendMail),
       limits: { maxMints: limits.maxMints, maxUpdates: limits.maxUpdates, maxDocumentBytes: limits.maxDocumentBytes },
+      ...(app ? { app } : {}),
     };
   }
 
