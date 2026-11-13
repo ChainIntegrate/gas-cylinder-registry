@@ -226,6 +226,17 @@ async function main() {
   await page.locator("details.doc summary").first().click();
   await shot("documents");
 
+  // The data download: the files are made in the page.
+  await click("Scarica dati");
+  await see("Movimenti");
+  await shot("export");
+  const downloaded = {};
+  for (const [i, k] of [[0, "cylinders"], [1, "movements"]]) {
+    const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Scarica", exact: true }).nth(i).click()]);
+    downloaded[k] = { name: dl.suggestedFilename(), text: fs.readFileSync(await dl.path(), "utf8") };
+  }
+  const csvRows = (k) => downloaded[k].text.replace(/^\uFEFF/, "").trim().split("\r\n");
+
   // The password: changed from the page; the old one no longer opens the data.
   await click("Impostazioni");
   await page.getByLabel("Nuova password dei dati").fill("una nuova frase per il registro");
@@ -259,6 +270,8 @@ async function main() {
     ["customers written", cps.length === 3],
     ["phone authorized", await new ethers.Contract(r.address, O.REGISTRY_ABI, provider).isOperator(phone.address)],
     ["overview counts (6 cylinders: 4 at the customer, 2 back at the depot)", stats[0] === "6" && stats[1] === "2" && stats[2] === "4"],
+    ["data download: 6 cylinders in the file", /^gastrace-bombole-\d{4}-\d\d-\d\d\.csv$/.test(downloaded.cylinders.name) && csvRows("cylinders").length === 7 && csvRows("cylinders")[0].startsWith("Codice;Gas;")],
+    ["data download: every movement of the documents", csvRows("movements").length > 6 && csvRows("movements").some((r) => r.includes("DDT;2026/118"))],
     ["history shows stock count then collection", /Giacenza[\s\S]*Ritiro/.test(historyText)],
     ["password changed, old one refused", oldRefused],
     ["no technical words on screen", texts.every((x) => !FORBIDDEN.test(x))],

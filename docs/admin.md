@@ -37,6 +37,7 @@ Until then the page says it cannot find the extension.
 | **Documents** | Delivery notes, stock counts and refill notes, each with its cylinders and the warnings the driver confirmed |
 | **Customers** | Customers and refill plants: add, edit (name, e-mails: they receive that customer's documents), remove |
 | **Phones** | The authorized phones; authorize one by the code the app shows; revoke; the setup QR the app scans at its first start |
+| **Download data** | The register as CSV files made in the page (no server): cylinders, movements (each cylinder of each document), documents, customers and refill plants. UTF-8 with a byte order mark; `;` in Italian, `,` in English; a value starting with `= + - @` gets an apostrophe so a spreadsheet never runs it. The files are not encrypted, and the page says so |
 | **Settings** | The company name (shown in the app and the e-mails) and the company's own e-mails (they receive a copy of every document); a new data password |
 
 The data password opens the register's data **in the page only**: it is never sent anywhere, and closing

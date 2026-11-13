@@ -9,6 +9,7 @@ const qrcode = require("qrcode-generator");
 const S = require("../../shared");
 const O = require("../../scripts/lib/owner");
 const D = require("./data");
+const E = require("./export");
 const { T } = require("./i18n");
 const CONFIG = require("../admin-config.json");
 
@@ -657,8 +658,44 @@ function viewSettings() {
   ];
 }
 
+/** Saves a file from the page (no server involved). */
+function saveFile(name, text) {
+  const url = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
+  const a = h("a", { href: url, download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+function viewExport() {
+  const tx = t();
+  const day = new Date().toISOString().slice(0, 10);
+  const files = E.exportFiles(st.data, tx, st.lang, day);
+  const rows = (f) => f.text.split("\r\n").length - 2;
+  return h(
+    "section",
+    { class: "panel" },
+    h("h2", {}, tx.tabs.export),
+    h("p", {}, tx.export.intro),
+    h(
+      "div",
+      { class: "list" },
+      Object.entries(tx.export.items).map(([k, [title, what]]) =>
+        h(
+          "div",
+          { class: "item export" },
+          h("div", {}, h("b", {}, title), h("div", { class: "dim small" }, what), h("div", { class: "dim small" }, tx.export.rows(rows(files[k])))),
+          btn(tx.export.download, () => saveFile(files[k].name, files[k].text), "primary small")
+        )
+      )
+    ),
+    h("p", { class: "warn small" }, tx.export.privacy)
+  );
+}
+
 function viewMain() {
-  const v = { overview: viewOverview, cylinders: viewCylinders, documents: viewDocuments, counterparties: viewCounterparties, phones: viewPhones, settings: viewSettings }[st.tab];
+  const v = { overview: viewOverview, cylinders: viewCylinders, documents: viewDocuments, counterparties: viewCounterparties, phones: viewPhones, settings: viewSettings, export: viewExport }[st.tab];
   return [tabs(), v()];
 }
 
