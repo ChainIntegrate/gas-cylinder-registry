@@ -6,8 +6,9 @@ scanning app for drivers and a gasless relayer.
 **Status: milestones 1 to 5 of the [design](DESIGN.md).** The contracts (registry and factory), the
 shared library (encryption, key wraps, identifiers, formats), the owner tools
 ([guide](docs/owner-tools.md)), the relayer ([install](relayer/README.md)) and the drivers' Android app
-([guide](docs/app.md)) are written and tested on a local chain; nothing is deployed yet. Next: the demo
-on LUKSO mainnet.
+([guide](docs/app.md)), now named **GasTrace**, and its owner's admin page ([guide](docs/admin.md)),
+signed in with the ChainIntegrate Account extension, are written and tested on a local chain. Next: the
+demo on LUKSO mainnet.
 
 ## Development
 
@@ -17,7 +18,8 @@ npx hardhat compile        # solc 0.8.28 from npm (solc-js), no compiler downloa
 npx hardhat test
 npx hardhat run scripts/gas-report.js
 node scripts/export-abi.js   # after changing the contracts: ABIs for the tools, relayer and app
-node scripts/owner.js help   # owner tools
+node scripts/owner.js help   # owner tools (ChainIntegrate: factory, registries)
+node scripts/build-admin.js  # the GasTrace admin page (admin/www)
 ```
 
 ## In short

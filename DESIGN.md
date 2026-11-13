@@ -337,8 +337,9 @@ owner's key and sent through the relayer, which pays the gas as for the drivers.
 - **Demo**: `scripts/owner.js` run on a computer (for example `node scripts/owner.js add-phone <address>`),
   signing with the owner's encrypted key file; until the relayer exists, ChainIntegrate's key sends the
   signed operations and pays the gas. Guide: `docs/owner-tools.md`.
-- **Later**: an owner web page that connects with UP Modal or UP Wallet, lists operators and
-  counterparties, and signs in the owner's wallet. Same signed operations, same relayer.
+- **The GasTrace admin page** (`admin/`, `docs/admin.md`): the owner signs in with the ChainIntegrate
+  Account extension (up-onboarding), whose account owns the registry; it signs each change (ERC-1271
+  through the account) and the relayer sends it. The scripts stay for ChainIntegrate (factory, registries).
 
 ### 8.6 The demo, step by step
 

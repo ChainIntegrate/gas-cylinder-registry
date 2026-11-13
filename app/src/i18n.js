@@ -3,7 +3,7 @@
 
 const T = {
   it: {
-    appName: "Bombole",
+    appName: "GasTrace",
     lang: "EN",
     loading: "Caricamento…",
     offline: "Senza rete: le operazioni partono appena torna il segnale.",
@@ -148,7 +148,7 @@ const T = {
     mailFooter: "Messaggio automatico: non rispondere a questo indirizzo.",
   },
   en: {
-    appName: "Cylinders",
+    appName: "GasTrace",
     lang: "IT",
     loading: "Loading…",
     offline: "No network: operations will be sent when it is back.",

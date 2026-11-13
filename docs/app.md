@@ -34,7 +34,7 @@ who leaves: the owner runs `remove-phone`.
 ## Install
 
 APKs are built by GitHub Actions ("Android APK") at every push to `main` and attached to releases,
-as for UP Wallet: download the `.apk` from the run's artifacts (`bombole-apk`) or from a release,
+as for UP Wallet: download the `.apk` from the run's artifacts (`gastrace-apk`) or from a release,
 open it on the phone and allow installing from that source. Updates install over the previous
 version and keep the phone's setup. **Never uninstall the app to update it**: its keys would be lost
 and the phone would need to be set up again.

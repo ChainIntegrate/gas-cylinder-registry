@@ -25,7 +25,9 @@ Keys
 
 ChainIntegrate (the factory's owner; also sends the owner's signed operations until the relayer exists)
   deploy-factory                     Deploy the factory; writes its address to the config file.
-  create-registry --name <name> --symbol <symbol> --owner-keystore <file> [--language en|it]
+  create-registry --name <name> --symbol <symbol> (--owner <address> | --owner-keystore <file>) [--language en|it]
+                                     The owner is an account address (a ChainIntegrate Account, managed from
+                                     the GasTrace admin page) or, for an owner using these tools, a key file.
                                      Create a company's registry: asks the data password, shows the
                                      24-word recovery code once, creates the registry with both.
 
@@ -204,7 +206,8 @@ async function main() {
     if (!config.factory) throw new Error("no factory in the config: run deploy-factory first");
     if (config.registry) throw new Error(`the config already has a registry (${config.registry}); use another --config`);
     if (typeof args.name !== "string" || typeof args.symbol !== "string") throw new Error("--name and --symbol are required");
-    const owner = keystoreAddress(ownerKeystore);
+    // The owner: a ChainIntegrate Account (then managed from the admin page) or a key file used with these tools.
+    const owner = typeof args.owner === "string" ? getAddress(args.owner) : keystoreAddress(ownerKeystore);
     const ci = await openKeystore(ciKeystore, "ChainIntegrate", provider);
     const factory = new Contract(config.factory, O.FACTORY_ABI, ci);
 
@@ -230,7 +233,7 @@ async function main() {
 
     console.log(`Creating "${args.name}" (${args.symbol}) for owner ${owner} at ${prepared.address}...`);
     const r = await O.createRegistry({ factory, prepared, owner, name: args.name, symbol: args.symbol });
-    saveConfig(configFile, { ...config, network, registry: r.address, registryBlock: r.block, ownerKeystore });
+    saveConfig(configFile, { ...config, network, registry: r.address, registryBlock: r.block, ...(typeof args.owner === "string" ? { owner } : { ownerKeystore }) });
     console.log(`Registry: ${r.address} (block ${r.block}), saved to ${configFile}`);
     return;
   }

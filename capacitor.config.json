@@ -1,7 +1,12 @@
 {
   "appId": "it.chainintegrate.gascylinders",
-  "appName": "Bombole",
+  "appName": "GasTrace",
   "webDir": "app/www",
-  "server": { "androidScheme": "https" },
-  "android": { "allowMixedContent": false, "webContentsDebuggingEnabled": false }
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  }
 }

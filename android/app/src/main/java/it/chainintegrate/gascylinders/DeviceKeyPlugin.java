@@ -214,7 +214,7 @@ public class DeviceKeyPlugin extends Plugin {
         FragmentActivity activity = (FragmentActivity) getActivity();
         if (activity == null) { call.reject("no activity", "FAILED"); return; }
         busy = true;
-        String title = clip(call.getString("title", "Bombole"), 60);
+        String title = clip(call.getString("title", "GasTrace"), 60);
         String subtitle = clip(call.getString("subtitle", ""), 120);
         String cancel = clip(call.getString("cancel", "Annulla"), 30);
         activity.runOnUiThread(() -> {

@@ -46,6 +46,14 @@ jobs:
           sleep 8
           node scripts/ui-demo.js
 
+      # The GasTrace admin page in Chromium, every request checked against the ChainIntegrate Account
+      # extension's own catalog (from the public up-onboarding repository).
+      - name: Admin page test
+        timeout-minutes: 10
+        run: |
+          git clone --depth 1 https://github.com/ChainIntegrate/up-onboarding ../up-onboarding
+          UPONBOARDING_DIR=../up-onboarding node scripts/admin-demo.js
+
       - name: Web content and copy into the Android project
         run: |
           node scripts/build-app.js
@@ -83,12 +91,12 @@ jobs:
 
       - name: Name the APK after the commit
         run: |
-          if [ -n "$GCR_KEYSTORE_FILE" ]; then cp android/app/build/outputs/apk/release/app-release.apk "bombole-${GITHUB_SHA::7}.apk"
-          else cp android/app/build/outputs/apk/debug/app-debug.apk "bombole-${GITHUB_SHA::7}-debug.apk"; fi
+          if [ -n "$GCR_KEYSTORE_FILE" ]; then cp android/app/build/outputs/apk/release/app-release.apk "gastrace-${GITHUB_SHA::7}.apk"
+          else cp android/app/build/outputs/apk/debug/app-debug.apk "gastrace-${GITHUB_SHA::7}-debug.apk"; fi
 
       - name: Signer of the APK
         run: |
-          f=$(ls bombole-*.apk)
+          f=$(ls gastrace-*.apk)
           signer=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
           certs=$("$signer" verify --print-certs "$f")
           fp=$(echo "$certs" | grep -m1 'certificate SHA-256 digest' | sed 's/.*digest: //')
@@ -108,12 +116,12 @@ jobs:
           version=$(grep -m1 'versionName' android/app/build.gradle | sed 's/.*"\(.*\)".*/\1/')
           if [ "$GITHUB_REF_NAME" != "v$version" ]; then echo "::error::tag $GITHUB_REF_NAME does not match versionName $version"; exit 1; fi
           if [ -z "$GCR_KEYSTORE_FILE" ]; then echo "::error::no release key: a debug APK is not published"; exit 1; fi
-          f=$(ls bombole-*.apk)
-          mv "$f" "bombole-$GITHUB_REF_NAME.apk"
-          gh release upload "$GITHUB_REF_NAME" "bombole-$GITHUB_REF_NAME.apk" --clobber
+          f=$(ls gastrace-*.apk)
+          mv "$f" "gastrace-$GITHUB_REF_NAME.apk"
+          gh release upload "$GITHUB_REF_NAME" "gastrace-$GITHUB_REF_NAME.apk" --clobber
 
       - uses: actions/upload-artifact@v4
         with:
-          name: bombole-apk
-          path: bombole-*.apk
+          name: gastrace-apk
+          path: gastrace-*.apk
           retention-days: 30

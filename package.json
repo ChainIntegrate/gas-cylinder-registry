@@ -8,7 +8,9 @@
     "test": "hardhat test",
     "build:app": "node scripts/build-app.js",
     "sync": "node scripts/build-app.js && npx cap sync android",
-    "test:ui": "node scripts/ui-demo.js"
+    "test:ui": "node scripts/ui-demo.js",
+    "build:admin": "node scripts/build-admin.js",
+    "test:admin": "node scripts/admin-demo.js"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.2",
