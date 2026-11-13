@@ -10,9 +10,9 @@
 const fs = require("fs");
 const hre = require("hardhat");
 
-async function verify(address, constructorArguments, contract) {
+async function verify(address, constructorArguments, contract, force = false) {
   try {
-    await hre.run("verify:verify", { address, constructorArguments, contract });
+    await hre.run("verify:verify", { address, constructorArguments, contract, force });
     console.log(`verified: ${address}`);
   } catch (e) {
     if (/already verified/i.test(String(e.message))) console.log(`already verified: ${address}`);
@@ -32,7 +32,9 @@ async function main() {
   const implementation = await factory.implementation();
   console.log(`factory ${factoryAddress} (first owner ${firstOwner}), implementation ${implementation}`);
   await verify(implementation, [], "contracts/GasCylinderRegistry.sol:GasCylinderRegistry");
-  await verify(factoryAddress, [firstOwner], "contracts/GasCylinderRegistryFactory.sol:GasCylinderRegistryFactory");
+  // force: LUKSO's explorer takes the factory for a proxy (it has an implementation() getter) and answers
+  // "already verified" with the implementation's source; the factory's own needs submitting anyway.
+  await verify(factoryAddress, [firstOwner], "contracts/GasCylinderRegistryFactory.sol:GasCylinderRegistryFactory", true);
   const base = hre.network.config.chainId === 42 ? "https://explorer.execution.mainnet.lukso.network" : "https://explorer.execution.testnet.lukso.network";
   console.log(`\n${base}/address/${factoryAddress}?tab=contract\n${base}/address/${implementation}?tab=contract`);
 }
