@@ -13,20 +13,20 @@
     "test:admin": "node scripts/admin-demo.js"
   },
   "devDependencies": {
+    "@capacitor-mlkit/barcode-scanning": "^8.2.1",
+    "@capacitor/android": "^8.5.2",
     "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@lukso/lsp4-contracts": "^0.17.3",
+    "@lukso/lsp8-contracts": "^0.18.1",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^4.9.6",
+    "@openzeppelin/contracts-upgradeable": "^4.9.6",
     "esbuild": "^0.28.2",
     "hardhat": "^2.29.2",
     "solc": "^0.8.28"
   },
   "dependencies": {
-    "@capacitor-mlkit/barcode-scanning": "^8.2.1",
-    "@capacitor/android": "^8.5.2",
-    "@capacitor/core": "^8.5.2",
-    "@lukso/lsp4-contracts": "^0.17.3",
-    "@lukso/lsp8-contracts": "^0.18.1",
-    "@openzeppelin/contracts": "^4.9.6",
-    "@openzeppelin/contracts-upgradeable": "^4.9.6",
     "ethers": "^6.17.0",
     "qrcode-generator": "^1.4.4"
   }
