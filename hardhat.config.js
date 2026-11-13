@@ -9,7 +9,11 @@ const SOLC_VERSION = "0.8.28";
 subtask(TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD, async ({ solcVersion }, hre, runSuper) => {
   if (solcVersion !== SOLC_VERSION) return runSuper();
   const solcPath = require.resolve("solc/soljson.js");
-  return { compilerPath: solcPath, isSolcJs: true, version: SOLC_VERSION, longVersion: require("solc").version() };
+  // The long version without solc-js's platform suffix (".Emscripten.clang"): the same compiler commit as the
+  // native build, and the name explorers know when they verify the source (the bytecode is identical; the
+  // contracts' metadata already says "0.8.28+commit.7893614a").
+  const longVersion = require("solc").version().replace(/\.Emscripten\.clang$/, "");
+  return { compilerPath: solcPath, isSolcJs: true, version: SOLC_VERSION, longVersion };
 });
 
 module.exports = {
