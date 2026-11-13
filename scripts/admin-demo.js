@@ -27,7 +27,7 @@ const FORBIDDEN = /blockchain|token|wallet|transaz|transaction|LUKSO|\bLYX\b|sma
 const PASSWORD = "le bombole di argon tornano vuote";
 const CATALOG_PATHS = [process.env.UPONBOARDING_DIR, path.join(__dirname, "..", "..", "chainintegrate", "up-onboarding"), path.join(__dirname, "..", "..", "up-onboarding")]
   .filter(Boolean)
-  .map((d) => path.join(d, "extension", "shared", "catalog.js"));
+  .map((d) => path.resolve(d, "extension", "shared", "catalog.js")); // absolute: require() resolves relative paths from this file
 
 function serve(dir) {
   const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".ico": "image/x-icon" };
