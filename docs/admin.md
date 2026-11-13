@@ -1,39 +1,43 @@
-# GasTrace admin page
+# The admin page: GasTrace for the supplier
 
-The register owner's page: `https://gastrace.chainintegrate.it/` (planned address). It replaces the owner
-tools for everything the owner does day to day, and shows the register to them in plain words.
+The register owner's page, at **https://gastrace.chainintegrate.it/**. The supplier manages the register
+there and sees it in plain words; Italian and English (button at the top right), light and dark.
 
 ## Sign-in: the ChainIntegrate Account extension
 
-The owner signs in with the **ChainIntegrate Account** browser extension (`ChainIntegrate/up-onboarding`):
-the page finds it through EIP-6963 (`rdns` `it.chainintegrate.account`) and asks for the account. The
-registry's owner is that account (a Universal Profile created by up-onboarding); its key signs each change
+The supplier signs in with the **ChainIntegrate Account** browser extension
+([up-onboarding](https://github.com/ChainIntegrate/up-onboarding)). The page finds it through EIP-6963
+(`rdns` `it.chainintegrate.account`), asks for the account and finds, through the factory, the registers
+that account owns. The register's owner is that account (a Universal Profile); its key signs each change
 in the extension's own confirmation window, and the register checks the signature through the account
-(ERC-1271). The owner never holds LYX: the relayer sends every change and pays for it.
+(ERC-1271). The supplier never holds LYX: the relayer sends every change and pays for it.
 
-The extension serves only the pages and the requests of its catalog (`extension/shared/catalog.js` in
-up-onboarding). For GasTrace it already declares the four requests (`SetOperator`, `SetData`,
-`TransferOwnership`, `AcceptOwnership`), but serves them only once two values are set there:
+Any key of the account with the SIGN permission can sign in: a second computer can restore the same
+access from the extension's backup copy, or, once the extension offers it, add a key of its own.
+
+**The extension's catalog.** The extension serves only the sites and requests declared in its catalog
+(`extension/shared/catalog.js` in up-onboarding). For GasTrace the four requests (`SetOperator`,
+`SetData`, `TransferOwnership`, `AcceptOwnership`) are declared; the factory and the site must be set
+there, and a release of the extension made, before the page can sign in:
 
 ```js
-const CYLINDER_FACTORY = "0x…";                 // the factory deployed with: node scripts/owner.js deploy-factory
+const CYLINDER_FACTORY = "0xA128e7162fa8Dc779bf31EF569F06B53a499A50e";
 // in the "gas-cylinders" project:
 sites: ["gastrace.chainintegrate.it"],
 ```
 
-`scripts/admin-demo.js` checks every request the page makes against that catalog (when up-onboarding is
-next to this repository, or with `UPONBOARDING_DIR`), so the page asks only for what the extension accepts.
+Until then the page says it cannot find the extension.
 
-## What the owner does there
+## What the supplier does there
 
 | Section | What |
 |---|---|
 | **Overview** | Cylinders in total, at the depot, at customers, being refilled, defective; by gas; the latest documents |
 | **Cylinders** | Every cylinder with its gas, where it is, its condition and last movement; search; click for its history (each movement with its document) |
 | **Documents** | Delivery notes, stock counts and refill notes, each with its cylinders and the warnings the driver confirmed |
-| **Customers** | Customers and refill plants: add, edit (name, e-mails), remove |
-| **Phones** | The authorized phones, authorize one by the code the app shows, revoke; the setup QR the app scans at its first start |
-| **Settings** | The company name and the supplier's e-mails; a new data password |
+| **Customers** | Customers and refill plants: add, edit (name, e-mails: they receive that customer's documents), remove |
+| **Phones** | The authorized phones; authorize one by the code the app shows; revoke; the setup QR the app scans at its first start |
+| **Settings** | The company name (shown in the app and the e-mails) and the company's own e-mails (they receive a copy of every document); a new data password |
 
 The data password opens the register's data **in the page only**: it is never sent anywhere, and closing
 the page forgets it. "I lost the password" opens the data with the 24-word recovery code and sets a new
@@ -46,35 +50,22 @@ password.
 node scripts/build-admin.js      # admin/www: index.html, admin.js, admin.css, logo, favicon
 ```
 
-`admin/www` is a static site, committed so that the server serves it from its clone with no build. It is
-published as `gastrace.chainintegrate.it` together with the relayer (`/gcr/`): see [DEPLOY.md](../DEPLOY.md)
-and `tools/nginx/`. The page talks only to the configured RPC and relayer (its
-Content-Security-Policy allows nothing else), so the relayer's `allowedOrigins` must include
-`https://gastrace.chainintegrate.it` (`relayer/config.example.json` has it).
-
-nginx, a new `server` block:
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name gastrace.chainintegrate.it;
-    root /var/www/gastrace;          # the contents of admin/www
-    index index.html;
-    add_header X-Frame-Options DENY;
-    add_header Referrer-Policy no-referrer;
-    # ssl_certificate … (as the other ChainIntegrate sites)
-}
-```
+`admin/www` is committed: the server serves it from its clone (`/var/www/gas-cylinder-registry`) with no
+build, so a change to the page is `build-admin`, commit, push, then `git pull` on the server. The site
+(page and relayer under `/gcr/`) is described in [DEPLOY.md](../DEPLOY.md), its nginx files are in
+`tools/nginx/`. The page connects only to LUKSO's public node and to its own site (its
+Content-Security-Policy allows nothing else).
 
 ## Test
 
 ```bash
 npx hardhat node &
-node scripts/admin-demo.js [screenshots-dir]
+UPONBOARDING_DIR=../up-onboarding node scripts/admin-demo.js [screenshots-dir]
 ```
 
 The test runs the page in Chromium with a simulated extension whose account is a contract that validates
-signatures with ERC-1271, as a ChainIntegrate Account does: sign-in, the data password, settings,
-customers, a refill plant, a phone authorized by its code, then the driver's app records a stock count
-and a delivery note, and the page shows them (overview, cylinders, a cylinder's history, documents); the
-password is changed; no technical word appears; no horizontal scroll at phone width.
+signatures with ERC-1271, as a ChainIntegrate account does, and checks every request against the
+extension's own catalog (from up-onboarding; CI clones it). Steps: sign-in, the data password, settings,
+customers, a refill plant, a phone authorized by its code; the driver's app records a stock count and a
+delivery note; the page shows them (overview, cylinders, a cylinder's history, documents); the password
+is changed. It also checks that no technical word appears and that the page fits a phone's width.

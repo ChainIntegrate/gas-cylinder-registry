@@ -99,37 +99,20 @@ sudo systemctl enable --now gcr-relayer
 journalctl -u gcr-relayer -n 20     # "relayer 0x… on chain 42, balance …, mail on" and "listening on http://127.0.0.1:8789"
 ```
 
-**6. Web server: pass `/gcr/` to the service**, in the same site as `/relay/`.
-
-nginx:
-
-```nginx
-location /gcr/ {
-    proxy_pass http://127.0.0.1:8789;
-    proxy_set_header X-Real-IP $remote_addr;
-    client_max_body_size 700k;
-}
-```
-
-Apache (`<VirtualHost *:443>`, with `proxy` and `proxy_http` enabled):
-
-```apache
-ProxyPass        /gcr/ http://127.0.0.1:8789/gcr/
-ProxyPassReverse /gcr/ http://127.0.0.1:8789/gcr/
-```
-
-(Apache adds the client's address to `X-Forwarded-For`; the service uses the last entry for its
-per-IP limit.)
+**6. Web server.** The service is published as `https://gastrace.chainintegrate.it/gcr/`, in the same
+nginx site as the admin page: `tools/nginx/gastrace.chainintegrate.it.conf` (its `location /gcr/` passes
+to `127.0.0.1:8789` and sets `X-Real-IP` for the per-IP limit). The site's installation, certificate
+first, is step 5 of [DEPLOY.md](../DEPLOY.md).
 
 **7. Check.**
 
 ```bash
-curl -s https://crosschain-lukso.chainintegrate.it/gcr/info
+curl -s https://gastrace.chainintegrate.it/gcr/info
 ```
 
-Then set `"relayer": "https://crosschain-lukso.chainintegrate.it"` in the owner tools' `gcr-registry.json`:
-from then on the owner's operations go through the relayer and ChainIntegrate's key file is needed only
-to deploy the factory and create registries.
+For an owner that uses ChainIntegrate's command-line tools with a key file, set
+`"relayer": "https://gastrace.chainintegrate.it"` in their `gcr-registry.json`: owner operations then go
+through the relayer too.
 
 ## Update, logs, stop
 

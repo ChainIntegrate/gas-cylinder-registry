@@ -1,401 +1,240 @@
 # Design
 
-Status: **draft for review**. Nothing here is implemented yet. This document fixes the structure before
-any code is written; open points are listed at the end.
-
-The examples use a fictional supplier, **Argonia Gas Tecnici**. Real company names never appear in this
-repository: not in code, tests, fixtures, commits or pull requests.
+How GasTrace works, as implemented. Decisions are explained where they matter; what is left open is at
+the end. The examples use the fictional supplier **Argonia Gas Tecnici**.
 
 ## 1. The problem
 
 A supplier of technical gases (argon, acetylene, oxygen, nitrogen, CO₂) delivers full cylinders to its
-customers and collects the empty ones. Today every delivery comes with a delivery note (DDT) that lists
-one line per cylinder but **no serial numbers**: the note is printed before loading, and the driver does
-not want to tie specific cylinders to it in advance (a truck may carry ten argon cylinders, any of which
-can go to any customer). At unloading, the driver writes each cylinder's serial number (a text barcode)
-by hand next to its line, and does the same for the empty cylinders collected.
+customers and collects the empty ones. Every delivery comes with a delivery note (DDT) that lists one
+line per cylinder but **no serial numbers**: the note is printed before loading, and the driver does not
+tie specific cylinders to it in advance (a truck may carry ten argon cylinders, any of which can go to
+any customer). At unloading, the driver used to write each cylinder's serial number (a text barcode) by
+hand next to its line, and the same for the empty cylinders collected.
 
-The goal: replace the handwriting with an app that scans the barcodes, knows each cylinder's last
-state, links a collected cylinder to the customer that had it, and records every operation on LUKSO,
-encrypted, then e-mails a summary.
+GasTrace replaces the handwriting: the driver scans the barcodes, the app knows each cylinder's last
+state and links a collected cylinder to the customer that had it, every document is recorded on LUKSO,
+encrypted, and an e-mail summary is sent.
 
 ## 2. Principles
 
-- **One cylinder, one token.** Each cylinder is an LSP8 token in the supplier's own collection.
-- **Everything on-chain, encrypted.** Cylinder data, states, counterparties and documents live on
-  LUKSO, encrypted with a key that only the supplier controls. The chain is the database: no server is
-  needed to know where a cylinder is.
-- **No friction, no LYX.** Nobody at the supplier ever holds or manages LYX. People sign; ChainIntegrate's
-  relayer sends the transactions and pays the gas.
-- **EOA today, Universal Profile tomorrow.** The owner of a registry can be an EOA (the demo) or a
-  Universal Profile (including profiles created on ChainIntegrate's own domains). The contracts treat
-  both the same way.
-- **One registry per company.** A factory creates identical, independent registries; the same app and
-  the same relayer serve them all.
-- **Scales with unknown volumes.** One transaction per document (split automatically when large), one
-  read per scan, history from logs, an indexer only when needed.
+- **One cylinder, one token.** Each cylinder is an LSP8 token in the supplier's own register.
+- **Everything on-chain, encrypted.** Cylinder data, states, customers, settings and documents live on
+  LUKSO, encrypted with a key only the supplier holds. The chain is the database: no server keeps the
+  data.
+- **No friction, no LYX.** The supplier and the drivers only sign; the relayer sends and pays the gas.
+  Nobody at the supplier ever holds or sees LYX, and no screen uses technical words.
+- **One register per company.** A factory creates identical, independent registers; the same app,
+  page and relayer serve them all.
+- **The supplier's own account.** The register's owner is the supplier's ChainIntegrate account (a
+  Universal Profile created with up-onboarding). An EOA works too (the contracts treat both alike).
 
-## 3. Actors
+## 3. Who does what
 
-| Actor | Who | Does |
+| Who | With what | Does |
 |---|---|---|
-| **Owner** | The gas supplier (demo: an EOA created and held by ChainIntegrate; later the supplier's own EOA or UP) | Holds the tokens and the registry; authorizes operators; holds the data key |
-| **Operator** | A driver's phone (its own key) | Registers cylinders, records movements and documents; cannot transfer tokens or change operators |
-| **Relayer** | ChainIntegrate's server | Checks and sends signed operations, pays the gas, sends the e-mail |
-| **Factory owner** | ChainIntegrate | Creates registries; has no power over a registry's data |
-| **Counterparties** | Customers and refill plants | Exist only as encrypted records and e-mail recipients; they use nothing |
+| **The supplier** (register owner) | The admin page, signed in with the ChainIntegrate Account extension | Customers and refill plants, drivers' phones, settings, the data password; sees cylinders, histories, documents |
+| **A driver** (operator) | The GasTrace app, with a key kept on the phone | Stock counts, deliveries, collections, refills |
+| **The relayer** | ChainIntegrate's server | Checks and sends signed operations, pays the gas, sends each document's e-mail |
+| **ChainIntegrate** (factory owner) | Its command-line tools and key | Deploys the factory, creates a register for each supplier; no power inside a register |
+| **Customers, refill plants** | Nothing | Encrypted entries of the register; they receive the e-mails |
 
-## 4. Data model
+## 4. Data
 
-### 4.1 Cylinder (one LSP8 token)
+### 4.1 Cylinders
 
-**tokenId** = `HMAC-SHA256(idKey, "cylinder:" + normalizedSerial)`, a `bytes32`.
-Whoever has the key scans a barcode, computes the tokenId and reads the cylinder straight from the
-chain. Whoever does not sees random identifiers and cannot enumerate serial numbers (a plain hash of a
-short serial could be brute-forced; an HMAC cannot without the key).
+**Token ID** = `HMAC-SHA256(idKey, "cylinder:" + normalized serial)`. Whoever has the data key scans a
+barcode, computes the token ID and reads the cylinder from the chain; anyone else sees random
+identifiers and cannot enumerate serials (a plain hash of a short serial could be brute-forced). The
+same cylinder has unrelated token IDs in two registers.
 
-Per-token data (LSP8 `getDataForTokenId`), each value encrypted (section 5):
+Serials are normalized (trimmed, inner spaces removed, upper case) and checked (3 to 40 characters,
+letters, digits and `-./`): a misread code is refused rather than becoming a new cylinder
+(`shared/crypto.js`, `normalizeSerial`). The labels' real format is still to be seen (section 10).
 
-| Data key | Plaintext content | Changes |
-|---|---|---|
-| `GCRInfo` | serial, gas, capacity (optional), owner of the cylinder (`supplier` or a counterparty id), registered at | Rarely (registration, correction) |
-| `GCRState` | location (with the counterparty id), condition, lifecycle, last movement type, scan time (device clock) | Every movement |
+Per-token data, each value encrypted (section 5):
 
-Every change emits LSP8's `TokenIdDataChanged` with the encrypted value, so the **full history** of a
-cylinder is rebuilt from the logs; nothing else stores it. The document and the signer of a change are
-not repeated in the state: the `DocumentRecorded` event of the same transaction carries both.
-
-### 4.2 State
-
-Three independent fields instead of a fixed list of states:
-
-| Field | Values |
+| Data key | Plaintext |
 |---|---|
-| **Location** | `depot` · `customer:<id>` · `refill:<id>` |
-| **Condition** | `full` · `empty` · `defective` |
-| **Lifecycle** | `active` · `retired` |
+| `GCRInfo` | serial, gas, capacity (optional), owner of the cylinder (`supplier` or a counterparty id), registered at |
+| `GCRState` | location (`depot`, or a customer or refill plant by id), condition (`full`, `empty`, `defective`), lifecycle (`active`, `retired`), last movement, scan time |
 
-### 4.3 Movements
+Every change emits LSP8's `TokenIdDataChanged` with the encrypted value: a cylinder's **history** is
+rebuilt from the logs. The document and the signer of a change are in the same transaction's
+`DocumentRecorded` event, not repeated in the state.
 
-| Movement | From → To | Condition after |
-|---|---|---|
-| `delivery` | depot → customer | full |
-| `collection` | customer → depot | empty, full or defective |
-| `to_refill` | depot → refill plant | as found (usually empty or defective) |
-| `from_refill` | refill plant → depot | full or defective |
-| `defect` | stays where it is | defective |
-| `retire` | stays where it is | lifecycle `retired` (the token is kept, never burnt: history stays) |
+### 4.2 Movements
 
-A cylinder **owned by a customer** follows the same movements; the app warns when it is about to be
-delivered to anyone other than its owner.
+| Movement | Document | Location after | Condition |
+|---|---|---|---|
+| `stock_count` | stock count | the customer or refill plant counted | as found |
+| `delivery` | delivery note | the customer | full (by default) |
+| `collection` | delivery note | depot | empty by default; full or defective |
+| `to_refill` | refill note | the refill plant | as found |
+| `from_refill` | refill note | depot | full by default |
 
-### 4.4 Counterparties
+The app proposes the movement from the cylinder's last state and warns (the driver confirms, the e-mail
+lists it) when it does not fit: a cylinder recorded at another customer, at a refill plant, retired, or
+owned by someone else.
 
-Customers and refill plants share one encrypted directory, stored in the registry's own ERC725Y data
-(one entry per counterparty, so adding one never rewrites the others):
+### 4.3 Customers, refill plants, settings
 
-- key: LSP2 Mapping `GCRCounterparty:<bytes20 id>`, with `id = HMAC(idKey, "cp:" + uuid)` truncated;
-- value: encrypted `{ type: customer|refill, name, emails[] }`: only the heading the driver needs to
-  recognize the counterparty, and the optional addresses that receive the e-mail. Nothing else is kept.
+Stored in the register's own ERC725Y data, one entry each, encrypted:
 
-Counterparties are managed **by the owner only**, with the owner tools (section 8.5); the driver picks
-from the list and cannot add one. The demo has two customers.
+- a counterparty: key LSP2 Mapping `bytes10(keccak256("GCRCounterparty")) + 0x0000 + id` (a random
+  20-byte id); value `{ type: customer | refill, name, emails[] }`, the heading the driver needs and the
+  addresses that receive its documents' e-mails. Removing one writes an empty value; its past documents
+  keep its id.
+- the settings: key `keccak256("GCRSettings")`; value `{ company, emails[] }`, the name shown by the app
+  and the e-mails, and the supplier's own addresses, which receive a copy of every document.
 
-### 4.5 Documents
+Only the owner writes them (section 6.2); drivers pick from the list.
 
-A document is the unit an operator closes: one DDT (or the refill plant's equivalent) with all the
-movements made under it. It is recorded once, in the same transaction as its movements:
+### 4.4 Documents
 
-- `docId = HMAC(idKey, "doc:" + counterpartyId + ":" + documentNumber)`: the contract refuses the same
-  `docId` twice, so a document cannot be recorded twice by mistake;
-- event `DocumentRecorded(bytes32 indexed docId, bytes encryptedDocument, address indexed signer)`;
-  the encrypted document holds the number, date, counterparty, the list of movements and the per-gas
-  totals (what the e-mail shows);
-- a wrong document is **corrected, never deleted**: `DocumentCorrected(docId, encryptedCorrection,
-  reason)`, the original stays in the history.
+A document is what a driver closes: a delivery note, a stock count or a refill note, with all its
+movements.
 
-### 4.6 What the chain reveals
+- `docId = HMAC(idKey, "doc:" + counterparty id + ":" + document number)` (a stock count's number is
+  `STOCK-<time>`): the contract refuses the same document twice.
+- One transaction records the movements and emits `DocumentRecorded(docId, part, parts, signer,
+  corrects, document)`, `document` being the encrypted document (number, date, counterparty, every
+  line with serial, gas, movement, condition and confirmed warning).
+- A document too large for one transaction is split into parts (25 new cylinders, or 60 data writes, per
+  part); the encrypted document travels in the last one.
+- A wrong document is never deleted: a later document can name it in `corrects`.
 
-Public: that a registry exists, how many cylinders it has, when documents are recorded and how many
-cylinders each touches, which operator key signed. Not public: serials, gases, customers, document
-numbers, locations, conditions. Every info and state value has the same encrypted size (221 bytes),
-so its length reveals nothing (not even whether a cylinder is at the depot or at a customer); other
-values are padded to fixed buckets.
+### 4.5 What the chain reveals
+
+Public: that a register exists, its owner, how many cylinders it has, when documents are recorded and
+how many cylinders each touches, which key signed. Not public: serials, gases, customers, numbers,
+locations, conditions, e-mails. Every info and state value has the same encrypted size (221 bytes), so
+its length says nothing (not even depot or customer); other values are padded to fixed sizes.
 
 ## 5. Encryption
 
-- **Data key (DEK)**: 32 random bytes per registry, created by the owner. Two subkeys are derived with
-  HKDF-SHA256: `encKey` (AES-256-GCM) and `idKey` (HMAC for tokenIds, counterparty ids, document ids).
-- **Password wrap** (slot 0): the owner's password, through PBKDF2-SHA256 (600,000 iterations, random
-  salt, registry address as context), gives a key-encryption key that wraps the DEK. The wrapped DEK is
-  stored on-chain in the registry's data (`GCRKeyWrap:<slot>`). The password is typed only in the owner
-  tools and once per phone at enrollment; it never reaches the relayer. The owner tools refuse a weak
-  password and suggest a phrase.
-- **Recovery code** (slot 1): when the registry is created, the owner tools generate a random recovery
-  code (24 words, 256 bits) and wrap the same DEK with it. The owner prints it and keeps it in a safe
-  place. Being random and long, it cannot be guessed offline the way a chosen password could.
-- **Every value**: `version (1) | IV (12) | ciphertext | tag (16)`, AES-256-GCM, with the registry
-  address, the tokenId (or entry id) and the data key name as associated data, so a ciphertext cannot
-  be moved to another cylinder or field without failing.
-- **Operators never learn the password.** At enrollment the owner types the password once on the
-  driver's phone; the app unwraps the DEK and keeps it encrypted under an Android Keystore key unlocked
-  by fingerprint or PIN (the same approach as UP Wallet's phone key). The driver uses the app, never
-  the password.
-- **Limits, stated plainly.** Encrypted data on a public chain can be copied and attacked offline
-  forever: the password must be long. Nobody, ChainIntegrate included, keeps a copy of the DEK: with
-  both the password and the recovery code lost, the data cannot be read again.
-
-### 5.1 Password lifecycle
+- **Data key**: 32 random bytes per register. HKDF-SHA256 derives `encKey` (AES-256-GCM) and `idKey`
+  (HMAC for token, counterparty and document ids).
+- **Every value**: `version | IV (12) | ciphertext | tag (16)`, with the register's address, the entry id
+  and the field name as associated data: a value copied to another cylinder or field does not decrypt.
+- **Password wrap** (slot 0, `GCRKeyWrap:0`): the data key wrapped with a key from the data password
+  (PBKDF2-SHA256, 600,000 iterations, random salt, bound to the register's address). The password is
+  typed in the admin page (kept in the page's memory only) and once on each phone; it is never sent.
+  Weak passwords are refused (a phrase of 20 or more characters, or 14 or more mixing letters, digits and
+  symbols).
+- **Recovery code** (slot 1, `GCRKeyWrap:1`): 24 random words (256 bits, English or Italian list), shown
+  once when the register is created, wrapping the same data key. Random and long, it cannot be guessed
+  offline as a chosen password could.
+- **Phones never learn the password**: the owner types it once on the phone, the app unwraps the data
+  key and keeps it encrypted under an Android Keystore key unlocked by fingerprint or PIN.
+- **Limits**: encrypted data on a public chain can be copied and attacked offline forever, hence the
+  long password. Nobody, ChainIntegrate included, keeps a copy of the data key: without the password and
+  the recovery code the data cannot be read again.
 
 | Case | What happens |
 |---|---|
-| **Change** (the old password is known) | The owner tools unwrap the DEK with the old password and write a new slot 0. Phones are not affected. The old wrap stays in the chain's history, so this is a change, not a protection against someone who knew the old password. |
-| **Lost** | The owner tools unwrap the DEK with the recovery code and write a new slot 0 with a new password. Phones are not affected. |
-| **Lost, with no recovery code** | The data cannot be read again; the registry keeps working only on phones still enrolled, and a new registry is the way out. |
-| **Leaked** | The data is not sensitive, so this is a rare case: the owner tools can rotate the DEK (new key, current states and directory re-encrypted, new password and recovery code, phones enrolled again). History already written stays under the old key. |
-| **Phone lost, or an employee leaves** | The owner revokes the operator: from then on the phone cannot write. Reading what it already had stays possible only by unlocking the phone; for this data, revocation is enough. |
-
-### 5.2 A new owner
-
-When the demo ends and the supplier starts for real, it **starts from scratch**: a new registry from the
-factory, with its own DEK, password and recovery code. Nothing is copied from the demo registry, which
-stays on-chain as it is.
-
-The same cylinder in two registries has two unrelated tokenIds, because each registry derives them with
-its own key: no collision, and nobody can tell that the two are the same cylinder. Token IDs are only
-unique within one contract anyway.
+| **Change the password** | From the admin page (Settings): a new slot 0. Phones keep working. The old wrap stays in the chain's history: a change, not a protection against someone who knew the old password. |
+| **Password lost** | Admin page, "I lost the password": the 24 words open the data key, a new password is set. |
+| **Both lost** | The data cannot be read again; a new register is the way out. |
+| **Phone lost, driver leaves** | The owner revokes the phone: it can no longer write. |
+| **A new company** | Starts a new register (its own key, password, recovery code); nothing is copied. |
 
 ## 6. Contracts
 
-Built on LUKSO's LSP8 (`@lukso/lsp8-contracts`) and ownership (LSP14). Not upgradeable: a new version
-is a new factory, and registries are migrated explicitly.
+`contracts/`, Solidity 0.8.28, on LUKSO's LSP8 (`@lukso/lsp8-contracts`) and OpenZeppelin. Not
+upgradeable. Source verified on LUKSO's explorer (`scripts/verify-lukso.js`).
 
-### 6.1 `GasCylinderRegistry` (one per company)
+### 6.1 `GasCylinderRegistryFactory`
 
-- LSP8 collection, tokenId format unique id (`bytes32`); name and symbol set at creation; LSP4 metadata
-  (name, description, images) editable by the owner.
-- **Owner**: the company's EOA or UP (LSP14 two-step ownership).
-- **Operators**: a set of addresses authorized by the owner.
-- **Tokens**: minted to the owner; not transferable, except by the owner to its own new account (for
-  example the same company moving from an EOA to a Universal Profile), in chunks, with `force = true`
-  so that an EOA can receive them. A different company starts a new registry instead (5.2).
-- **Writes** go through signed operations only (section 7); anyone may submit them, the signature
-  decides who acts:
-  - operator or owner: `registerCylinders`, `recordDocument` (mints + state updates + the document event
-    in one call), `correctDocument`;
-  - owner only: `addOperator`, `removeOperator`, `setKeyWrap`, `setCounterparty`, `setMetadata`,
-    `migrateTokens`.
-- **Optimistic concurrency**: each state update carries the hash of the state it expects to replace.
-  If the cylinder changed in between (two phones, or an offline queue sent out of order), the whole
-  operation reverts and the app shows the conflict, so a newer state is never overwritten by an older
-  one.
+- Owned by ChainIntegrate's key; only it calls `createRegistry(salt, owner, name, symbol, dataKeys,
+  dataValues)`, which deploys an EIP-1167 clone of one register implementation at a predictable address
+  (`predictRegistryAddress(salt)`: the key wraps written at creation are bound to that address).
+- `isRegistry(address)`, `registryCount()`, `registries(start, count)`: the relayer, the page and the
+  extension's catalog accept only registers made here.
+- It has no rights inside a register.
 
-### 6.2 `GasCylinderRegistryFactory` (one, owned by ChainIntegrate)
+### 6.2 `GasCylinderRegistry`
 
-- `createRegistry(owner, name, symbol, initialKeyWrap)` deploys a registry and records it.
-- `isRegistry(address)`: the relayer and the app only work with registries the factory created, so
-  a look-alike contract cannot spend the relayer's gas.
-- The factory owner has no rights inside a registry.
+- An LSP8 collection (token ID format: unique id), owned by the supplier's account.
+- **Operators**: the drivers' phones (or any account), authorized by the owner.
+- **Writes are signed operations** (EIP-712, domain `GasCylinderRegistry` version `1`, the register's
+  address and chain id); anyone may submit them, the signature decides:
+  - owner or operator: `recordDocument(payload, signer, nonce, deadline, signature)`: mints the new
+    cylinders to the owner, writes info and states, emits the document;
+  - owner: `setOperatorSigned`, `setDataSigned` (key wraps, counterparties, settings, LSP4 metadata),
+    `transferOwnershipSigned` then `acceptOwnershipSigned` by the new owner. An owner with LYX can also
+    call `setOperator`, `transferOwnership`, `acceptOwnership` directly. `renounceOwnership` is disabled.
+- **Signatures**: `ecrecover` for keys, **ERC-1271** for accounts (a Universal Profile accepts a
+  signature from its controllers with the SIGN permission).
+- **Optimistic concurrency**: every write carries the hash of the value it replaces; if a cylinder
+  changed meanwhile (two phones, an offline queue), the whole document is refused (`StaleValue`).
+- **Nonces** are unordered (a bitmap per signer, random 256-bit values): documents queued offline need
+  no order. Deadline: seven days.
+- **Tokens** always belong to the owner and cannot be transferred; after an ownership change,
+  `syncHolders(tokenIds)` (anyone may call it) moves them to the new owner.
+- The LSP4 name, symbol, token type and the LSP8 token ID format are read-only.
 
-### 6.3 Implementation notes (milestone 1)
+**Gas** (`scripts/gas-report.js`): a new cylinder about 460,000 gas, a movement of a known one about
+60,000; 25 new cylinders about 11.5 million, under the 16.7 million cap of one transaction.
 
-- Registries are **EIP-1167 clones** of one implementation deployed by the factory: creating a registry
-  is cheap and the factory stays small. Clones cannot be upgraded or initialized twice.
-- `recordDocument(payload, signer, nonce, deadline, signature)` takes the whole document part: `mints`
-  (new token IDs, minted to the owner), `updates` (writes of `GCRInfo` / `GCRState`, each with the hash
-  it expects to replace, `keccak256("")` for a new value), the encrypted `document`, and `corrects`
-  (the id of an earlier document, or zero). Part `i of n` of a document can be recorded once.
-- Owner operations: `setOperatorSigned`, `setDataSigned` (key wraps, counterparties, LSP4 metadata; the
-  LSP4 name, symbol, token type and the LSP8 token ID format stay read-only), `transferOwnershipSigned`
-  and `acceptOwnershipSigned` (two steps). An owner with LYX may also call `setOperator`,
-  `transferOwnership` and `acceptOwnership` directly. `renounceOwnership` is disabled.
-- `syncHolders(tokenIds)`: anyone may call it; it moves tokens only from a former owner to the current
-  owner. Every other transfer reverts.
-- Nonces are a bitmap per signer; the app uses random 256-bit nonces, so queued operations never collide.
-- The EIP-712 types and the payload encoding are in `shared/eip712.js`; a test checks that the library
-  and the contract hash payloads identically.
-- **Gas** (`scripts/gas-report.js`, local network, 221-byte encrypted values, 512-byte document): a new
-  cylinder costs about 460,000 gas (mint plus two values), a movement of a known cylinder about 60,000.
-  A document of 25 new cylinders uses about 11.5 million gas. Recent Ethereum forks cap a transaction
-  at 16.7 million gas, so the app splits documents at **25 cylinders** by default.
-- Registries are created at an address known in advance (`predictRegistryAddress(salt)`), because the
-  wrapped data key written at creation is bound to the registry's address.
+## 7. The relayer and the e-mail
 
-## 7. Signed operations and the relayer
+`relayer/relay.js` on ChainIntegrate's server, behind `https://gastrace.chainintegrate.it/gcr/`.
 
-### 7.1 Signatures
+- `POST /gcr/document` (a phone's document, with its e-mail), `POST /gcr/owner` (an owner operation),
+  `GET /gcr/status?hash=…`, `GET /gcr/info`.
+- It accepts only registers of the factory and signers that are the owner or an operator, simulates
+  first (the register's refusal comes back by name and nothing is sent), sends one transaction at a
+  time, returns the same transaction for the same operation, and limits requests per IP and operations
+  per register per day.
+- It holds only the LYX it spends; it cannot forge or alter anything (without a valid signature the
+  register refuses). At worst it fails to send.
+- **E-mail**: the phone signs the e-mail (recipients, subject, text) bound to the document's EIP-712
+  digest, with the same fingerprint as the document; the relayer sends exactly that e-mail, and only
+  after the document's transaction is confirmed. Recipients: the customer's addresses, the supplier's,
+  and up to three typed by the driver. The relayer logs that an e-mail left and to how many people,
+  never its content. The e-mail is plaintext in transit to the relayer: the one place where data leaves
+  the encryption, by choice, so that its delivery can be checked.
 
-- **EIP-712**, domain = registry address + chain id (42 on mainnet).
-- Operator operations (the app's own key): the typed data is `{ kind, payloadHash, nonce, deadline }`,
-  where `payloadHash` is the hash of the ABI-encoded payload. The signer is the app itself, so wallet
-  readability does not matter here.
-- Owner operations (adding an operator, migrating): fully typed structs, so that an owner signing in a
-  wallet (UP Wallet, the UP Browser Extension, the UP! App) reads exactly what they approve.
-- **Verification**: `ecrecover` for EOAs, **ERC-1271** for Universal Profiles (the UP's own signature
-  check: any controller with the SIGN permission). Same code path for demo and production.
-- **Unordered nonces** (a bitmap per signer): operations queued offline do not have to arrive in order.
-- **Deadline**: long enough for an offline queue (default 7 days).
+## 8. The app
 
-### 7.2 Relayer (`relayer/`)
+`app/` (logic, interface, texts) and `android/` (Capacitor 8, like UP Wallet for Android). Guide:
+[docs/app.md](docs/app.md).
 
-Node.js, stateless apart from its logs. Built from the experience of Cross_Chain's relayer and
-cross-chain-sponsor's limits.
+- **Setup**: scan the register's setup code (QR on the admin page), create the phone key (fingerprint or
+  PIN), the owner authorizes the phone's code from the admin page, the owner types the data password
+  once.
+- **A document**: pick the customer, scan each cylinder (Google's ML Kit scanner, no camera permission)
+  or type its code, adjust movement and condition, give the gas of new cylinders, type the delivery
+  note number, send: one fingerprint signs every part and the e-mail.
+- **Offline**: signed documents wait in "To send" and leave when the network returns; the last
+  states read are kept for scanning without network. If the relayer has restarted and no longer knows a
+  document, the app checks the network itself.
+- **Keys** (`DeviceKeyPlugin.java`): the phone key and the data key, each encrypted under its own
+  Android Keystore key usable only right after fingerprint or PIN; no backup of app data.
 
-1. `POST /gcr/document` (phones) or `POST /gcr/owner` (owner operations) with the signed operation and,
-   for a document, the e-mail with the phone's signature over it (`shared/mail.js`).
-2. Checks: the registry comes from the factory; the signer is the owner or an operator (read from the
-   chain); the operation simulates successfully; per-registry limits (operations per day, cylinders
-   per operation).
-3. Sends the transaction from its hot wallet, pays the gas, waits for confirmation, returns the hash.
-4. E-mail (7.3), only after confirmation.
+## 9. The admin page
 
-The relayer **cannot forge or alter** anything: without a valid signature the contract refuses, and the
-payload is encrypted. At worst it can fail to send; any account with LYX can then submit the same
-signed operation directly.
+`admin/`, served from `admin/www` at `https://gastrace.chainintegrate.it/`. Guide:
+[docs/admin.md](docs/admin.md).
 
-Gas is paid by ChainIntegrate (a fraction of a cent per document on LUKSO) and can later be billed
-in the service fee. The relayer alerts when its wallet runs low.
+The supplier signs in with the **ChainIntegrate Account** extension (up-onboarding), found through
+EIP-6963; the page finds the registers owned by the account through the factory, asks for the data
+password, and shows overview, cylinders with their history, documents, customers, phones and settings.
+Each change is an EIP-712 request the extension describes and the owner confirms; the relayer sends it.
+The extension serves the page only with the factory and the site set in its catalog
+(`extension/shared/catalog.js` in up-onboarding); `scripts/admin-demo.js` checks every request of the
+page against that catalog.
 
-### 7.3 E-mail
+## 10. Open points
 
-Sent by the relayer, so that there is a record that it left:
-
-- the phone signs the e-mail together with the operation's signature, so the relayer sends only the
-  e-mail written by the document's signer, for that document only;
-- the app sends, with the operation, the recipients (from the encrypted directory, plus at most three
-  typed by the driver for that document) and the plaintext
-  summary over HTTPS; the relayer binds it to the operation's hash and sends it **only after the
-  transaction is confirmed**;
-- content: supplier, counterparty, document number and date, delivered and collected cylinders per
-  gas (with serials), anomalies confirmed by the driver, a link to the transaction on the explorer;
-  optionally a PDF of the same;
-- the relayer keeps a log of *that* a mail was sent (operation hash, number of recipients, time,
-  outcome), never its content or addresses;
-- if sending fails, the app is told and offers to send the same summary from the phone.
-
-The plaintext is seen by the relayer only in transit. This is the one place where data leaves the
-encryption boundary, by choice, to make delivery verifiable.
-
-## 8. The app (`app/`)
-
-Android, built with Capacitor; Italian and English with a language switch in the header.
-
-### 8.1 Setup (once per phone)
-
-1. The app creates its own key (secp256k1, encrypted under an Android Keystore key, unlocked by
-   fingerprint or PIN) and shows its address.
-2. The owner authorizes that address as an operator (signed, sent through the relayer).
-3. The owner types the registry password once; the app unwraps and keeps the DEK (section 5).
-
-### 8.2 A document
-
-1. **New document**: the counterparty, picked from the owner's list. The document number can be typed
-   now or at any time before closing.
-2. **Scan loop**, continuous camera, one beep per accepted code. For each barcode:
-   - the app normalizes it, computes the tokenId and reads `GCRInfo` / `GCRState` (one RPC call);
-   - **unknown cylinder**: asks the gas (and optional capacity, ownership), registers it at the depot and
-     proposes `delivery`; the driver can switch to `collection` (a cylinder never seen before, found at
-     the customer);
-   - **known cylinder**: shows gas and last state and proposes the movement:
-     at the depot → `delivery`; at this customer → `collection` (asks the condition: empty by default,
-     full, defective);
-   - **anomalies**, each to be confirmed explicitly and reported in the e-mail: collecting a cylinder
-     recorded at another customer; delivering one already at a customer; delivering a customer-owned
-     cylinder to someone else; a retired cylinder; the same code scanned twice.
-3. **Summary per gas**: delivered and collected, to compare with the printed DDT lines.
-4. **Document number**, if not typed yet, and **e-mail recipients**: the counterparty's addresses and
-   the owner's are filled in from the directory; the driver can add up to three more addresses for this
-   document only (they are not saved).
-5. **Close**: the app builds the operation (registrations, state updates with expected previous states,
-   the encrypted document), signs it, sends it to the relayer with the e-mail, and shows the outcome.
-   Large documents are split into several operations under the same `docId` (`part i of n`).
-
-### 8.2b Stock count
-
-A separate mode registers the cylinders already at a counterparty when the system starts (or when one
-is found that was never registered): pick the counterparty, scan, give gas and condition. Each cylinder
-is registered with that counterparty as its location; the count is recorded as a document of type
-`stock count`, with no delivery note and no e-mail unless asked.
-
-### 8.3 Offline
-
-Cylinder reads are cached; a document closed without network is signed and queued, and sent as soon
-as the network returns. Conflicts (6.1) are shown to the driver, who re-scans or confirms.
-
-### 8.4 Barcode
-
-The barcode format is not known yet. Recognition uses ML Kit (all common 1D and 2D formats); the
-normalization (trim, case, allowed characters, length) is a per-registry setting, so that it can be
-fixed when the labels are known without changing the contracts.
-
-### 8.5 Owner tools
-
-What only the owner does: create the registry, set or change the password, authorize or revoke a
-driver's phone, add or edit counterparties, migrate to a new owner. Each operation is signed with the
-owner's key and sent through the relayer, which pays the gas as for the drivers.
-
-- **Demo**: `scripts/owner.js` run on a computer (for example `node scripts/owner.js add-phone <address>`),
-  signing with the owner's encrypted key file; until the relayer exists, ChainIntegrate's key sends the
-  signed operations and pays the gas. Guide: `docs/owner-tools.md`.
-- **The GasTrace admin page** (`admin/`, `docs/admin.md`): the owner signs in with the ChainIntegrate
-  Account extension (up-onboarding), whose account owns the registry; it signs each change (ERC-1271
-  through the account) and the relayer sends it. The scripts stay for ChainIntegrate (factory, registries).
-
-### 8.6 The demo, step by step
-
-1. **Before**: the owner creates the registry, sets the password, adds two customers and the owner's
-   e-mail, and authorizes the phone (scripts, 8.5).
-2. **Stock count**: at the demo customer's site, the cylinders already there are scanned in stock-count
-   mode (8.2b), leaving one out to show how an unknown cylinder is handled.
-3. **The driver arrives**: new document for that customer.
-   - Full cylinders unloaded: unknown, so the app asks the gas and proposes `delivery`.
-   - Empty cylinders taken back: known, so the app proposes `collection` from this customer; the
-     cylinder left out of the count is unknown and is registered on the spot.
-4. **Close**: the delivery note number, the preset recipients plus an address typed on the spot,
-   **Send**. One transaction, paid by the relayer; the e-mail arrives with the summary per gas and the
-   link to the transaction.
-5. **Afterwards**: scanning any of those cylinders again shows its new state, read from the chain.
-
-## 9. Scalability
-
-- One transaction per document, split by a configurable maximum number of cylinders per transaction.
-- One `eth_call` per scan, independent of the number of cylinders.
-- History from `TokenIdDataChanged` and `DocumentRecorded` logs, read in block ranges; when volumes
-  grow, an Envio HyperIndex indexer of the same events (it stores only ciphertexts, so it needs no key).
-- Many companies: one registry each through the factory; the relayer applies limits per registry.
-- Counterparties are separate entries; nothing grows into a single large value.
-
-## 10. Repository layout (planned)
-
-```
-contracts/   GasCylinderRegistry.sol, GasCylinderRegistryFactory.sol, tests (Hardhat)
-shared/      encryption, ids, encoding and EIP-712 types, used by the app, the relayer and scripts
-relayer/     the relay and mail service
-app/         the Android app (Capacitor), Italian and English
-scripts/     deployment and owner tools for the demo (create registry, add operator, set password)
-docs/        guides
-```
-
-## 11. Milestones
-
-1. ✅ **Contracts** and their tests on a local chain: registry, factory, signed operations, nonces,
-   ERC-1271, optimistic concurrency, migration.
-2. ✅ **Shared library** (`shared/`): encryption, key wraps (password and 24-word recovery code, English or
-   Italian words), ids, padding, plaintext formats, with test vectors checked against Node's own crypto.
-3. ✅ **Owner tools** (`scripts/owner.js`, guide in `docs/owner-tools.md`): create a registry, set and change
-   the password, recover it with the 24 words, add phones, add counterparties.
-4. ✅ **Relayer** (`relayer/`, install guide in `relayer/README.md`): checks, limits, sending, e-mail signed
-   by the phone and sent after confirmation; runs on Cross_Chain's server under `/gcr/`.
-5. ✅ **App** (`app/`, `android/`, guide in `docs/app.md`): setup, scanning, states, documents, refill,
-   stock count, offline queue, both languages; built and signed by GitHub Actions.
-6. **Demo on LUKSO mainnet** with Argonia Gas Tecnici's data replaced by the real supplier's only in
-   the deployed registry, never in this repository.
-7. **Later**: owner on a Universal Profile; an owner web page (UP Modal / UP Wallet) replacing the
-   scripts; indexer; refill-plant documents once their format is known.
-
-## 12. Open points
-
-- **Barcode format** of the labels (section 8.4).
+- **Barcode format** of the real labels: the normalization rules may need adjusting (section 4.1).
 - **Refill plant documents**: what accompanies a cylinder sent to and back from refilling.
-- **Emergency role**: whether ChainIntegrate keeps any recovery power over a registry (proposed: none).
-- **Retention**: whether retired cylinders and old counterparties should ever be hidden from the app.
+- **Registering from a computer** (an office entering a stock count): the register allows it (any
+  operator), the admin page does not do it yet.
+- **The collection on Universal Everything**: name, description, image and creators (LSP4 metadata,
+  written by the owner, no new contract).
+- **Scale**: past a few thousand cylinders, an indexer of the register's events (Envio) instead of
+  reading the logs from the page.
+- **Second device on an account**: the ChainIntegrate Account extension will add a key to an account
+  (up-onboarding's backlog); GasTrace needs nothing for it.

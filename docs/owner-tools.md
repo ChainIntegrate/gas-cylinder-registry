@@ -1,68 +1,65 @@
-# Owner tools (demo)
+# ChainIntegrate's command-line tools
 
-Command-line tools for what only a registry's owner does: create the registry, authorize the drivers'
-phones, keep the list of customers and refill plants, change the data password. They run on a
-computer with Node.js 20 or later, from this repository after `npm install`.
+`scripts/owner.js`: what ChainIntegrate does once per network and once per supplier (the factory, the
+registers, the source verification), and the owner operations for an owner that uses a key file instead
+of a ChainIntegrate account. A supplier with a ChainIntegrate account manages its register from the
+admin page ([admin.md](admin.md)), not from here.
+
+They run with Node.js 20 or later, from a clone of this repository after `npm ci --omit=dev` (`npm ci`
+for the source verification, which needs the compiler). On the server they live in the user's home
+(`~/gastrace-tools`), apart from the clone that serves the site, because they hold ChainIntegrate's key.
 
 ```bash
 node scripts/owner.js help
 ```
 
-During the demo the owner is an EOA held by ChainIntegrate. Every owner operation is **signed** with
-the owner's key and **sent** by ChainIntegrate's key, which pays the gas, as the relayer will do: the
-owner's key never needs LYX. A web page replaces these tools when owners move to a Universal Profile.
-
 ## Files
 
-| File | What | Commit it? |
+| File | What | In the repository? |
 |---|---|---|
-| `chainintegrate.keystore.json` | ChainIntegrate's key (deploys the factory, creates registries, sends operations); needs LYX | **Never** |
-| `owner.keystore.json` | The registry owner's key; needs no LYX | **Never** |
-| `gcr-registry.json` | Network, factory and registry addresses, and which key files to use | No (it may name the company) |
+| `chainintegrate.keystore.json` | ChainIntegrate's key: deploys the factory, creates registers; needs a little LYX | **Never** |
+| `owner.keystore.json` | Only for an owner that uses a key file; needs no LYX | **Never** |
+| `gcr-registry.json` | Network, factory and register addresses and blocks, which key files to use | No (it may name the company) |
 
-All three are in `.gitignore`. Keep a copy of each key file and its password: a lost key cannot be
-recovered.
+All three are in `.gitignore`. Keep a copy of each key file and its password.
 
-## Setting up the demo
+## A new supplier
 
 ```bash
-# 1. Keys (once). Fund ChainIntegrate's address with a little LYX.
+# Once: ChainIntegrate's key (send it a little LYX), then the factory
 node scripts/owner.js new-key chainintegrate.keystore.json
-node scripts/owner.js new-key owner.keystore.json
-
-# 2. Factory (once per network)
 node scripts/owner.js deploy-factory --network lukso
+npx hardhat run --network luksoMainnet scripts/verify-lukso.js     # source on LUKSO's explorer (needs npm ci)
 
-# 3. The company's registry: asks the data password, shows the 24-word recovery code once
-node scripts/owner.js create-registry --name "Argonia Gas Tecnici cylinders" --symbol ARGCYL \
-  --owner-keystore owner.keystore.json --language it
-
-# 4. Customers, refill plants, phones
-node scripts/owner.js add-customer --name "Officina Demo" --email demo@example.com
-node scripts/owner.js add-customer --name "Cliente Due"
-node scripts/owner.js add-phone "d59F 2E8B …"  # the code the app shows at its first start (spaces allowed)
-node scripts/owner.js status
+# Per supplier: the register, owned by the supplier's ChainIntegrate account
+node scripts/owner.js create-registry --network lukso --name "Argonia Gas Tecnici" --symbol ARGCYL \
+  --owner 0x<the account's address> --language it
 ```
 
-## Day to day
+`create-registry` asks the data password twice (it refuses a weak one) and shows the **24-word
+recovery code once**, asking for two of its words before going on: write it down. The supplier then
+does everything else from the admin page.
 
-| Command | When |
+If the network does not answer while a register is being created, the tools look for it for five
+minutes. If they still stop, check whether it exists before trying again (a new attempt makes a new
+address and a new recovery code), and save an existing one with `use-registry <address>`.
+
+## Other commands
+
+| Command | What |
 |---|---|
-| `counterparties` | See customers and refill plants with their ids |
-| `add-customer`, `add-refill-plant` | A new customer or refill plant (`--name`, any number of `--email`) |
-| `edit-counterparty <id>` | New name or e-mails (`--email` replaces the whole list) |
-| `remove-counterparty <id>` | Hide it from the app's list; its past documents keep it |
-| `phones`, `add-phone`, `remove-phone` | A new phone; a lost phone or a driver who leaves (revocation is enough) |
-| `change-password` | A new data password, with the current one |
-| `change-password --recovery` | The password is lost: the 24 words open the data key, then a new password is set |
+| `status` | The register: name, owner, phones, cylinders, key wraps |
+| `phone-setup` | The setup code and its QR in the terminal (the admin page shows the same) |
+| `use-registry <address>` | Save a register created earlier into `gcr-registry.json` |
 
-Phones already set up keep working after a password change: they hold the data key, not the password.
+For an owner with a key file (`--owner-keystore` at creation), the owner operations are here too:
+`settings`, `counterparties`, `add-customer`, `add-refill-plant`, `edit-counterparty`,
+`remove-counterparty`, `phones`, `add-phone`, `remove-phone`, `change-password [--recovery]`. Each is
+signed with the owner's key file and sent through the relayer (`"relayer"` in `gcr-registry.json`) or,
+without one, by ChainIntegrate's key.
 
-## The data password and the recovery code
+## Networks
 
-- The data password protects data that anyone can copy from the chain and attack offline forever:
-  the tools accept a phrase of 20 or more characters, or 14 or more mixing letters, digits and symbols.
-- The recovery code (24 words, English or Italian) is shown **once**, when the registry is created;
-  the tools ask for two of its words before going on. Write it on paper and keep it in a safe place.
-- Without both the password and the recovery code, the data can no longer be read by anyone,
-  ChainIntegrate included.
+`--network lukso` (default) uses `LUKSO_RPC_URL` or LUKSO's public node; `lukso-testnet` and `local`
+exist for tests. If the public node is slow, set `LUKSO_RPC_URL` to ChainIntegrate's node for the
+command.
