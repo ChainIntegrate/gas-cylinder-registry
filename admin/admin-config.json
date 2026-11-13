@@ -1,7 +1,7 @@
 {
   "rpc": "https://rpc.mainnet.lukso.network",
   "chainId": 42,
-  "relayer": "https://crosschain-lukso.chainintegrate.it",
+  "relayer": "https://gastrace.chainintegrate.it",
   "factory": "0x0000000000000000000000000000000000000000",
   "factoryBlock": 0
 }

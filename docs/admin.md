@@ -46,8 +46,9 @@ password.
 node scripts/build-admin.js      # admin/www: index.html, admin.js, admin.css, logo, favicon
 ```
 
-`admin/www` is a static site: serve it from the Cross_Chain server (nginx or Apache) as
-`gastrace.chainintegrate.it`, with HTTPS. The page talks only to the configured RPC and relayer (its
+`admin/www` is a static site, committed so that the server serves it from its clone with no build. It is
+published as `gastrace.chainintegrate.it` together with the relayer (`/gcr/`): see [DEPLOY.md](../DEPLOY.md)
+and `tools/nginx/`. The page talks only to the configured RPC and relayer (its
 Content-Security-Policy allows nothing else), so the relayer's `allowedOrigins` must include
 `https://gastrace.chainintegrate.it` (`relayer/config.example.json` has it).
 

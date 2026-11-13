@@ -48,7 +48,10 @@ let log = (...a) => console.log(new Date().toISOString(), ...a);
 
 function loadConfig(file) {
   const c = JSON.parse(fs.readFileSync(file, "utf8"));
-  if (!c.rpc || !c.factory || !c.chainId) throw new Error("config: rpc, chainId and factory are required");
+  // rpcFile: a file holding the RPC URL (ChainIntegrate's node, whose URL carries an access key), readable
+  // only by the service; it takes the place of "rpc".
+  if (c.rpcFile) c.rpc = fs.readFileSync(c.rpcFile, "utf8").trim();
+  if (!c.rpc || !c.factory || !c.chainId) throw new Error("config: rpc (or rpcFile), chainId and factory are required");
   c.listen = { host: "127.0.0.1", port: 8789, ...(c.listen || {}) };
   c.allowedOrigins = c.allowedOrigins || [];
   c.limits = { ...DEFAULT_LIMITS, ...(c.limits || {}) };

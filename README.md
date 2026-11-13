@@ -35,6 +35,10 @@ node scripts/build-admin.js  # the GasTrace admin page (admin/www)
 
 The examples use a fictional supplier, Argonia Gas Tecnici.
 
+## Publishing
+
+The whole sequence (factory, register, relayer, site, the extension's catalog): [DEPLOY.md](DEPLOY.md).
+
 ## License
 
 Source available, all rights reserved: see [LICENSE](LICENSE). Third-party components:

@@ -52,6 +52,8 @@ read it; `DocumentPartAlreadyRecorded`: the same document number was sent before
 
 ## Install on the server
 
+The whole sequence, with the admin page and the site, is in [DEPLOY.md](../DEPLOY.md). The relayer's part:
+
 Like Cross_Chain's relayer: its own clone outside the web root, its key and configuration in `/etc`.
 
 **1. User and a clone with only `relayer/` and `shared/`.**
@@ -60,7 +62,7 @@ Like Cross_Chain's relayer: its own clone outside the web root, its key and conf
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin gcr-relayer
 sudo git clone --filter=blob:none --no-checkout https://github.com/ChainIntegrate/gas-cylinder-registry.git /opt/gas-cylinder-registry
 cd /opt/gas-cylinder-registry
-sudo git sparse-checkout set --no-cone '/relayer/' '/shared/'
+sudo git sparse-checkout set --no-cone '/relayer/' '/shared/' '/admin/www/' '/tools/nginx/'
 sudo git checkout main
 cd relayer && sudo npm ci --omit=dev
 ```
@@ -72,6 +74,8 @@ sudo install -d -m 700 -o gcr-relayer -g gcr-relayer /etc/gcr-relayer
 sudo -u gcr-relayer node /opt/gas-cylinder-registry/relayer/relay.js new-key /etc/gcr-relayer/relayer.key
 sudo install -m 600 -o gcr-relayer -g gcr-relayer /opt/gas-cylinder-registry/relayer/config.example.json /etc/gcr-relayer/config.json
 sudo nano /etc/gcr-relayer/config.json        # factory: the address from the owner tools' deploy-factory
+sudo install -m 600 -o gcr-relayer -g gcr-relayer /dev/null /etc/gcr-relayer/rpc-url
+sudo nano /etc/gcr-relayer/rpc-url            # one line: the RPC URL (ChainIntegrate's node with its key, or LUKSO's public one)
 ```
 
 The service refuses to start if the key file is readable by other users, if the RPC is on another

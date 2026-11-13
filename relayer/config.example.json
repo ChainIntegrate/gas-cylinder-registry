@@ -4,7 +4,7 @@
     "host": "127.0.0.1",
     "port": 8789
   },
-  "rpc": "https://rpc.mainnet.lukso.network",
+  "rpcFile": "/etc/gcr-relayer/rpc-url",
   "chainId": 42,
   "factory": "0x0000000000000000000000000000000000000000",
   "allowedOrigins": [
