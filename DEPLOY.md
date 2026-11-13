@@ -10,7 +10,9 @@ implementation `0x3075ED17F09E0006cECC0D7e67Fe7E7A4Dc95b00`, both verified on th
 Gas Tecnici's register `0xEae1a8B84977694e5c9925028a23599bc345b801` (block 8774282), owned by its
 ChainIntegrate account `0xC335aFd1d95fA790DE419e9BCe482d9B8BC1D773`; relayer
 `0xDC84b301024A4d1735Ad59616023e0C74F07f100` on port 8789; the site with its certificate, every check
-of step 5 as expected; app release v0.2.0.
+of step 5 as expected; app release v0.2.0. The factory was then handed to ChainIntegrate's Universal
+Profile `0x4a2605796e0d91A9667d6E30365aEEC384C48c27` (`transfer-factory`), and the operator page lists the
+demo register.
 
 | Part | Where | Port |
 |---|---|---|
