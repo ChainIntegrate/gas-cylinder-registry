@@ -12,7 +12,8 @@ ChainIntegrate account `0xC335aFd1d95fA790DE419e9BCe482d9B8BC1D773`; relayer
 `0xDC84b301024A4d1735Ad59616023e0C74F07f100` on port 8789; the site with its certificate, every check
 of step 5 as expected; app release v0.2.0. The factory was then handed to ChainIntegrate's Universal
 Profile `0x4a2605796e0d91A9667d6E30365aEEC384C48c27` (`transfer-factory`), and the operator page lists the
-demo register.
+demo register. App release v0.2.1 followed, with the update notice: the relayer announces it from
+`/etc/gcr-relayer/app-release.json` (`appReleaseFile` in its configuration).
 
 | Part | Where | Port |
 |---|---|---|
