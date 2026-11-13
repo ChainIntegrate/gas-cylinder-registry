@@ -259,17 +259,20 @@ async function loadAll() {
   st.data = { settings, cps, phones, cyls, docs, ov: D.overview(cyls) };
 }
 
-/** Runs a change: the extension asks the owner to confirm, the relayer records it, then the data is read again. */
+/**
+ * Runs a change: the extension asks the owner to confirm, the relayer records it, then the data is read
+ * again. `fn` may return its own success message (shown instead of "Done.").
+ */
 async function change(fn) {
   st.msg = null;
   st.busy = t().confirmInExtension;
   render();
   try {
-    await fn();
+    const said = await fn();
     st.busy = t().loading;
     render();
     await loadAll();
-    st.msg = { text: t().done, cls: "ok" };
+    st.msg = { text: typeof said === "string" ? said : t().done, cls: "ok" };
   } catch (e) {
     st.msg = { text: e.plain ? e.message : failText(e), cls: "err" };
   }
@@ -631,7 +634,7 @@ function viewSettings() {
     if (!c.ok) return say(tx.weak[c.reason], "err");
     change(async () => {
       await O.changePassword(st.ctx, st.dek, p1.value);
-      st.msg = { text: tx.passwordChanged, cls: "ok" };
+      return tx.passwordChanged;
     });
   };
   return [
