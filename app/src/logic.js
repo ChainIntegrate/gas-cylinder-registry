@@ -9,7 +9,18 @@ const ABI = require("../../shared/abi/GasCylinderRegistry.json");
 const { T } = require("./i18n");
 
 const DEADLINE_SECONDS = 7 * 24 * 3600; // long enough for a document waiting offline
-const LIMITS = { maxMints: 25, maxUpdates: 60 };
+// What one document may hold, checked before anything is signed (external review A04): the relayer's
+// limits (relayer/relay.js DEFAULT_LIMITS: new cylinders and updates per part, the encrypted document's
+// size) and the phone's (DeviceKeyPlugin MAX_DIGESTS: 16 signatures with one fingerprint, the e-mail's
+// included, so at most 15 parts). A test keeps these equal to the relayer's and the plugin's.
+const LIMITS = { maxMints: 25, maxUpdates: 60, maxDocumentBytes: 16384, maxParts: 15 };
+
+/** A document too large for one send: the driver splits it in two. Nothing was signed. */
+function tooLarge(detail) {
+  const e = new Error(`document too large: ${detail}`);
+  e.code = "TOO_LARGE";
+  return e;
+}
 
 const MOVES_BY_KIND = {
   delivery_note: ["delivery", "collection"],
@@ -264,7 +275,15 @@ async function buildDocument({ registry, operator, counterparty, kind, number, l
   }
   chunks.push(cur);
 
-  const encrypted = await S.encryptValue(keys, docId, "document", document);
+  let encrypted;
+  try {
+    encrypted = await S.encryptValue(keys, docId, "document", document);
+  } catch (e) {
+    if (/too large/.test(String(e.message))) throw tooLarge("the document");
+    throw e;
+  }
+  if ((encrypted.length - 2) / 2 > LIMITS.maxDocumentBytes) throw tooLarge(`${(encrypted.length - 2) / 2} bytes`);
+  if (chunks.length > LIMITS.maxParts) throw tooLarge(`${chunks.length} parts`);
   const deadline = BigInt(now + DEADLINE_SECONDS);
   const parts = chunks.map((c, i) => {
     const payload = {
@@ -319,6 +338,15 @@ function anomalyText(t, a) {
  */
 async function signDocument({ registry, operator, built, mail, signDigests, meta }) {
   const last = built.parts[built.parts.length - 1];
+  // The e-mail is checked before signing, as the relayer will check it: a refusal then would come after
+  // the earlier parts were recorded.
+  if (mail) {
+    try {
+      mail = S.validateMail(mail);
+    } catch (e) {
+      throw /text|attachment/.test(String(e.message)) ? tooLarge("the e-mail") : e;
+    }
+  }
   const mailHash = mail ? hashMessage(getBytes(S.mailDigest(registry.address, last.digest, mail))) : null;
   const digests = built.parts.map((p) => p.digest).concat(mailHash ? [mailHash] : []);
   const sigs = await signDigests(digests);
@@ -332,7 +360,7 @@ async function signDocument({ registry, operator, built, mail, signDigests, meta
       nonce: p.nonce.toString(),
       deadline: p.deadline.toString(),
       signature: sigs[i],
-      ...(mail && i === built.parts.length - 1 ? { mail: S.validateMail(mail), mailSignature: sigs[sigs.length - 1] } : {}),
+      ...(mail && i === built.parts.length - 1 ? { mail, mailSignature: sigs[sigs.length - 1] } : {}),
     },
   }));
   return { id: built.docId, createdAt: Date.now(), parts, mail: mail ? "pending" : "none", ...meta };

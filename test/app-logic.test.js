@@ -179,6 +179,30 @@ describe("app logic", function () {
     expect(await reg.contract.isDocumentPartRecorded(built.docId, 1)).to.equal(true);
   });
 
+  it("refuses a document too large before anything is signed (review A04)", async function () {
+    const lines = [];
+    for (let i = 0; i < 100; i++) lines.push(await scan(`LONG-SERIAL-${String(i).padStart(3, "0")}-${"X".repeat(24)}`, customerB, "delivery_note"));
+    let signed = 0;
+    let err = null;
+    try {
+      const built = await A.buildDocument({ registry: reg, operator: phone.address, counterparty: customerB, kind: "delivery_note", number: "DDT BIG", lines, now });
+      await A.signDocument({ registry: reg, operator: phone.address, built, mail: null, signDigests: async (d) => ((signed += d.length), []), meta: {} });
+    } catch (e) {
+      err = e;
+    }
+    expect(err && err.code).to.equal("TOO_LARGE");
+    expect(signed).to.equal(0);
+    expect(A.errorText).to.be.a("function");
+    expect(require("../app/src/i18n").T.it.errors.tooLarge).to.match(/dividilo/);
+  });
+
+  it("keeps the app's limits equal to the relayer's and the phone's", function () {
+    const { DEFAULT_LIMITS } = require("../relayer/relay");
+    for (const k of ["maxMints", "maxUpdates", "maxDocumentBytes"]) expect(A.LIMITS[k], k).to.equal(DEFAULT_LIMITS[k]);
+    const java = require("fs").readFileSync(require("path").join(__dirname, "..", "android/app/src/main/java/it/chainintegrate/gascylinders/DeviceKeyPlugin.java"), "utf8");
+    expect(A.LIMITS.maxParts + 1).to.equal(Number(/MAX_DIGESTS = (\d+)/.exec(java)[1]));
+  });
+
   it("keeps a document signed offline and sends it later", async function () {
     const outbox = new A.Outbox(new MemoryStorage());
     const lines = [await scan("OFF-1", customerB, "delivery_note")];

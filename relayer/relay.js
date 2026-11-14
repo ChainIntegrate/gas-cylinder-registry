@@ -475,4 +475,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { createRelayer, loadConfig, Refused };
+module.exports = { createRelayer, loadConfig, Refused, DEFAULT_LIMITS };

@@ -101,7 +101,11 @@ movements.
   corrects, document)`, `document` being the encrypted document (number, date, counterparty, every
   line with serial, gas, movement, condition and confirmed warning).
 - A document too large for one transaction is split into parts (25 new cylinders, or 60 data writes, per
-  part); the encrypted document travels in the last one.
+  part); the encrypted document travels in the last one. Before anything is signed the app checks the
+  whole document against every limit: the encrypted document at most 16 KB (about 80 to 95 cylinders,
+  depending on the codes' length), at most 15 parts (16 signatures with one fingerprint, the e-mail's
+  included), the e-mail as the relayer will check it. A document over a limit is refused whole, with
+  "split it into two documents", so no part is recorded without the others (review A04).
 - A wrong document is never deleted: a later document can name it in `corrects`.
 
 ### 4.5 What the chain reveals

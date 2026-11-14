@@ -87,6 +87,7 @@ function fail(e) {
   const tx = t();
   if (e && e.code === "CANCELED") app.msg = { text: tx.errors.cancelled, cls: "warn" };
   else if (e && e.code === "NO_AUTH") app.msg = { text: tx.noAuth, cls: "error" };
+  else if (e && e.code === "TOO_LARGE") app.msg = { text: tx.errors.tooLarge, cls: "error" };
   else if (L.isNetworkError(e)) app.msg = { text: tx.errors.network, cls: "error" };
   else app.msg = { text: (e && e.message) || tx.errors.generic, cls: "error" };
   render();

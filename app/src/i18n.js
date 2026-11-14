@@ -138,6 +138,7 @@ const T = {
       limit: "Troppe operazioni oggi: riprova più tardi.",
       generic: "Operazione rifiutata.",
       cancelled: "Annullato.",
+      tooLarge: "Documento troppo grande per un solo invio: dividilo in due documenti. Non è stato registrato niente.",
     },
     // E-mail
     mailSubject: (kind, number, company) => {
@@ -279,6 +280,7 @@ const T = {
       limit: "Too many operations today: try again later.",
       generic: "Operation refused.",
       cancelled: "Cancelled.",
+      tooLarge: "Document too large for one send: split it into two documents. Nothing was recorded.",
     },
     mailSubject: (kind, number, company) => {
       const label = { delivery_note: "Delivery note", refill_note: "Refill note", stock_count: "Stock count" }[kind];
