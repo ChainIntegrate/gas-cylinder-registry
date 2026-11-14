@@ -73,8 +73,19 @@ release. Release notes are in English.
 
 The release key never enters the repository. CI reads it from the repository's secrets:
 `GCR_KEYSTORE_B64` (the PKCS#12 file in base64) and `GCR_KEYSTORE_PASSWORD` (`GCR_KEY_ALIAS` if the alias
-is not `gascylinders`). Without them CI builds a debug APK, which cannot update a release. Keep a copy of
-the key file and its password offline: without them no update of the installed app is possible.
+is not `gascylinders`). Keep a copy of the key file and its password offline: without them no update of
+the installed app is possible.
+
+CI has two jobs (`.github/workflows/android.yml`, external review G-06). **test** runs at every push:
+all the tests, then the APK built **unsigned**, plus a debug APK to try on a phone (artifact
+`gastrace-apk`); it has read-only access and no secret, so the npm packages, Playwright and the local
+chain it runs never see the release key. **release** runs only for a published release, in the GitHub
+environment `release`: it installs nothing, signs the unsigned APK with the release key (the Android
+SDK's `zipalign` and `apksigner`), checks the tag matches `versionName` and attaches the APK. Protect the
+environment once (Settings → Environments → `release` → Required reviewers: yourself), and move the
+three secrets from the repository's secrets to the environment's: then only an approved release can
+use the key. Actions are pinned by commit, and the admin page test uses the catalog of a released
+extension (`UPONBOARDING_REF`).
 
 If a release's build fails, delete the release and its tag, fix `main`, and create the release again
 (the build uses the tag's commit).

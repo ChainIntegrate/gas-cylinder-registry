@@ -1,5 +1,11 @@
 name: Android APK
 
+# Two jobs (external review G-06). "test" runs every test and builds the APK unsigned, with no secret
+# and read-only access: the ~1,150 npm packages, Playwright and the local chain run there and never see
+# the release key. "release" runs only for a published release, in the protected "release" environment
+# (Settings > Environments: required reviewers): it installs nothing, signs the APK built by "test" with
+# the release key and attaches it to the release. Actions are pinned by commit.
+
 on:
   push:
     branches: [main]
@@ -9,21 +15,27 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # used only by the Release step, on tags
+  contents: read
+
+env:
+  # The ChainIntegrate Account extension's release whose catalog the admin page test checks against.
+  UPONBOARDING_REF: extension-v0.5.0
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
         with:
           distribution: temurin
           java-version: 21
@@ -46,12 +58,12 @@ jobs:
           sleep 8
           node scripts/ui-demo.js
 
-      # The GasTrace admin page in Chromium, every request checked against the ChainIntegrate Account
-      # extension's own catalog (from the public up-onboarding repository).
+      # The GasTrace admin page in Chromium, every request checked against the catalog of a released
+      # ChainIntegrate Account extension (the public up-onboarding repository, at UPONBOARDING_REF).
       - name: Admin page test
         timeout-minutes: 10
         run: |
-          git clone --depth 1 https://github.com/ChainIntegrate/up-onboarding ../up-onboarding
+          git clone --depth 1 --branch "$UPONBOARDING_REF" https://github.com/ChainIntegrate/up-onboarding ../up-onboarding
           UPONBOARDING_DIR=../up-onboarding node scripts/admin-demo.js
 
       # The operator page: ChainIntegrate creates a register from the browser.
@@ -64,69 +76,79 @@ jobs:
           node scripts/build-app.js
           npx cap sync android
 
-      # The release key comes from the repository's secrets (GCR_KEYSTORE_B64: the PKCS#12 file in
-      # base64; GCR_KEYSTORE_PASSWORD; optional GCR_KEY_ALIAS, default "gascylinders"). Without them a
-      # debug APK is built with a throwaway key, named "-debug".
-      - name: Release key
-        env:
-          KEY_B64: ${{ secrets.GCR_KEYSTORE_B64 }}
-        run: |
-          if [ -n "$KEY_B64" ]; then
-            umask 077
-            printf '%s' "$KEY_B64" | base64 -d > "$RUNNER_TEMP/gascylinders.p12"
-            echo "GCR_KEYSTORE_FILE=$RUNNER_TEMP/gascylinders.p12" >> "$GITHUB_ENV"
-          else
-            echo "No release key in the secrets: building a debug APK."
-          fi
-
       # The phone key's signatures (Secp256k1.java) against vectors made with ethers.
       - name: Java unit tests
         working-directory: android
         timeout-minutes: 10
         run: ./gradlew testDebugUnitTest --no-daemon
 
-      - name: Build the APK
+      # The release build unsigned (signed in the "release" job), and a debug build to try on a phone.
+      - name: Build the APKs
         working-directory: android
+        run: ./gradlew assembleRelease assembleDebug --no-daemon
+
+      - name: Name the APKs after the commit
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/app-release-unsigned.apk "out/gastrace-${GITHUB_SHA::7}-unsigned.apk"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "out/gastrace-${GITHUB_SHA::7}-debug.apk"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gastrace-apk
+          path: out/gastrace-*.apk
+          retention-days: 30
+
+  release:
+    if: github.event_name == 'release'
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      contents: write # to attach the APK to the release
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          sparse-checkout: android/app/build.gradle
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: gastrace-apk
+
+      # The release key comes from the secrets (GCR_KEYSTORE_B64: the PKCS#12 file in base64;
+      # GCR_KEYSTORE_PASSWORD; optional GCR_KEY_ALIAS, default "gascylinders"). Nothing else runs here:
+      # the Android SDK's own zipalign and apksigner, already on the runner.
+      - name: Sign with the release key
         env:
+          KEY_B64: ${{ secrets.GCR_KEYSTORE_B64 }}
           GCR_KEYSTORE_PASSWORD: ${{ secrets.GCR_KEYSTORE_PASSWORD }}
           GCR_KEY_ALIAS: ${{ secrets.GCR_KEY_ALIAS }}
         run: |
-          if [ -n "$GCR_KEYSTORE_FILE" ]; then ./gradlew assembleRelease --no-daemon
-          else ./gradlew assembleDebug --no-daemon; fi
-
-      - name: Name the APK after the commit
-        run: |
-          if [ -n "$GCR_KEYSTORE_FILE" ]; then cp android/app/build/outputs/apk/release/app-release.apk "gastrace-${GITHUB_SHA::7}.apk"
-          else cp android/app/build/outputs/apk/debug/app-debug.apk "gastrace-${GITHUB_SHA::7}-debug.apk"; fi
-
-      - name: Signer of the APK
-        run: |
-          f=$(ls gastrace-*.apk)
-          signer=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
-          certs=$("$signer" verify --print-certs "$f")
+          version=$(grep -m1 'versionName' android/app/build.gradle | sed 's/.*"\(.*\)".*/\1/')
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then echo "::error::tag $GITHUB_REF_NAME does not match versionName $version"; exit 1; fi
+          if [ -z "$KEY_B64" ]; then echo "::error::no release key in the secrets"; exit 1; fi
+          tools=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)
+          umask 077
+          printf '%s' "$KEY_B64" | base64 -d > "$RUNNER_TEMP/gascylinders.p12"
+          unsigned=$(ls gastrace-*-unsigned.apk)
+          "$tools/zipalign" -p -f 4 "$unsigned" "$RUNNER_TEMP/aligned.apk"
+          "$tools/apksigner" sign --ks "$RUNNER_TEMP/gascylinders.p12" --ks-type PKCS12 \
+            --ks-key-alias "${GCR_KEY_ALIAS:-gascylinders}" --ks-pass env:GCR_KEYSTORE_PASSWORD --key-pass env:GCR_KEYSTORE_PASSWORD \
+            --out "gastrace-$GITHUB_REF_NAME.apk" "$RUNNER_TEMP/aligned.apk"
+          rm -f "$RUNNER_TEMP/gascylinders.p12"
+          certs=$("$tools/apksigner" verify --print-certs "gastrace-$GITHUB_REF_NAME.apk")
           fp=$(echo "$certs" | grep -m1 'certificate SHA-256 digest' | sed 's/.*digest: //')
           owner=$(echo "$certs" | grep -m1 'certificate DN' | sed 's/.*DN: //')
-          if [ -n "$GCR_KEYSTORE_FILE" ]; then echo "::notice title=Release key::$f signed by $owner, SHA-256 $fp"
-          else echo "::warning title=Debug key::$f signed by a throwaway debug key ($owner): it cannot update an installed release"; fi
+          echo "::notice title=Release key::gastrace-$GITHUB_REF_NAME.apk signed by $owner, SHA-256 $fp"
 
       - name: Remove the release key
         if: always()
         run: rm -f "$RUNNER_TEMP/gascylinders.p12"
 
-      - name: Release
-        if: github.event_name == 'release'
+      - name: Attach to the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          version=$(grep -m1 'versionName' android/app/build.gradle | sed 's/.*"\(.*\)".*/\1/')
-          if [ "$GITHUB_REF_NAME" != "v$version" ]; then echo "::error::tag $GITHUB_REF_NAME does not match versionName $version"; exit 1; fi
-          if [ -z "$GCR_KEYSTORE_FILE" ]; then echo "::error::no release key: a debug APK is not published"; exit 1; fi
-          f=$(ls gastrace-*.apk)
-          mv "$f" "gastrace-$GITHUB_REF_NAME.apk"
-          gh release upload "$GITHUB_REF_NAME" "gastrace-$GITHUB_REF_NAME.apk" --clobber
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: gastrace-apk
-          path: gastrace-*.apk
-          retention-days: 30
+        run: gh release upload "$GITHUB_REF_NAME" "gastrace-$GITHUB_REF_NAME.apk" --clobber --repo "$GITHUB_REPOSITORY"
