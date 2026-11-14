@@ -231,10 +231,14 @@ async function setData(ctx, dataKeys, dataValues) {
   await checkOwner(ctx);
   const nonce = S.randomNonce();
   const dl = await deadline(ctx);
+  // The values travel with the request too (`extra.dataValues`): the ChainIntegrate Account extension
+  // checks them against dataValuesHash and describes each change by its kind (review A02/G-04). A plain
+  // key (ethers' signTypedData) ignores the fourth argument.
   const signature = await ctx.owner.signTypedData(
     ctx.domain,
     { SetData: S.TYPES.SetData },
-    { dataKeys, dataValuesHash: S.hashDataValues(dataValues), nonce, deadline: dl }
+    { dataKeys, dataValuesHash: S.hashDataValues(dataValues), nonce, deadline: dl },
+    { dataValues }
   );
   return ctx.submit(ctx.address, "setDataSigned", [dataKeys, dataValues, nonce, dl, signature]);
 }

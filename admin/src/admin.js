@@ -128,7 +128,7 @@ function findExtension(ms = 1200) {
 function extensionOwner(wallet, account) {
   return {
     address: account,
-    async signTypedData(domain, types, value) {
+    async signTypedData(domain, types, value, extra = {}) {
       const primaryType = Object.keys(types)[0];
       const typed = {
         types: {
@@ -143,6 +143,9 @@ function extensionOwner(wallet, account) {
         primaryType,
         domain: { ...domain, chainId: Number(domain.chainId) },
         message: JSON.parse(JSON.stringify(value, (k, v) => (typeof v === "bigint" ? v.toString() : v))),
+        // SetData's values, beside the signed hash: the extension recomputes the hash from them and says
+        // what kind of change it is (password, recovery code, settings, customers). Other wallets ignore it.
+        ...(extra.dataValues ? { dataValues: extra.dataValues } : {}),
       };
       st.busy = t().confirmInExtension;
       render();

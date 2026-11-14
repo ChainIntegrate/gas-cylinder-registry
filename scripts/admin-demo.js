@@ -99,6 +99,7 @@ async function main() {
 
   // The simulated extension: EIP-6963 with ChainIntegrate Account's rdns; typed data checked against the catalog.
   const catalogChecks = [];
+  let tampered = null; // the catalog's answer to a SetData whose values do not match its hash
   await page.exposeFunction("__ext", async (method, params) => {
     if (method === "eth_requestAccounts" || method === "eth_accounts") return [owner];
     if (method === "eth_chainId") return "0x" + Number(chainId).toString(16);
@@ -106,9 +107,21 @@ async function main() {
       const typed = JSON.parse(params[1]);
       if (ethers.getAddress(params[0]) !== owner) throw new Error("other account");
       if (catalog) {
-        const c = catalog.typedData(catalog.projectById("gas-cylinders"), typed, { account: owner, chainId: Number(chainId) });
-        catalogChecks.push(c.ok ? typed.primaryType : `REFUSED ${typed.primaryType}: ${c.error}`);
+        // As the extension does: a first look names the registry values it needs, then the precise
+        // description with the current values (UPCatalog.readCurrent), from extension-v0.5.1.
+        const project = catalog.projectById("gas-cylinders");
+        let c = catalog.typedData(project, typed, { account: owner, chainId: Number(chainId) });
+        if (c.ok && c.reads && c.reads.length && catalog.readCurrent) {
+          c = catalog.typedData(project, typed, { account: owner, chainId: Number(chainId), current: await catalog.readCurrent(provider, c.reads) });
+        }
+        catalogChecks.push(c.ok ? `${typed.primaryType}: ${c.lines.map((l) => (typeof l === "string" ? l : l.it)).join(" | ")}` : `REFUSED ${typed.primaryType}: ${c.error}`);
         if (!c.ok) throw new Error("refused by the catalog: " + c.error);
+        if (typed.primaryType === "SetData" && !tampered) {
+          // The same request with one value changed after the hash: the catalog must refuse it.
+          const bad = JSON.parse(JSON.stringify(typed));
+          bad.dataValues[0] = bad.dataValues[0].slice(0, -2) + (bad.dataValues[0].endsWith("00") ? "01" : "00");
+          tampered = catalog.typedData(project, bad, { account: owner, chainId: Number(chainId) });
+        }
         if (!(await catalog.verifyNeeds(provider, c.needs))) throw new Error("not a registry of the factory");
       }
       const types = { [typed.primaryType]: typed.types[typed.primaryType] };
@@ -303,11 +316,19 @@ async function main() {
     ["password changed, old one refused", oldRefused],
     ["no technical words on screen", texts.every((x) => !FORBIDDEN.test(x))],
     ["no horizontal scroll at phone width", !overflow],
+    ["the extension sees the values and names each change (A02/G-04)", catalog && catalog.readCurrent
+      ? catalogChecks.some((c) => /^SetData: Preparare la cifratura/.test(c)) &&
+        catalogChecks.some((c) => /^SetData: Cambiare la password dei dati/.test(c)) &&
+        catalogChecks.some((c) => /^SetData: Aggiungere 1 cliente/.test(c)) &&
+        catalogChecks.some((c) => /^SetData: Impostazioni dell'azienda/.test(c)) &&
+        !catalogChecks.some((c) => /non verificabile/.test(c))
+      : true],
+    ["values changed after the hash are refused (data_values_mismatch)", catalog && catalog.readCurrent ? tampered && tampered.error === "data_values_mismatch" : true],
     ["every request accepted by the extension's catalog", catalog ? catalogChecks.length > 0 && catalogChecks.every((c) => !c.startsWith("REFUSED")) : true],
     ["no page errors", errors.length === 0],
   ];
   if (!catalog) console.log("note: up-onboarding not found next to this repository: catalog check skipped");
-  else console.log(`catalog: ${catalogChecks.length} requests checked (${[...new Set(catalogChecks)].join(", ")})`);
+  else console.log(`catalog: ${catalogChecks.length} requests checked:\n  ${catalogChecks.join("\n  ")}`);
   let ok = true;
   for (const [name, pass] of checks) {
     console.log(`${pass ? "ok  " : "FAIL"} ${name}`);

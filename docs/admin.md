@@ -21,7 +21,15 @@ people who may administer the register.
 **The extension's catalog.** The extension serves only the sites and requests declared in its catalog
 (`extension/shared/catalog.js` in up-onboarding). For GasTrace the four requests (`SetOperator`,
 `SetData`, `TransferOwnership`, `AcceptOwnership`) are declared, with the factory and the site (from
-extension 0.4.3):
+extension 0.4.3). From extension 0.5.1 (review A02/G-04) the page sends each `SetData`'s values beside
+the signed hash (`dataValues`, a top-level field of the `eth_signTypedData_v4` request that other
+wallets ignore): the extension recomputes the hash (a mismatch is refused), accepts only GasTrace's five
+kinds of data key, reads the registry's current values and says what the change is ("Prepare the
+encryption of the registry's data… (first time)", "Change the data password", "Add 1 customer or refill
+centre", "The company's settings"…), never both key wraps once they exist; it shows how long the request
+is valid and refuses more than seven days. The values are encrypted: the window names the kind of change,
+not its content. The browser test checks every request against the catalog of the release named in CI
+(`UPONBOARDING_REF`):
 
 ```js
 const CYLINDER_FACTORY = "0xA128e7162fa8Dc779bf31EF569F06B53a499A50e";
