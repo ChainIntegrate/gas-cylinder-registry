@@ -261,8 +261,12 @@ async function readCounterparty(ctx, keys, cpId) {
   return raw === "0x" ? null : S.validateCounterparty(await S.decryptValue(keys, cpId, "counterparty", raw));
 }
 
-/** All current counterparties, decrypted: [{ id, type, name, emails }]. */
-async function listCounterparties(ctx, keys) {
+/**
+ * All current counterparties, decrypted: [{ id, type, name, emails }]. One that cannot be read (it does
+ * not decrypt or is not valid) is left out and reported in `problems` ({ what, id }), so that it never
+ * stops the others from loading (review G-08).
+ */
+async function listCounterparties(ctx, keys, problems = []) {
   const logs = await scanLogs(ctx, ctx.registry.filters.DataChanged());
   const prefix = S.COUNTERPARTY_KEY_PREFIX.toLowerCase();
   const ids = new Set();
@@ -272,7 +276,13 @@ async function listCounterparties(ctx, keys) {
   }
   const list = [];
   for (const cpId of ids) {
-    const cp = await readCounterparty(ctx, keys, cpId);
+    let cp;
+    try {
+      cp = await readCounterparty(ctx, keys, cpId);
+    } catch {
+      problems.push({ what: "counterparty", id: cpId });
+      continue;
+    }
     if (cp) list.push({ id: cpId, ...cp });
   }
   return list.sort((a, b) => a.name.localeCompare(b.name));
@@ -290,7 +300,8 @@ async function readSettings(ctx, keys) {
 
 /** Sets the company name and/or the supplier's e-mails (fields not given keep their value). */
 async function writeSettings(ctx, keys, fields) {
-  const current = (await readSettings(ctx, keys)) || { v: 1, company: "", emails: [] };
+  // Unreadable settings (badly written) are replaced, so that the owner can always repair them.
+  const current = (await readSettings(ctx, keys).catch(() => null)) || { v: 1, company: "", emails: [] };
   const value = S.validateSettings({ ...current, ...fields, v: 1 });
   return setData(ctx, [S.SETTINGS_DATA_KEY], [await S.encryptValue(keys, S.SETTINGS_DATA_KEY, "settings", value)]);
 }

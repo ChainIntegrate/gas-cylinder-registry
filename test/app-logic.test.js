@@ -203,6 +203,24 @@ describe("app logic", function () {
     expect(A.LIMITS.maxParts + 1).to.equal(Number(/MAX_DIGESTS = (\d+)/.exec(java)[1]));
   });
 
+  it("lets the admin page load everything else when a phone wrote a value that cannot be read (review G-08)", async function () {
+    const D = require("../admin/src/data");
+    const lines = [await scan("BAD-1", customerB, "delivery_note"), await scan("GOOD-1", customerB, "delivery_note")];
+    const built = await A.buildDocument({ registry: reg, operator: phone.address, counterparty: customerB, kind: "delivery_note", number: "DDT BAD", lines, now });
+    const p = built.parts[0];
+    const bad = p.payload.updates.find((u) => u.dataKey === S.INFO_KEY && u.tokenId === lines[0].tokenId);
+    bad.newValue = "0x" + "5a".repeat(300); // what a faulty or hostile phone could write
+    p.digest = S.recordDocumentDigest(reg.address, 31337n, phone.address, p.payload, p.nonce, p.deadline);
+    const item = await A.signDocument({ registry: reg, operator: phone.address, built, mail: null, signDigests: signDigests(phone), meta: {} });
+    expect((await A.sendItem(item, { relayer: base, pollMs: 20 })).done).to.equal(true);
+
+    const problems = [];
+    const list = await D.cylinders(reg.contract, reg.keys, reg.fromBlock, ethers.provider, problems);
+    expect(list.map((c) => c.info.serial)).to.include("GOOD-1");
+    expect(list.map((c) => c.info.serial)).to.not.include("BAD-1");
+    expect(problems).to.deep.equal([{ what: "cylinder", id: lines[0].tokenId, field: "info" }]);
+  });
+
   it("keeps a document signed offline and sends it later", async function () {
     const outbox = new A.Outbox(new MemoryStorage());
     const lines = [await scan("OFF-1", customerB, "delivery_note")];

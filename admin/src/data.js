@@ -41,8 +41,13 @@ async function registriesOf(provider, factoryAddress, account, fromBlock = 0) {
   return out;
 }
 
-/** Every cylinder of the registry: [{ tokenId, info, state }], sorted by serial. */
-async function cylinders(registry, keys, fromBlock, provider) {
+/**
+ * Every cylinder of the registry: [{ tokenId, info, state }], sorted by serial. A value that cannot be
+ * read (it does not decrypt or is not valid) never stops the others (review G-08): a cylinder whose
+ * information is unreadable is left out, one whose state is unreadable keeps state null; each is
+ * reported in `problems` ({ what, id, field }).
+ */
+async function cylinders(registry, keys, fromBlock, provider, problems = []) {
   const ids = new Set();
   const logs = await scan(registry, registry.filters.TokenIdDataChanged(null, S.INFO_KEY), fromBlock, provider);
   for (const l of logs) ids.add(l.args.tokenId);
@@ -58,11 +63,22 @@ async function cylinders(registry, keys, fromBlock, provider) {
       const t = chunk[j];
       const [rawInfo, rawState] = [values[2 * j], values[2 * j + 1]];
       if (rawInfo === "0x") continue;
-      out.push({
-        tokenId: t,
-        info: S.validateInfo(await S.decryptValue(keys, t, "info", rawInfo)),
-        state: rawState === "0x" ? null : S.validateState(await S.decryptValue(keys, t, "state", rawState)),
-      });
+      let info;
+      try {
+        info = S.validateInfo(await S.decryptValue(keys, t, "info", rawInfo));
+      } catch {
+        problems.push({ what: "cylinder", id: t, field: "info" });
+        continue;
+      }
+      let state = null;
+      if (rawState !== "0x") {
+        try {
+          state = S.validateState(await S.decryptValue(keys, t, "state", rawState));
+        } catch {
+          problems.push({ what: "cylinder", id: t, field: "state", serial: info.serial });
+        }
+      }
+      out.push({ tokenId: t, info, state });
     }
   }
   return out.sort((a, b) => a.info.serial.localeCompare(b.info.serial));
@@ -91,16 +107,21 @@ async function documents(registry, keys, fromBlock, provider) {
   return [...byDoc.values()].sort((a, b) => b.block - a.block);
 }
 
-/** One cylinder's history, oldest first: [{ state, tx, block, docId? }]. */
+/** One cylinder's history, oldest first: [{ state, unreadable, tx, block, document }] (state null when unreadable). */
 async function history(registry, keys, tokenId, fromBlock, provider, docs = []) {
   const logs = await scan(registry, registry.filters.TokenIdDataChanged(tokenId, S.STATE_KEY), fromBlock, provider);
   const docByTx = new Map();
   for (const d of docs) for (const tx of d.txs) docByTx.set(tx, d);
   const out = [];
   for (const l of logs) {
-    const state = S.validateState(await S.decryptValue(keys, tokenId, "state", l.args.dataValue));
     const d = docByTx.get(l.transactionHash);
-    out.push({ state, tx: l.transactionHash, block: l.blockNumber, document: d ? d.document : null });
+    let state = null;
+    try {
+      state = S.validateState(await S.decryptValue(keys, tokenId, "state", l.args.dataValue));
+    } catch {
+      // shown as an unreadable movement, the others still are
+    }
+    out.push({ state, unreadable: !state, tx: l.transactionHash, block: l.blockNumber, document: d ? d.document : null });
   }
   return out;
 }

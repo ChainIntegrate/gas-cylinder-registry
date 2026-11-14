@@ -74,6 +74,8 @@ const T = {
     contents: "Contenuto",
     corrects: "Corregge un documento precedente",
     unreadable: "Contenuto non leggibile",
+    unreadableMovement: "Movimento non leggibile",
+    problems: (n) => `${n === 1 ? "Un dato del registro non si legge" : `${n} dati del registro non si leggono`} (scritto male o danneggiato): il resto è mostrato normalmente. Avvisa ChainIntegrate.`,
     // Counterparties
     customers: "Clienti",
     refillPlants: "Centri di ricarica",
@@ -219,6 +221,8 @@ const T = {
     contents: "Contents",
     corrects: "Corrects an earlier document",
     unreadable: "Contents not readable",
+    unreadableMovement: "Movement not readable",
+    problems: (n) => `${n === 1 ? "One value of the register cannot be read" : `${n} values of the register cannot be read`} (badly written or damaged): everything else is shown as usual. Tell ChainIntegrate.`,
     customers: "Customers",
     refillPlants: "Refill plants",
     addCustomer: "Add customer",

@@ -250,14 +250,17 @@ async function recover(code, p1, p2) {
 
 async function loadAll() {
   const reg = new Contract(st.reg.address, D.REGISTRY_ABI, st.provider);
+  // A value that cannot be read is reported, never allowed to stop the page (review G-08).
+  const problems = [];
   const [settings, cps, phones, cyls, docs] = await Promise.all([
-    O.readSettings(st.ctx, st.keys),
-    O.listCounterparties(st.ctx, st.keys),
+    O.readSettings(st.ctx, st.keys).catch(() => (problems.push({ what: "settings" }), null)),
+    O.listCounterparties(st.ctx, st.keys, problems),
     O.listOperators(st.ctx),
-    D.cylinders(reg, st.keys, st.reg.block, st.provider),
+    D.cylinders(reg, st.keys, st.reg.block, st.provider, problems),
     D.documents(reg, st.keys, st.reg.block, st.provider),
   ]);
-  st.data = { settings, cps, phones, cyls, docs, ov: D.overview(cyls) };
+  for (const d of docs) if (d.unreadable) problems.push({ what: "document", id: d.docId });
+  st.data = { settings, cps, phones, cyls, docs, ov: D.overview(cyls), problems };
 }
 
 /**
@@ -467,7 +470,9 @@ function viewCylinders() {
         "ol",
         { class: "timeline" },
         st.history.entries.map((e) =>
-          h(
+          e.unreadable
+            ? h("li", {}, h("div", { class: "warn" }, tx.unreadableMovement), e.document ? h("div", { class: "dim small" }, docLabel(e.document)) : null)
+            : h(
             "li",
             {},
             h("div", { class: "when" }, fmtDate(e.state.at)),
@@ -696,7 +701,8 @@ function viewExport() {
 
 function viewMain() {
   const v = { overview: viewOverview, cylinders: viewCylinders, documents: viewDocuments, counterparties: viewCounterparties, phones: viewPhones, settings: viewSettings, export: viewExport }[st.tab];
-  return [tabs(), v()];
+  const problems = st.data.problems || [];
+  return [tabs(), problems.length ? h("div", { class: "msg err", role: "status" }, t().problems(problems.length)) : null, v()].filter(Boolean);
 }
 
 function render() {
