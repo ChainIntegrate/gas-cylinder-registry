@@ -139,8 +139,11 @@ describe("shared library", function () {
     });
 
     it("reject a recovery code with a wrong word or checksum", async function () {
-      const words = S.generateRecoveryCode("en").split(" ");
-      words[3] = words[3] === "abandon" ? "ability" : "abandon";
+      // A fixed valid code and a fixed wrong word: a random one would still pass the 8-bit checksum
+      // once in 256 runs (review Q-01).
+      const words = ("abandon ".repeat(23) + "art").split(" ");
+      expect(() => S.recoveryCodeEntropy(words.join(" "))).to.not.throw();
+      words[3] = "ability";
       expect(() => S.recoveryCodeEntropy(words.join(" "))).to.throw(/invalid recovery code/);
       expect(() => S.recoveryCodeEntropy("abandon ".repeat(11) + "about")).to.throw(/24 words/);
     });

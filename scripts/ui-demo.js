@@ -74,7 +74,7 @@ async function main() {
 
   // The app, built for the local chain and relayer.
   const cfg = path.join(os.tmpdir(), `gcr-app-config-${process.pid}.json`);
-  fs.writeFileSync(cfg, JSON.stringify({ rpc: RPC, chainId: Number((await provider.getNetwork()).chainId), relayer: relayerUrl }));
+  fs.writeFileSync(cfg, JSON.stringify({ rpc: RPC, chainId: Number((await provider.getNetwork()).chainId), relayer: relayerUrl, factory: f.address }));
   execFileSync("node", [path.join(__dirname, "build-app.js")], { env: { ...process.env, GCR_APP_CONFIG: cfg }, stdio: "inherit" });
   const web = await serve(path.join(__dirname, "..", "app", "www"));
   const appUrl = `http://127.0.0.1:${web.address().port}/`;

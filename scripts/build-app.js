@@ -15,7 +15,7 @@ const APP = path.join(ROOT, "app");
 const OUT = path.join(APP, "www");
 const configFile = process.env.GCR_APP_CONFIG ? path.resolve(process.env.GCR_APP_CONFIG) : path.join(APP, "app-config.json");
 const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
-for (const k of ["rpc", "chainId", "relayer"]) if (!config[k]) throw new Error(`app config: ${k} missing`);
+for (const k of ["rpc", "chainId", "relayer", "factory"]) if (!config[k]) throw new Error(`app config: ${k} missing`);
 
 // The app's version: versionName in android/app/build.gradle (the release tag is v<versionName>).
 const gradle = fs.readFileSync(path.join(ROOT, "android", "app", "build.gradle"), "utf8");

@@ -168,6 +168,8 @@ async function connect() {
     const [account] = await wallet.request({ method: "eth_requestAccounts" });
     const chainId = Number(await wallet.request({ method: "eth_chainId" }));
     if (chainId !== Number(CONFIG.chainId)) throw Object.assign(new Error(t().wrongNetwork), { plain: true });
+    // The page's own node too: asked, not assumed (review A15).
+    if (Number(await st.provider.send("eth_chainId", [])) !== Number(CONFIG.chainId)) throw new Error(`the node is not on chain ${CONFIG.chainId}`);
     st.wallet = wallet;
     st.account = getAddress(account);
     st.registries = await D.registriesOf(st.provider, CONFIG.factory, st.account, CONFIG.factoryBlock || 0);

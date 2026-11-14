@@ -452,9 +452,18 @@ async function main() {
     const i = rest.indexOf("--config");
     const config = loadConfig(i >= 0 ? rest[i + 1] : "/etc/gcr-relayer/config.json");
     const provider = new JsonRpcProvider(config.rpc, Number(config.chainId), { staticNetwork: true });
-    const { chainId } = await provider.getNetwork();
-    if (Number(chainId) !== Number(config.chainId)) throw new Error(`the RPC is on chain ${chainId}, not ${config.chainId}`);
-    if ((await provider.getCode(config.factory)) === "0x") throw new Error(`no contract at the factory ${config.factory}`);
+    // The node is asked for its chain (a provider with a static network would only repeat the configured
+    // one: review A15), and the factory must answer as GasTrace's factory, with its implementation in place.
+    const chainId = Number(await provider.send("eth_chainId", []));
+    if (chainId !== Number(config.chainId)) throw new Error(`the RPC is on chain ${chainId}, not ${config.chainId}`);
+    const factoryCheck = new Contract(config.factory, FACTORY_ABI, provider);
+    let impl;
+    try {
+      impl = await factoryCheck.implementation();
+    } catch {
+      throw new Error(`no GasTrace factory at ${config.factory}`);
+    }
+    if ((await provider.getCode(impl)) === "0x") throw new Error(`the factory's implementation ${impl} has no code`);
     const wallet = loadKey(config.keyFile).connect(provider);
     const mail = require("./mail");
     const relayer = createRelayer({ provider, wallet, config, sendMail: mail.smtpReady() ? mail.sendMail : null });

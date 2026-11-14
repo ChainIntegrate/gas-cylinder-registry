@@ -1,7 +1,7 @@
 "use strict";
 // The app's interface: one page, Italian and English, plain words only.
 
-const { JsonRpcProvider, hexlify, getBytes } = require("ethers");
+const { JsonRpcProvider, Contract, hexlify, getBytes } = require("ethers");
 const S = require("../../shared");
 const L = require("./logic");
 const { T } = require("./i18n");
@@ -141,8 +141,27 @@ async function checkUpdate() {
 // ------------------------------------------------------------------------------------------------
 
 async function setupCode(code) {
+  let s;
   try {
-    const s = S.parseSetupCode(code);
+    s = S.parseSetupCode(code);
+  } catch {
+    app.msg = { text: t().setupCodeInvalid, cls: "error" };
+    return render();
+  }
+  // Before anything else: the network is the expected one (asked, not assumed: review A15) and the
+  // register was created by GasTrace's factory (review G-09), so that the owner never types the data
+  // password on a phone set up with a foreign code.
+  try {
+    const chainId = Number(await app.provider.send("eth_chainId", []));
+    const factory = new Contract(CONFIG.factory, ["function isRegistry(address) view returns (bool)"], app.provider);
+    if (chainId !== Number(CONFIG.chainId) || !(await factory.isRegistry(s.registry))) {
+      app.msg = { text: t().setupCodeInvalid, cls: "error" };
+      return render();
+    }
+  } catch (e) {
+    return fail(e);
+  }
+  try {
     store.set("gcr.setup", s);
     app.reg = new L.Registry({ provider: app.provider, address: s.registry, fromBlock: s.fromBlock });
     render();
