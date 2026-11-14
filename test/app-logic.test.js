@@ -229,9 +229,29 @@ describe("app logic", function () {
     const item = await A.signDocument({ registry: reg, operator: phone.address, built, mail, signDigests: signDigests(phone), meta: {} });
     // Sent, then the relayer "restarts": every status answer is 404.
     const forgetful = async (url, opts) => (String(url).includes("/gcr/status") ? new Response(JSON.stringify({ error: "unknown transaction" }), { status: 404 }) : fetch(url, opts));
-    const out = await A.sendItem(item, { relayer: base, provider: ethers.provider, fetchFn: forgetful, pollMs: 20 });
+    const outbox = new A.Outbox(new MemoryStorage());
+    outbox.add(item);
+    const out = await A.sendItem(item, { relayer: base, provider: ethers.provider, fetchFn: forgetful, pollMs: 20, onUpdate: (i) => outbox.update(i) });
     expect(out.done).to.equal(true);
     expect(out.mail).to.equal("unknown");
+    // Still in sight, saved and read back, so that the driver can send the e-mail from the phone (review A08).
+    const reloaded = new A.Outbox(outbox.storage);
+    expect(reloaded.pending().map((i) => [i.id, i.done, i.mail])).to.deep.equal([[item.id, true, "unknown"]]);
+  });
+
+  it("keeps a document waiting when the service is busy, and sends it later (review A12)", async function () {
+    const lines = [await scan("BUSY-1", customerB, "delivery_note")];
+    const built = await A.buildDocument({ registry: reg, operator: phone.address, counterparty: customerB, kind: "delivery_note", number: "DDT BUSY", lines, now });
+    const item = await A.signDocument({ registry: reg, operator: phone.address, built, mail: null, signDigests: signDigests(phone), meta: {} });
+    for (const status of [429, 503]) {
+      const busy = async () => new Response(JSON.stringify({ error: "busy" }), { status });
+      const r = await A.sendItem(item, { relayer: base, fetchFn: busy });
+      expect(r.failed).to.equal(undefined);
+      expect(r.waiting).to.equal(status === 429 ? "limit" : "server");
+    }
+    const r2 = await A.sendItem(item, { relayer: base, pollMs: 20 });
+    expect(r2.done).to.equal(true);
+    expect(r2.waiting).to.equal(null);
   });
 
   it("refuses a document built on an old state, and says why in plain words", async function () {

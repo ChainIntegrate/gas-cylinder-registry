@@ -395,8 +395,13 @@ class Outbox {
   remove(id) {
     this.save(this.list().filter((i) => i.id !== id));
   }
+  /**
+   * The items that need the driver or the network: not all recorded yet, or recorded with an e-mail
+   * that is still pending, did not leave or may not have left (review A08: these stay in sight, with
+   * "send from the phone", until the driver removes them).
+   */
   pending() {
-    return this.list().filter((i) => i.parts.some((p) => p.state !== "confirmed") || i.mail === "pending");
+    return this.list().filter((i) => i.parts.some((p) => p.state !== "confirmed") || ["pending", "failed", "unknown"].includes(i.mail));
   }
 }
 
@@ -421,6 +426,13 @@ async function sendItem(item, { relayer, provider = null, fetchFn = fetch, pollM
         return item;
       }
       const body = await res.json().catch(() => ({}));
+      // Busy or limited (429) and server errors (5xx) pass: the item waits and is sent again later, like
+      // without network (review A12). Only the registry's or the relayer's refusals are final.
+      if (res.status === 429 || res.status >= 500) {
+        item.waiting = res.status === 429 ? "limit" : "server";
+        onUpdate(item);
+        return item;
+      }
       if (!res.ok) {
         item.failed = { status: res.status, error: (body.detail && body.detail.error) || (res.status === 429 ? "limit" : "generic"), message: body.error };
         onUpdate(item);
@@ -429,6 +441,7 @@ async function sendItem(item, { relayer, provider = null, fetchFn = fetch, pollM
       part.hash = body.hash;
       part.state = "sent";
       item.offline = false;
+      item.waiting = null;
       onUpdate(item);
     }
     // Wait until the relayer reports it recorded.

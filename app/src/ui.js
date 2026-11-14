@@ -417,7 +417,7 @@ async function flushOutbox() {
   if (flushing || !app.reg || !app.reg.keys) return;
   flushing = true;
   try {
-    for (const item of app.outbox.pending()) if (!item.failed) await sendOne(item);
+    for (const item of app.outbox.pending()) if (!item.failed && !item.done) await sendOne(item);
   } finally {
     flushing = false;
   }
@@ -517,6 +517,7 @@ function itemStatus(item) {
     const mail = { sent: " " + tx.mailSent, failed: " " + tx.mailFailed, unknown: " " + tx.mailUnknown }[item.mail] || "";
     return { text: tx.sentOk + mail, cls: item.mail === "failed" || item.mail === "unknown" ? "warn" : "ok" };
   }
+  if (item.waiting) return { text: tx.waitingRetry, cls: "warn" };
   if (item.offline) return { text: tx.queued, cls: "warn" };
   return { text: tx.sending, cls: "note" };
 }
@@ -555,12 +556,19 @@ function viewOutbox() {
             h("p", { class: "note" }, new Date(it.createdAt).toLocaleString(app.lang === "en" ? "en-GB" : "it-IT")),
             h("p", { class: st.cls }, st.text),
             h("div", { class: "row" },
-              !it.failed ? btn(tx.sendNow, () => sendOne(it)) : null,
+              !it.failed && !it.done ? btn(tx.sendNow, () => sendOne(it)) : null,
               it.done && (it.mail === "failed" || it.mail === "unknown") ? h("a", { class: "button", href: mailtoLink(it) }, tx.sendFromPhone) : null,
-              btn(tx.discard, () => {
-                app.outbox.remove(it.id);
-                render();
-              }, "small"))
+              it.done
+                ? btn(tx.mailHandled, () => {
+                    app.outbox.remove(it.id);
+                    render();
+                  }, "small")
+                : btn(tx.discard, () => {
+                    // A document partly recorded: its recorded part stays (review A12).
+                    if (it.parts.some((p) => p.state === "confirmed" || p.state === "sent") && !window.confirm(tx.discardPartial)) return;
+                    app.outbox.remove(it.id);
+                    render();
+                  }, "small"))
           );
         })
       : note(tx.outboxEmpty),
