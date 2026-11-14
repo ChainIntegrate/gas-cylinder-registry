@@ -4,7 +4,7 @@ Everything GasTrace serves lives under **gastrace.chainintegrate.it**, on the sa
 account.chainintegrate.it: the admin page (static files, `admin/www`) and the relayer (`/gcr/`, a local
 service on port 8789). The steps are in order; each says where it runs.
 
-**Done for the demo on 2026-11-13** (steps 0 to 5; step 6, the extension's catalog, is pending in up-onboarding): DNS `gastrace` →
+**Done for the demo on 2026-11-13** (steps 0 to 6; step 6, the extension's catalog, in extension 0.4.3): DNS `gastrace` →
 `31.14.140.170`; factory `0xA128e7162fa8Dc779bf31EF569F06B53a499A50e` (block 8774243) and register
 implementation `0x3075ED17F09E0006cECC0D7e67Fe7E7A4Dc95b00`, both verified on the explorer; Argonia
 Gas Tecnici's register `0xEae1a8B84977694e5c9925028a23599bc345b801` (block 8774282), owned by its
@@ -151,7 +151,7 @@ curl -s $R -o /dev/null -w "%{http_code} %{redirect_url}\n" http://gastrace.chai
 
 In `extension/shared/catalog.js`, project `gas-cylinders`: `CYLINDER_FACTORY` = the factory's address and
 `sites: ["gastrace.chainintegrate.it"]`; then a release of the extension (a released version never changes)
-and its update on the owner's computer. Until then the extension does not serve the page.
+and its update on the owner's computer. Done in extension 0.4.3 (2026-11-13).
 
 ## 7. First use
 

@@ -13,12 +13,15 @@ in the extension's own confirmation window, and the register checks the signatur
 (ERC-1271). The supplier never holds LYX: the relayer sends every change and pays for it.
 
 Any key of the account with the SIGN permission can sign in: a second computer can restore the same
-access from the extension's backup copy, or, once the extension offers it, add a key of its own.
+access from the extension's backup copy, or get a key of its own ("Authorize another computer", from
+extension 0.5.0). Every such key can sign **all** the register's owner operations, handing the register
+over included, whatever role the extension gives it (review X-01): authorize other computers only for
+people who may administer the register.
 
 **The extension's catalog.** The extension serves only the sites and requests declared in its catalog
 (`extension/shared/catalog.js` in up-onboarding). For GasTrace the four requests (`SetOperator`,
-`SetData`, `TransferOwnership`, `AcceptOwnership`) are declared; the factory and the site must be set
-there, and a release of the extension made, before the page can sign in:
+`SetData`, `TransferOwnership`, `AcceptOwnership`) are declared, with the factory and the site (from
+extension 0.4.3):
 
 ```js
 const CYLINDER_FACTORY = "0xA128e7162fa8Dc779bf31EF569F06B53a499A50e";
@@ -26,7 +29,6 @@ const CYLINDER_FACTORY = "0xA128e7162fa8Dc779bf31EF569F06B53a499A50e";
 sites: ["gastrace.chainintegrate.it"],
 ```
 
-Until then the page says it cannot find the extension.
 
 ## What the supplier does there
 

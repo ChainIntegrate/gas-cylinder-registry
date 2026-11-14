@@ -1,11 +1,14 @@
 # GasTrace (gas-cylinder-registry)
 
 Tracking of technical gas cylinders on LUKSO, for gas suppliers and their drivers. Each cylinder is an
-LSP8 token in the supplier's own register; its data is encrypted on-chain with a key only the supplier
-holds. Drivers scan the barcodes with an Android app at delivery and collection; the supplier manages
+LSP8 token in the supplier's own register; its data is encrypted on-chain with the register's data
+key, opened by the supplier's password (and held by the authorized phones: see
+[DESIGN.md](DESIGN.md), "Who holds the data key"). Drivers scan the barcodes with an Android app at delivery and collection; the supplier manages
 the register from a web page; nobody at the supplier ever holds LYX.
 
-**Status: live on LUKSO mainnet for a demo** (Argonia Gas Tecnici, a fictional supplier). Not audited.
+**Status: live on LUKSO mainnet for a demo** (Argonia Gas Tecnici, a fictional supplier). A first
+external review (2026-11-13) found issues that are being addressed; not yet suitable for real customer
+data.
 
 ## The parts
 

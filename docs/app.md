@@ -17,8 +17,12 @@ at the top right. It speaks plain words only: cylinders, delivery notes, custome
 - **Check a cylinder**: gas, where it is, its condition and last movement.
 - **Send**: one fingerprint (or PIN) confirms the whole document and its e-mail. The relayer records
   it, then e-mails it to the customer's and the supplier's addresses and up to three typed for that
-  document. Without network the document waits in "To send" and leaves when the network returns; if
-  the e-mail cannot leave (or it is not known whether it left), the app offers to send it from the phone.
+  document. Without network, or when the service is busy, the document waits in "To send" and leaves
+  when the network returns (or with "Send now"). It can still be refused then: a cylinder changed
+  meanwhile, the signature older than seven days, the phone revoked; the driver makes the document
+  again. If the e-mail cannot leave (or it is not known whether it left), the document stays in "To
+  send" with "Send from the phone" until the driver removes it. A document too large for one send is
+  refused before signing: split it in two.
 
 ## Install
 
@@ -30,7 +34,9 @@ The APK is attached to each [release](https://github.com/ChainIntegrate/gas-cyli
    offers Settings: turn on "Allow from this source" for that app, go back, and the installation goes on.
 3. **Play Protect** may offer to scan the app, because it does not come from the Play Store: accept the
    scan, or choose "More details" and then "Install anyway". It is Google's check of apps from
-   developers it has not verified yet, not a problem of the app.
+   developers it has not verified yet. Install only the APK downloaded from this repository's releases:
+   its signer's SHA-256 is printed in the release's build ("Release key" notice). Any other warning, or
+   an APK from elsewhere: stop and ask ChainIntegrate.
 
 **Updates** install over the previous version and keep the phone's setup. **Never uninstall the app to
 update it**: its keys would be lost and the phone would have to be set up again (and revoked by the
@@ -47,7 +53,9 @@ owner). Clearing the app's data, removing the phone's screen lock or a factory r
    once. The phone keeps the data key protected by the fingerprint; the password is not stored.
 
 Each time the app opens, the driver unlocks it with the fingerprint or PIN. A lost phone, or a driver who
-leaves: the owner revokes the phone from the admin page.
+leaves: the owner revokes the phone from the admin page. Revoking stops the phone from writing; it
+still holds the data key and can read until the key can be replaced, so a returned phone should be
+wiped (company phones make this simple).
 
 ## Build
 

@@ -132,7 +132,7 @@
         <li>Tu scrivi quel codice in <strong>Autorizza un telefono</strong>, premi <strong>Autorizza</strong> e confermi nell'estensione.</li>
         <li>L'app se ne accorge da sola e chiede la <strong>password dei dati</strong>: la scrivi tu sul telefono, una volta sola. Il telefono non la conserva.</li>
       </ol>
-      <p><strong>Revoca</strong> un telefono perso, rubato o di un autista che non lavora più con voi: da quel momento non può più registrare niente.</p>
+      <p><strong>Revoca</strong> un telefono perso, rubato o di un autista che non lavora più con voi: da quel momento non può più registrare niente. <strong>Attenzione:</strong> il telefono conserva la chiave dei dati, quindi chi riesce a sbloccarlo può ancora leggerli. Per questo è meglio usare telefoni aziendali e farli azzerare quando vengono restituiti.</p>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-phones.webp" target="_blank" rel="noopener"><img src="guide-img/page-phones.webp" alt="Telefoni: i telefoni autorizzati, il codice da scrivere e il QR da far inquadrare (qui sfocato)" loading="lazy"></a><figcaption>Telefoni: i telefoni autorizzati, il codice da scrivere e il QR da far inquadrare (qui sfocato)</figcaption></figure>
       </div>
@@ -177,7 +177,7 @@
       <ol>
         <li>Sul telefono apri <a href="https://github.com/ChainIntegrate/gas-cylinder-registry/releases/latest" target="_blank" rel="noopener">l'ultima versione di GasTrace</a> e tocca il file <code>gastrace-v….apk</code> per scaricarlo.</li>
         <li>Apri il file scaricato. <strong>La prima volta</strong> Android dice che non può installare app da questa fonte: tocca <strong>Impostazioni</strong>, attiva <strong>Consenti da questa fonte</strong>, torna indietro e l'installazione prosegue.</li>
-        <li>Può comparire <strong>Play Protect</strong>, che propone di controllare l'app perché non viene dal Play Store: accetta il controllo, oppure tocca <strong>Altri dettagli → Installa comunque</strong>. È il controllo di Google sulle app che non passano dal suo negozio, non un problema dell'app.</li>
+        <li>Può comparire <strong>Play Protect</strong>, che propone di controllare l'app perché non viene dal Play Store: accetta il controllo, oppure tocca <strong>Altri dettagli → Installa comunque</strong>. È il controllo di Google sulle app che non passano dal suo negozio. Installa solo il file scaricato dal link di questa guida; per qualsiasi altro avviso, o un file arrivato da altre parti (mail, chat), fermati e chiedi a ChainIntegrate.</li>
       </ol>
       <p>Il telefono deve avere un <strong>blocco schermo</strong> (impronta, PIN o sequenza): senza, l'app non può proteggere la sua chiave.</p>
       <p class="warn">Non disinstallare mai l'app e non cancellarne i dati: la chiave del telefono andrebbe persa e il telefono andrebbe configurato di nuovo con il titolare.</p>
@@ -251,8 +251,9 @@
 
     <section class="panel" id="senza-rete">
       <h3>Senza rete: "Da inviare"</h3>
-      <p>Se non c'è segnale, il documento viene salvato sul telefono e parte da solo appena torna la rete. Nella schermata iniziale compare <strong>Da inviare (n)</strong>: lì puoi vederli, mandarli con <strong>Invia ora</strong> o scartarli.</p>
-      <p>Se intanto un'altra persona ha registrato una delle stesse bombole, l'app dice "Una bombola è cambiata nel frattempo": rifai il documento.</p>
+      <p>Se non c'è segnale, o il servizio è occupato, il documento viene salvato sul telefono e parte da solo appena possibile. Nella schermata iniziale compare <strong>Da inviare (n)</strong>: lì puoi vederli, mandarli con <strong>Invia ora</strong> o scartarli. Restano lì anche i documenti registrati la cui mail non è partita, con <strong>Manda dal telefono</strong>; quando l'hai mandata tocca <strong>Mail a posto: togli</strong>.</p>
+      <p>Un documento in attesa può essere rifiutato quando parte: se intanto un'altra persona ha registrato una delle stesse bombole ("Una bombola è cambiata nel frattempo"), se sono passati più di sette giorni ("Documento scaduto") o se il telefono è stato revocato. In questi casi rifai il documento.</p>
+      <p>Un documento troppo grande (circa più di 80 bombole) non parte: l'app lo dice prima di firmare. Dividilo in due documenti.</p>
     </section>
 
     <section class="panel" id="mail">

@@ -132,7 +132,7 @@
         <li>You type that code in <strong>Authorize a phone</strong>, press <strong>Authorize</strong> and confirm in the extension.</li>
         <li>The app notices by itself and asks for the <strong>data password</strong>: you type it on the phone, once. The phone does not keep it.</li>
       </ol>
-      <p><strong>Revoke</strong> a phone that is lost, stolen, or belongs to a driver who no longer works with you: from then on it cannot record anything.</p>
+      <p><strong>Revoke</strong> a phone that is lost, stolen, or belongs to a driver who no longer works with you: from then on it cannot record anything. <strong>Note:</strong> the phone keeps the data key, so whoever manages to unlock it can still read the data. That is why company phones are better, wiped when they are returned.</p>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-phones.webp" target="_blank" rel="noopener"><img src="guide-img/page-phones.webp" alt="Phones: the authorized phones, the code to type and the QR to scan (blurred here)" loading="lazy"></a><figcaption>Phones: the authorized phones, the code to type and the QR to scan (blurred here)</figcaption></figure>
       </div>
@@ -177,7 +177,7 @@
       <ol>
         <li>On the phone open <a href="https://github.com/ChainIntegrate/gas-cylinder-registry/releases/latest" target="_blank" rel="noopener">the latest version of GasTrace</a> and tap the <code>gastrace-v….apk</code> file to download it.</li>
         <li>Open the downloaded file. <strong>The first time</strong> Android says it cannot install apps from this source: tap <strong>Settings</strong>, turn on <strong>Allow from this source</strong>, go back and the installation goes on.</li>
-        <li><strong>Play Protect</strong> may offer to scan the app because it does not come from the Play Store: accept the scan, or tap <strong>More details → Install anyway</strong>. It is Google's check of apps that do not go through its store, not a problem of the app.</li>
+        <li><strong>Play Protect</strong> may offer to scan the app because it does not come from the Play Store: accept the scan, or tap <strong>More details → Install anyway</strong>. It is Google\'s check of apps that do not go through its store. Install only the file downloaded from this guide\'s link; for any other warning, or a file that came from elsewhere (e-mail, chat), stop and ask ChainIntegrate.</li>
       </ol>
       <p>The phone needs a <strong>screen lock</strong> (fingerprint, PIN or pattern): without it the app cannot protect its key.</p>
       <p class="warn">Never uninstall the app or clear its data: the phone's key would be lost and the phone would have to be set up again with the owner.</p>
@@ -251,8 +251,9 @@
 
     <section class="panel" id="offline">
       <h3>No network: "To send"</h3>
-      <p>Without signal the document is saved on the phone and leaves by itself when the network returns. The home screen shows <strong>To send (n)</strong>: there you can see them, send them with <strong>Send now</strong> or discard them.</p>
-      <p>If meanwhile someone else recorded one of the same cylinders, the app says "A cylinder changed in the meantime": make the document again.</p>
+      <p>Without signal, or when the service is busy, the document is saved on the phone and leaves by itself as soon as it can. The home screen shows <strong>To send (n)</strong>: there you can see them, send them with <strong>Send now</strong> or discard them. Recorded documents whose e-mail did not leave stay there too, with <strong>Send from the phone</strong>; once you sent it, tap <strong>E-mail handled: remove</strong>.</p>
+      <p>A waiting document can be refused when it leaves: if meanwhile someone else recorded one of the same cylinders ("A cylinder changed in the meantime"), if more than seven days went by ("Document expired"), or if the phone was revoked. Then make the document again.</p>
+      <p>A document too large (roughly more than 80 cylinders) does not leave: the app says so before signing. Split it into two documents.</p>
     </section>
 
     <section class="panel" id="email">

@@ -20,8 +20,8 @@ encrypted, and an e-mail summary is sent.
 
 - **One cylinder, one token.** Each cylinder is an LSP8 token in the supplier's own register.
 - **Everything on-chain, encrypted.** Cylinder data, states, customers, settings and documents live on
-  LUKSO, encrypted with a key only the supplier holds. The chain is the database: no server keeps the
-  data.
+  LUKSO, encrypted with the register's data key. The chain is the database: no server keeps the
+  data. Who can hold that key is in §5 ("Who holds the data key").
 - **No friction, no LYX.** The supplier and the drivers only sign; the relayer sends and pays the gas.
   Nobody at the supplier ever holds or sees LYX, and no screen uses technical words.
 - **One register per company.** A factory creates identical, independent registers; the same app,
@@ -132,18 +132,29 @@ its length says nothing (not even depot or customer); other values are padded to
 - **Recovery code** (slot 1, `GCRKeyWrap:1`): 24 random words (256 bits, English or Italian list), shown
   once when the register is created, wrapping the same data key. Random and long, it cannot be guessed
   offline as a chosen password could.
-- **Phones never learn the password**: the owner types it once on the phone, the app unwraps the data
-  key and keeps it encrypted under an Android Keystore key unlocked by fingerprint or PIN.
+- **Phones do not keep the password**: the owner types it once on the phone, the app uses it to unwrap
+  the data key and forgets it; the data key stays encrypted under an Android Keystore key unlocked by
+  fingerprint or PIN.
 - **Limits**: encrypted data on a public chain can be copied and attacked offline forever, hence the
-  long password. Nobody, ChainIntegrate included, keeps a copy of the data key: without the password and
-  the recovery code the data cannot be read again.
+  long password. Without the password and the recovery code the data cannot be read again.
+- **Who holds the data key** (external review X-02, X-03, A05):
+  - the register's data key, password and recovery code are made **in the browser that creates the
+    register**: today the operator page, used by ChainIntegrate with the supplier, which therefore sees
+    the 24 words (and the password, when typed there). Nothing is stored or sent, but this is trust,
+    not a guarantee: making them in the supplier's own admin page at first sign-in is planned;
+  - every **authorized phone** holds the data key (protected by the Keystore);
+  - the admin page's and the app's code, served by ChainIntegrate, handles the key in the browser: a
+    compromised server could serve a page that sends it elsewhere;
+  - the data key **cannot be replaced yet**: changing the password re-wraps the same key (the old wrap
+    stays in the chain's history), and a revoked phone, or whoever knew an old password or the recovery
+    code, can still read everything, future data included. Key rotation is planned.
 
 | Case | What happens |
 |---|---|
 | **Change the password** | From the admin page (Settings): a new slot 0. Phones keep working. The old wrap stays in the chain's history: a change, not a protection against someone who knew the old password. |
 | **Password lost** | Admin page, "I lost the password": the 24 words open the data key, a new password is set. |
 | **Both lost** | The data cannot be read again; a new register is the way out. |
-| **Phone lost, driver leaves** | The owner revokes the phone: it can no longer write. |
+| **Phone lost, driver leaves** | The owner revokes the phone: it can no longer write. It still holds the data key, so whoever unlocks it can still read the register until the key can be rotated: use company phones, and have a returned phone wiped. |
 | **A new company** | Starts a new register (its own key, password, recovery code); nothing is copied. |
 
 ## 6. Contracts
@@ -153,7 +164,9 @@ upgradeable. Source verified on LUKSO's explorer (`scripts/verify-lukso.js`).
 
 ### 6.1 `GasCylinderRegistryFactory`
 
-- Owned by ChainIntegrate's key; only it calls `createRegistry(salt, owner, name, symbol, dataKeys,
+- Owned by ChainIntegrate's Universal Profile `0x4a2605796e0d91A9667d6E30365aEEC384C48c27` (deployed
+  by ChainIntegrate's key, then handed over with `transfer-factory`); only the owner calls
+  `createRegistry(salt, owner, name, symbol, dataKeys,
   dataValues)`, which deploys an EIP-1167 clone of one register implementation at a predictable address
   (`predictRegistryAddress(salt)`: the key wraps written at creation are bound to that address).
 - `isRegistry(address)`, `registryCount()`, `registries(start, count)`: the relayer, the page and the
@@ -176,7 +189,9 @@ upgradeable. Source verified on LUKSO's explorer (`scripts/verify-lukso.js`).
 - **Optimistic concurrency**: every write carries the hash of the value it replaces; if a cylinder
   changed meanwhile (two phones, an offline queue), the whole document is refused (`StaleValue`).
 - **Nonces** are unordered (a bitmap per signer, random 256-bit values): documents queued offline need
-  no order. Deadline: seven days.
+  no order. Each signature carries a deadline: the app uses seven days for documents, the owner tools
+  and the admin page one hour; the register only checks it is not past (it sets no maximum, and an
+  unsent signature cannot be cancelled: review G-07, planned with the next contract).
 - **Tokens** always belong to the owner and cannot be transferred; after an ownership change,
   `syncHolders(tokenIds)` (anyone may call it) moves them to the new owner.
 - The LSP4 name, symbol, token type and the LSP8 token ID format are read-only.
@@ -199,7 +214,8 @@ upgradeable. Source verified on LUKSO's explorer (`scripts/verify-lukso.js`).
 - **E-mail**: the phone signs the e-mail (recipients, subject, text) bound to the document's EIP-712
   digest, with the same fingerprint as the document; the relayer sends exactly that e-mail, and only
   after the document's transaction is confirmed. Recipients: the customer's addresses, the supplier's,
-  and up to three typed by the driver. The relayer logs that an e-mail left and to how many people,
+  and up to three typed by the driver; the app enforces this, the relayer only checks up to ten valid
+  addresses signed by the phone (it cannot read the encrypted customer list: review G-03). The relayer logs that an e-mail left and to how many people,
   never its content. The e-mail is plaintext in transit to the relayer: the one place where data leaves
   the encryption, by choice, so that its delivery can be checked.
 
@@ -243,5 +259,10 @@ page against that catalog.
   written by the owner, no new contract).
 - **Scale**: past a few thousand cylinders, an indexer of the register's events (Envio) instead of
   reading the logs from the page.
-- **Second device on an account**: the ChainIntegrate Account extension will add a key to an account
-  (up-onboarding's backlog); GasTrace needs nothing for it.
+- **Second device on an account**: done in the ChainIntegrate Account extension 0.5.0 ("Authorize
+  another computer"); GasTrace needed nothing for it. Any key of the account with SIGN can sign the
+  register's owner operations, ownership transfer included (review X-01): give other computers only to
+  people who may administer the register.
+- **Export to the management software**: the admin page downloads the register as CSV (cylinders,
+  movements, documents, customers); a format matching the supplier's invoicing software is to agree
+  with them.
