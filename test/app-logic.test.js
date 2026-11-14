@@ -289,6 +289,15 @@ describe("app logic", function () {
     expect(item.failed.error).to.equal("DocumentPartAlreadyRecorded");
   });
 
+  it("tells documents apart by kind and year, stock counts by a random part (review A10)", async function () {
+    const lines = [await scan("ID-1", customerA, "delivery_note")];
+    const id = async (kind, number, when) => (await A.buildDocument({ registry: reg, operator: phone.address, counterparty: customerA, kind, number, lines: kind === "stock_count" ? [{ ...lines[0], movement: "stock_count" }] : lines, now: when })).docId;
+    const year = 365 * 24 * 3600;
+    expect(await id("delivery_note", "1", now)).to.equal(await id("delivery_note", " 1 ", now + 60)); // the same note
+    expect(await id("delivery_note", "1", now)).to.not.equal(await id("delivery_note", "1", now + year)); // next year's 1
+    expect(await id("stock_count", "", now)).to.not.equal(await id("stock_count", "", now)); // same second, two phones
+  });
+
   it("refuses codes that cannot be a label", async function () {
     let err;
     try {

@@ -95,8 +95,11 @@ Only the owner writes them (section 6.2); drivers pick from the list.
 A document is what a driver closes: a delivery note, a stock count or a refill note, with all its
 movements.
 
-- `docId = HMAC(idKey, "doc:" + counterparty id + ":" + document number)` (a stock count's number is
-  `STOCK-<time>`): the contract refuses the same document twice.
+- `docId = HMAC(idKey, "doc:" + counterparty id + ":" + name)`, the name being
+  `<kind>:<year of the document's date>:<number>` (a stock count, which has no number:
+  `stock_count:<time>:<random>`): the contract refuses the same document twice, while numbering that
+  starts again each year, or the same number in another kind of document, makes a different one (review
+  A10; documents recorded before 2026-11-14 used the number alone).
 - One transaction records the movements and emits `DocumentRecorded(docId, part, parts, signer,
   corrects, document)`, `document` being the encrypted document (number, date, counterparty, every
   line with serial, gas, movement, condition and confirmed warning).

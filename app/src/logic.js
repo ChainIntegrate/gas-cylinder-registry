@@ -220,7 +220,13 @@ async function buildDocument({ registry, operator, counterparty, kind, number, l
   const docNumber = kind === "stock_count" ? `STOCK-${now}` : String(number || "").trim();
   if (!docNumber) throw new Error("missing document number");
   const keys = registry.keys;
-  const docId = await S.documentId(keys, counterparty.id, docNumber);
+  // What makes a document unique (review A10): its kind, the year of its date and its number, for the
+  // counterparty. Numbering that starts again each year, or a delivery and a refill note with the same
+  // number, are different documents; the same note sent twice is refused by the registry. A stock count
+  // has no number: its time and a random part, so that two phones counting in the same second differ.
+  const year = new Date(now * 1000).getFullYear();
+  const idName = kind === "stock_count" ? `stock_count:${now}:${S.randomNonce().toString(16)}` : `${kind}:${year}:${docNumber}`;
+  const docId = await S.documentId(keys, counterparty.id, idName);
   const chainId = await registry.chainId();
 
   // Per line: its mints and updates, kept together in one part.
