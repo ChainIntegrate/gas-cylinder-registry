@@ -94,25 +94,46 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
 
   // --- checks ---
 
-  function rateLimit(ip, registry) {
+  // Two limits (external review G-01). Per IP, checked first, before any call to the node: it costs
+  // nothing and it bounds what one source can make the relayer do. Per registry per day, the registry's
+  // own budget: charged only for an operation that passed every check and the simulation, right before it
+  // is sent, so requests that are malformed, badly signed or from unauthorized signers never use it up.
+  function ipLimit(ip) {
     const now = Date.now();
     const hits = (ipHits.get(ip) || []).filter((t) => now - t < 60000);
     if (hits.length >= limits.perIpPerMinute) throw new Refused("too many requests, wait a minute", 429);
     hits.push(now);
     ipHits.set(ip, hits);
-    const key = `${registry}|${new Date().toISOString().slice(0, 10)}`;
-    const n = registryDay.get(key) || 0;
-    if (n >= limits.perRegistryPerDay) throw new Refused("this registry reached its daily limit of operations", 429);
-    registryDay.set(key, n + 1);
-    if (registryDay.size > 10000) registryDay.clear();
     if (ipHits.size > 10000) ipHits.clear();
   }
 
+  const dayKey = (registry) => `${registry}|${new Date().toISOString().slice(0, 10)}`;
+  function checkQuota(registry) {
+    if ((registryDay.get(dayKey(registry)) || 0) >= limits.perRegistryPerDay) {
+      throw new Refused("this registry reached its daily limit of operations", 429);
+    }
+  }
+  function chargeQuota(registry) {
+    checkQuota(registry);
+    const key = dayKey(registry);
+    if (registryDay.size > 10000) registryDay.clear();
+    registryDay.set(key, (registryDay.get(key) || 0) + 1);
+  }
+
+  // A factory's answer: yes is kept for good (a registry stays one), no for ten minutes, so that repeated
+  // requests naming a foreign address do not each cost a call to the node.
+  const notRegistries = new Map(); // address -> time of the answer
   async function checkRegistry(address) {
     if (!isAddress(address)) throw new Refused("registry: not an address");
     const a = getAddress(address);
     if (knownRegistries.has(a)) return a;
-    if (!(await factory.isRegistry(a))) throw new Refused("registry: not created by this service's factory", 403);
+    const no = notRegistries.get(a);
+    if (no && Date.now() - no < 600000) throw new Refused("registry: not created by this service's factory", 403);
+    if (!(await factory.isRegistry(a))) {
+      if (notRegistries.size > 10000) notRegistries.clear();
+      notRegistries.set(a, Date.now());
+      throw new Refused("registry: not created by this service's factory", 403);
+    }
     knownRegistries.add(a);
     return a;
   }
@@ -160,6 +181,7 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
   async function relay(registry, method, args, opSignature, mail) {
     const opKey = keccak256(opSignature);
     if (byOperation.has(opKey)) return { hash: byOperation.get(opKey), repeated: true };
+    checkQuota(registry); // before the simulation: a registry at its limit costs no call to the node
 
     const reg = new Contract(registry, REGISTRY_ABI, wallet);
     let gas = null;
@@ -185,6 +207,7 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
     // One transaction at a time, so that the relayer's nonces never collide.
     const send = queue.then(async () => {
       if (byOperation.has(opKey)) return byOperation.get(opKey);
+      chargeQuota(registry);
       const tx = await reg[method](...args, { gasLimit });
       byOperation.set(opKey, tx.hash);
       txs.set(tx.hash, { state: "pending", mail: mail ? "pending" : "none" });
@@ -281,8 +304,8 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
   }
 
   async function postDocument(body, ip) {
+    ipLimit(ip);
     const registry = await checkRegistry(body.registry);
-    rateLimit(ip, registry);
     const p = body.payload || {};
     if (!Array.isArray(p.mints) || !Array.isArray(p.updates)) throw new Refused("payload: mints and updates are required");
     if (p.mints.length > limits.maxMints || p.updates.length > limits.maxUpdates) {
@@ -327,8 +350,8 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
   }
 
   async function postOwner(body, ip) {
+    ipLimit(ip);
     const registry = await checkRegistry(body.registry);
-    rateLimit(ip, registry);
     if (!OWNER_METHODS.includes(body.method)) throw new Refused(`method: one of ${OWNER_METHODS.join(", ")}`);
     if (!Array.isArray(body.args)) throw new Refused("args: an array");
     if (JSON.stringify(body.args).length > limits.maxDataBytes * 2 + 4096) throw new Refused("args: too large");

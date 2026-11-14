@@ -185,8 +185,8 @@ upgradeable. Source verified on LUKSO's explorer (`scripts/verify-lukso.js`).
   `GET /gcr/status?hash=…`, `GET /gcr/info`.
 - It accepts only registers of the factory and signers that are the owner or an operator, simulates
   first (the register's refusal comes back by name and nothing is sent), sends one transaction at a
-  time, returns the same transaction for the same operation, and limits requests per IP and operations
-  per register per day.
+  time, returns the same transaction for the same operation, and limits requests per IP (before any
+  call to the node) and operations per register per day (counted only for operations it sends).
 - It holds only the LYX it spends; it cannot forge or alter anything (without a valid signature the
   register refuses). At worst it fails to send.
 - **E-mail**: the phone signs the e-mail (recipients, subject, text) bound to the document's EIP-712

@@ -228,4 +228,48 @@ describe("relayer", function () {
     expect((await post("/gcr/document", await delivery(1))).status).to.equal(200);
     expect((await post("/gcr/document", await delivery(1))).status).to.equal(429);
   });
+
+  it("charges a registry's daily limit only for operations it sends (review G-01)", async function () {
+    await new Promise((res) => server.close(res));
+    const relayer = createRelayer({
+      provider: ethers.provider,
+      wallet: relayerSigner,
+      config: { chainId: 31337, factory: await factory.getAddress(), limits: { perRegistryPerDay: 2, perIpPerMinute: 1000 } },
+      logger: () => {},
+    });
+    server = relayer.server;
+    await new Promise((res) => server.listen(0, "127.0.0.1", res));
+    base = `http://127.0.0.1:${server.address().port}`;
+    const stranger = ethers.Wallet.createRandom();
+    for (let i = 0; i < 20; i++) {
+      // junk owner requests, documents signed by an unknown key, and badly signed documents
+      expect((await post("/gcr/owner", { registry: ctx.address, method: "nothing", args: [] })).status).to.equal(400);
+      const d = await delivery(1);
+      expect((await post("/gcr/document", { ...d, signer: stranger.address })).status).to.equal(403);
+      expect((await post("/gcr/document", { ...d, signature: "0x" + "11".repeat(65) })).status).to.equal(400);
+    }
+    expect((await post("/gcr/document", await delivery(1))).status).to.equal(200);
+    const resent = await delivery(1);
+    expect((await post("/gcr/document", resent)).status).to.equal(200);
+    expect((await post("/gcr/document", resent)).status).to.equal(200); // the same operation again: not charged twice
+    expect((await post("/gcr/document", await delivery(1))).status).to.equal(429);
+  });
+
+  it("limits each source before asking the node anything", async function () {
+    await new Promise((res) => server.close(res));
+    const relayer = createRelayer({
+      provider: ethers.provider,
+      wallet: relayerSigner,
+      config: { chainId: 31337, factory: await factory.getAddress(), limits: { perIpPerMinute: 3 } },
+      logger: () => {},
+    });
+    server = relayer.server;
+    await new Promise((res) => server.listen(0, "127.0.0.1", res));
+    base = `http://127.0.0.1:${server.address().port}`;
+    const foreign = ethers.Wallet.createRandom().address;
+    const codes = [];
+    for (let i = 0; i < 5; i++) codes.push((await post("/gcr/owner", { registry: foreign, method: "nothing", args: [] }, { "x-real-ip": "198.51.100.7" })).status);
+    expect(codes).to.deep.equal([403, 403, 403, 429, 429]);
+    expect((await post("/gcr/owner", { registry: foreign, method: "nothing", args: [] }, { "x-real-ip": "198.51.100.8" })).status).to.equal(403);
+  });
 });

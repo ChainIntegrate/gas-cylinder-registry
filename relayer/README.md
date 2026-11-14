@@ -36,8 +36,13 @@ read it; `DocumentPartAlreadyRecorded`: the same document number was sent before
   sent. Gas limit: the estimate plus 25%, never more than 16 million (when a node's estimate fails
   after a successful simulation, the 16 million cap; only the gas used is paid).
 - The same signed operation again returns the same transaction (and sends no second e-mail).
-- Limits: requests per IP per minute, operations per registry per day; requests up to 700 KB; a
-  browser `Origin`, when present, must be in `allowedOrigins` (the app's).
+- Limits: requests per IP per minute (`perIpPerMinute`), checked first, before any call to the node;
+  operations per registry per day (`perRegistryPerDay`), counted only for an operation that passed
+  every check and the simulation, when it is sent, so malformed or badly signed requests naming a
+  registry cannot use up its day (and the same operation sent again is not counted twice). An address
+  that is not one of the factory's registries is remembered for ten minutes. The counters live in
+  memory: a restart resets them. Requests up to 700 KB; a browser `Origin`, when present, must be in
+  `allowedOrigins` (the app's).
 
 ## The e-mail
 
