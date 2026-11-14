@@ -57,7 +57,7 @@ async function main() {
   // ChainIntegrate: factory and the registry, created for the account.
   const f = await O.deployFactory(chainIntegrate);
   const factory = new ethers.Contract(f.address, O.FACTORY_ABI, chainIntegrate);
-  const prepared = await O.prepareRegistry({ factory, password: PASSWORD, language: "it" });
+  const prepared = await O.prepareRegistry({ factory }); // no data key: the owner prepares it in the page (review X-02)
   const r = await O.createRegistry({ factory, prepared, owner, name: "Argonia Gas Tecnici", symbol: "ARGCYL" });
 
   // The extension's catalog, configured as it will be for GasTrace.
@@ -148,6 +148,30 @@ async function main() {
   await page.goto(pageUrl);
   await see("Accedi con ChainIntegrate Account");
   await shot("connect");
+  await click("Accedi con ChainIntegrate Account");
+  // First sign-in: the owner prepares the data key, the password and the 24 words in the page.
+  await see("Prepara i dati del registro");
+  await page.getByLabel("Nuova password dei dati").fill(PASSWORD);
+  await page.getByLabel("Ripeti la nuova password").fill(PASSWORD);
+  await shot("setup-keys");
+  await click("Continua");
+  await page.locator(".words li").first().waitFor({ timeout: 30000 });
+  await shot("recovery-code");
+  const words = await page.locator(".words li").allInnerTexts();
+  const nums = (await page.locator("label").allInnerTexts()).map((l) => /parola numero (\d+)/.exec(l)).filter(Boolean).map((m) => Number(m[1]));
+  await page.getByLabel(`Controllo: parola numero ${nums[0]}`, { exact: true }).fill(words[nums[0] - 1]);
+  await page.getByLabel(`Controllo: parola numero ${nums[1]}`, { exact: true }).fill("sbagliata");
+  await click("Salva e apri i dati");
+  await see("Le parole di controllo non coincidono");
+  await page.getByLabel(`Controllo: parola numero ${nums[1]}`, { exact: true }).fill(words[nums[1] - 1]);
+  await click("Salva e apri i dati");
+  await see("Dati preparati");
+  const setupCtx = await O.context({ provider, registry: r.address });
+  const byWords = await O.unlockWithRecoveryCode(setupCtx, words.join(" "));
+  const byPassword = await O.unlockWithPassword(setupCtx, PASSWORD);
+
+  // The next sign-in asks the password.
+  await page.reload();
   await click("Accedi con ChainIntegrate Account");
   await see("Apri i dati");
   await page.locator("input[type=password]").fill(PASSWORD);
@@ -268,6 +292,7 @@ async function main() {
 
   const settings = await O.readSettings(ctxCheck, (await O.unlockWithPassword(ctxCheck, "una nuova frase per il registro")).keys);
   const checks = [
+    ["first sign-in: the page made the data key; the password and the 24 words open it", Buffer.from(byWords.dek).equals(Buffer.from(byPassword.dek))],
     ["settings written", settings && settings.company === "Argonia Gas Tecnici" && settings.emails.length === 2],
     ["customers written", cps.length === 3],
     ["phone authorized", await new ethers.Contract(r.address, O.REGISTRY_ABI, provider).isOperator(phone.address)],

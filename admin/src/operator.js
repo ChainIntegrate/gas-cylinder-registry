@@ -1,8 +1,9 @@
 "use strict";
 // GasTrace operator page, for ChainIntegrate only (operator.html, not indexed): creates a supplier's register
 // from the browser. ChainIntegrate's Universal Profile, owner of the factory, signs and pays the creation in
-// its own wallet (LUKSO's Universal Profile extension or UP Wallet, found through EIP-6963). The data
-// password and the recovery code are made in this page and never leave it: only the key wraps go on-chain.
+// its own wallet (LUKSO's Universal Profile extension or UP Wallet, found through EIP-6963). The register is
+// created without its data key: the supplier makes the data password and the recovery code in their own
+// admin page at the first sign-in, so that ChainIntegrate never sees them (external review X-02).
 
 const { JsonRpcProvider, Contract, Interface, getAddress, isAddress, hexlify, randomBytes, id } = require("ethers");
 const qrcode = require("qrcode-generator");
@@ -36,29 +37,17 @@ const T = {
     symbol: "Sigla (maiuscole, 3-8 caratteri)",
     owner: "Account ChainIntegrate del fornitore (indirizzo 0x…)",
     ownerHint: "La UP che gestirà il registro dalla pagina admin con l'estensione ChainIntegrate Account.",
-    password: "Password dei dati",
-    password2: "Ripeti la password",
-    passwordHint: "La scrive il fornitore, o tu con lui: protegge i dati cifrati. Resta in questa pagina.",
-    language: "Lingua delle 24 parole",
-    prepare: "Prepara",
-    weak: { too_short: "Password troppo corta (almeno 14, meglio una frase di 20+).", too_simple: "Password troppo semplice: mescola maiuscole, cifre e simboli, o usa una frase di 20+ caratteri.", repetitive: "Password troppo ripetitiva." },
-    mismatch: "Le due password non coincidono.",
     badOwner: "Indirizzo del titolare non valido.",
     ownerNotProfile: "L'indirizzo del titolare non è una Universal Profile.",
     badName: "Scrivi il nome dell'azienda.",
     badSymbol: "Sigla: 3-8 lettere maiuscole o cifre.",
-    codeTitle: "CODICE DI RECUPERO — scrivilo ora",
-    codeIntro: "24 parole: con queste il fornitore imposta una nuova password se perde quella attuale. Compaiono solo ora: scrivile o stampale e consegnale al fornitore. Nessuno le può recuperare.",
-    print: "Stampa",
-    check: (n) => `Controllo: parola numero ${n}`,
-    checkFail: "Le parole di controllo non coincidono.",
     create: "Crea il registro",
     confirmWallet: "Conferma la transazione nel wallet…",
     waiting: "In attesa della conferma della rete…",
     created: "Registro creato.",
     address: "Indirizzo del registro",
     block: "Blocco",
-    next: "Al fornitore: apra la pagina admin, acceda con l'estensione ChainIntegrate Account e scriva la password dei dati.",
+    next: "Al fornitore: apra la pagina admin e acceda con l'estensione ChainIntegrate Account. Al primo accesso sceglierà la password dei dati e riceverà il codice di recupero (24 parole): li vede solo lui, ChainIntegrate no.",
     openAdmin: "Pagina admin",
     failed: (m) => `Non riuscito: ${m}`,
     rejected: "Annullato nel wallet.",
@@ -84,29 +73,17 @@ const T = {
     symbol: "Symbol (capitals, 3-8 characters)",
     owner: "The supplier's ChainIntegrate account (0x… address)",
     ownerHint: "The UP that will manage the register from the admin page with the ChainIntegrate Account extension.",
-    password: "Data password",
-    password2: "Password again",
-    passwordHint: "Typed by the supplier, or you with them: it protects the encrypted data. It stays in this page.",
-    language: "Language of the 24 words",
-    prepare: "Prepare",
-    weak: { too_short: "Password too short (at least 14, better a phrase of 20+).", too_simple: "Password too simple: mix capitals, digits and symbols, or use a phrase of 20+ characters.", repetitive: "Password too repetitive." },
-    mismatch: "The two passwords do not match.",
     badOwner: "Invalid owner address.",
     ownerNotProfile: "The owner's address is not a Universal Profile.",
     badName: "Type the company's name.",
     badSymbol: "Symbol: 3-8 capitals or digits.",
-    codeTitle: "RECOVERY CODE — write it down now",
-    codeIntro: "24 words: with them the supplier sets a new password if the current one is lost. They are shown only now: write them down or print them and hand them to the supplier. Nobody can recover them.",
-    print: "Print",
-    check: (n) => `Check: word number ${n}`,
-    checkFail: "The check words do not match.",
     create: "Create the register",
     confirmWallet: "Confirm the transaction in the wallet…",
     waiting: "Waiting for the network to confirm…",
     created: "Register created.",
     address: "Register address",
     block: "Block",
-    next: "For the supplier: open the admin page, sign in with the ChainIntegrate Account extension and type the data password.",
+    next: "For the supplier: open the admin page and sign in with the ChainIntegrate Account extension. At the first sign-in they choose the data password and get the recovery code (24 words): only they see them, ChainIntegrate does not.",
     openAdmin: "Admin page",
     failed: (m) => `Failed: ${m}`,
     rejected: "Cancelled in the wallet.",
@@ -120,8 +97,7 @@ const st = {
   wallet: null,
   account: null,
   registers: null,
-  form: { name: "", symbol: "", owner: "", password: "", password2: "", language: "it" }, // kept across renders
-  prepared: null, // { form, prepared, checks: [n, m] }
+  form: { name: "", symbol: "", owner: "" }, // kept across renders
   result: null,
   msg: null,
   busy: null,
@@ -211,16 +187,13 @@ async function loadRegisters() {
 // A new register
 // ------------------------------------------------------------------------------------------------
 
-async function prepare(form) {
+async function create(form) {
   const tx = t();
   st.msg = null;
   if (!form.name.trim()) return say(tx.badName);
   if (!/^[A-Z0-9]{3,8}$/.test(form.symbol)) return say(tx.badSymbol);
   if (!isAddress(form.owner)) return say(tx.badOwner);
   const owner = getAddress(form.owner);
-  if (form.password !== form.password2) return say(tx.mismatch);
-  const c = S.checkPassword(form.password);
-  if (!c.ok) return say(tx.weak[c.reason]);
   st.busy = "…";
   render();
   try {
@@ -229,35 +202,10 @@ async function prepare(form) {
       isProfile = await new Contract(owner, ["function supportsInterface(bytes4) view returns (bool)"], st.provider).supportsInterface("0x24871b3d").catch(() => false);
     }
     if (!isProfile) return say(tx.ownerNotProfile);
-    const prepared = await O.prepareRegistry({ factory: factoryRead(), password: form.password, language: form.language, salt: hexlify(randomBytes(32)) });
-    const a = 1 + Math.floor(Math.random() * 12);
-    const b = 13 + Math.floor(Math.random() * 12);
-    st.prepared = { form: { ...form, owner, password: null, password2: null }, prepared, checks: [a, b] };
-    st.form.password = st.form.password2 = ""; // the wraps are made: the password is no longer needed here
-    st.busy = null;
+    const prepared = await O.prepareRegistry({ factory: factoryRead(), salt: hexlify(randomBytes(32)) }); // no data key: see the top
+    st.busy = tx.confirmWallet;
     render();
-  } catch (e) {
-    say(errText(e));
-  }
-}
-
-async function create(answers) {
-  const tx = t();
-  const p = st.prepared;
-  const words = p.prepared.recoveryCode.split(" ");
-  if (answers.some((w, i) => w.trim().toLowerCase() !== words[p.checks[i] - 1])) return say(tx.checkFail);
-  st.msg = null;
-  st.busy = tx.confirmWallet;
-  render();
-  try {
-    const data = new Interface(O.FACTORY_ABI).encodeFunctionData("createRegistry", [
-      p.prepared.salt,
-      p.form.owner,
-      p.form.name.trim(),
-      p.form.symbol,
-      p.prepared.dataKeys,
-      p.prepared.dataValues,
-    ]);
+    const data = new Interface(O.FACTORY_ABI).encodeFunctionData("createRegistry", [prepared.salt, owner, form.name.trim(), form.symbol, [], []]);
     const hash = await st.wallet.provider.request({ method: "eth_sendTransaction", params: [{ from: st.account, to: CONFIG.factory, data, value: "0x0" }] });
     st.busy = tx.waiting;
     render();
@@ -266,10 +214,9 @@ async function create(answers) {
       receipt = await st.provider.getTransactionReceipt(hash).catch(() => null);
       if (!receipt) await new Promise((r) => setTimeout(r, 3000));
     }
-    if (!(await factoryRead().isRegistry(p.prepared.address))) throw new Error("the register is not on the factory yet: check the transaction " + hash);
-    st.result = { address: p.prepared.address, block: receipt ? receipt.blockNumber : null, hash, name: p.form.name };
-    st.prepared = null;
-    st.form = { name: "", symbol: "", owner: "", password: "", password2: "", language: "it" };
+    if (!(await factoryRead().isRegistry(prepared.address))) throw new Error("the register is not on the factory yet: check the transaction " + hash);
+    st.result = { address: prepared.address, block: receipt ? receipt.blockNumber : null, hash, name: form.name.trim() };
+    st.form = { name: "", symbol: "", owner: "" };
     st.busy = null;
     st.msg = { text: tx.created, cls: "ok" };
     await loadRegisters();
@@ -321,8 +268,6 @@ function viewForm() {
   const f = st.form;
   const field = (key, attrs = {}, transform = (v) => v) =>
     h("input", { ...attrs, value: f[key], oninput: (e) => { e.target.value = transform(e.target.value); f[key] = e.target.value; } });
-  const lang = h("select", { onchange: (e) => (f.language = e.target.value) },
-    h("option", { value: "it", selected: f.language === "it" }, "Italiano"), h("option", { value: "en", selected: f.language === "en" }, "English"));
   return h(
     "section",
     { class: "panel" },
@@ -330,33 +275,7 @@ function viewForm() {
     h("label", {}, tx.company, field("name", { type: "text" })),
     h("label", {}, tx.symbol, field("symbol", { type: "text", maxlength: "8" }, (v) => v.toUpperCase())),
     h("label", {}, tx.owner, field("owner", { type: "text", placeholder: "0x…", spellcheck: "false", autocomplete: "off" }), h("span", { class: "hint" }, tx.ownerHint)),
-    h("label", {}, tx.password, field("password", { type: "password", autocomplete: "new-password" }), h("span", { class: "hint" }, tx.passwordHint)),
-    h("label", {}, tx.password2, field("password2", { type: "password", autocomplete: "new-password" })),
-    h("label", {}, tx.language, lang),
-    btn(tx.prepare, () => prepare({ ...f, symbol: f.symbol.trim(), owner: f.owner.trim() }), "primary")
-  );
-}
-
-function viewCode() {
-  const tx = t();
-  const p = st.prepared;
-  const words = p.prepared.recoveryCode.split(" ");
-  p.answers = p.answers || ["", ""]; // kept across renders, as the form
-  const check = (i) => h("input", { type: "text", autocomplete: "off", spellcheck: "false", value: p.answers[i], oninput: (e) => (p.answers[i] = e.target.value) });
-  const a = check(0);
-  const b = check(1);
-  return h(
-    "section",
-    { class: "panel code" },
-    h("h2", {}, tx.codeTitle),
-    h("p", {}, tx.codeIntro),
-    h("div", { class: "printable" },
-      h("p", { class: "print-only" }, `GasTrace · ${p.form.name} · ${p.prepared.address}`),
-      h("ol", { class: "words" }, words.map((w) => h("li", {}, w)))),
-    btn(tx.print, () => window.print(), "ghost"),
-    h("label", {}, tx.check(p.checks[0]), a),
-    h("label", {}, tx.check(p.checks[1]), b),
-    btn(tx.create, () => create([a.value, b.value]), "primary big")
+    btn(tx.create, () => create({ ...f, symbol: f.symbol.trim(), owner: f.owner.trim() }), "primary big")
   );
 }
 
@@ -380,7 +299,7 @@ function render() {
   const tx = t();
   document.documentElement.lang = st.lang;
   document.title = tx.title;
-  const main = !st.account ? [viewConnect()] : [st.result ? viewResult() : null, st.prepared ? viewCode() : viewForm(), viewRegisters()];
+  const main = !st.account ? [viewConnect()] : [st.result ? viewResult() : null, viewForm(), viewRegisters()];
   document.getElementById("app").replaceChildren(
     ...[
       h("header", { class: "top" },

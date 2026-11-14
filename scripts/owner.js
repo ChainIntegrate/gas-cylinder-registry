@@ -28,13 +28,16 @@ ChainIntegrate (the factory's owner; also sends the owner's signed operations un
   transfer-factory <address>         Hand the factory over to ChainIntegrate's Universal Profile, so that
                                      registers are created from the operator page. One step, final: the
                                      address must be a Universal Profile, and you retype its end.
-  create-registry --name <name> --symbol <symbol> (--owner <address> | --owner-keystore <file>) [--language en|it]
+  create-registry --name <name> --symbol <symbol> (--owner <address> | --owner-keystore <file>)
                                      The owner is an account address (a ChainIntegrate Account, managed from
                                      the GasTrace admin page) or, for an owner using these tools, a key file.
-                                     Create a company's registry: asks the data password, shows the
-                                     24-word recovery code once, creates the registry with both.
+                                     Creates a company's registry without its data key: the owner makes the
+                                     password and the recovery code (admin page at the first sign-in, or
+                                     init-keys), so that ChainIntegrate never sees them.
 
 Owner (signs with the owner's key file)
+  init-keys [--language en|it]       Once, after create-registry: the data password, the 24-word recovery
+                                     code shown once, both written to the registry.
   status                             Registry, owner, phones, cylinders.
   settings [--company <name>] [--email <address>]...
                                      Show, or set, the company name shown by the app and in the e-mails, and
@@ -215,30 +218,16 @@ async function main() {
     const ci = await openKeystore(ciKeystore, "ChainIntegrate", provider);
     const factory = new Contract(config.factory, O.FACTORY_ABI, ci);
 
-    console.log(`\nThe data password protects the registry's data. It is typed in these tools and once on each phone.`);
-    const password = await askNewSecret("Data password", S.checkPassword);
-    const prepared = await O.prepareRegistry({ factory, password, language: args.language || "en" });
-
-    const words = prepared.recoveryCode.split(" ");
-    console.log("\nRECOVERY CODE: write it down on paper and keep it in a safe place. It is shown only now.");
-    console.log("With it you can set a new data password if you lose the current one.\n");
-    for (let i = 0; i < 24; i += 4) {
-      console.log("  " + words.slice(i, i + 4).map((w, j) => `${String(i + j + 1).padStart(2)}. ${w.padEnd(12)}`).join(" "));
-    }
-    console.log("");
-    for (const n of [3, 17]) {
-      for (;;) {
-        const w = (await ask(`To check: word number ${n}? `)).trim().toLowerCase();
-        if (w === words[n - 1]) break;
-        console.log("  Not that one: check what you wrote.");
-      }
-    }
-    console.clear();
-
+    // No data key here (external review X-02): the owner makes it at the first sign-in in the admin page
+    // (a ChainIntegrate Account), or with "init-keys" (an owner using these tools with a key file).
+    const prepared = await O.prepareRegistry({ factory });
     console.log(`Creating "${args.name}" (${args.symbol}) for owner ${owner} at ${prepared.address}...`);
     const r = await O.createRegistry({ factory, prepared, owner, name: args.name, symbol: args.symbol, log: console.log });
     saveConfig(configFile, { ...config, network, registry: r.address, registryBlock: r.block, ...(typeof args.owner === "string" ? { owner } : { ownerKeystore }) });
     console.log(`Registry: ${r.address} (block ${r.block}), saved to ${configFile}`);
+    console.log(typeof args.owner === "string"
+      ? "Next: the owner signs in to the admin page and prepares the data (password and recovery code)."
+      : `Next: node scripts/owner.js init-keys --config ${configFile}`);
     return;
   }
 
@@ -393,6 +382,33 @@ async function main() {
       const cpId = args._[1];
       if (!cpId) throw new Error("usage: remove-counterparty <id>");
       return done(await O.removeCounterparty(await writeCtx(), cpId));
+    }
+    case "init-keys": {
+      // The register's data key, password and recovery code, made here by the owner, once.
+      const ctx = await writeCtx();
+      if (await O.hasDataKey(ctx)) throw new Error("this registry already has its data key");
+      console.log(`\nThe data password protects the registry's data. It is typed in these tools and once on each phone.`);
+      const password = await askNewSecret("Data password", S.checkPassword);
+      const prepared = await O.prepareKeys(ctx.address, password, args.language || "en");
+      const words = prepared.recoveryCode.split(" ");
+      console.log("\nRECOVERY CODE: write it down on paper and keep it in a safe place. It is shown only now.");
+      console.log("With it you can set a new data password if you lose the current one.\n");
+      for (let i = 0; i < 24; i += 4) {
+        console.log("  " + words.slice(i, i + 4).map((w, j) => `${String(i + j + 1).padStart(2)}. ${w.padEnd(12)}`).join(" "));
+      }
+      console.log("");
+      for (const n of [3, 17]) {
+        for (;;) {
+          const w = (await ask(`To check: word number ${n}? `)).trim().toLowerCase();
+          if (w === words[n - 1]) break;
+          console.log("  Not that one: check what you wrote.");
+        }
+      }
+      console.clear();
+      await O.initializeKeys(ctx, prepared);
+      prepared.dek.fill(0);
+      console.log("The registry's data key is written: phones can be set up (phone-setup, add-phone).");
+      return;
     }
     case "change-password": {
       const ctx = await writeCtx();

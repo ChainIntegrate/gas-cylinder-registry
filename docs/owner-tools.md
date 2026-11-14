@@ -37,16 +37,18 @@ node scripts/owner.js transfer-factory 0x<ChainIntegrate's profile>
 
 # Per supplier, from the command line (or from the operator page, see admin.md):
 node scripts/owner.js create-registry --network lukso --name "Argonia Gas Tecnici" --symbol ARGCYL \
-  --owner 0x<the account's address> --language it
+  --owner 0x<the account's address>
 ```
 
-`create-registry` asks the data password twice (it refuses a weak one) and shows the **24-word
-recovery code once**, asking for two of its words before going on: write it down. The supplier then
-does everything else from the admin page.
+`create-registry` creates the register **without its data key** (review X-02): no password is asked and
+no recovery code is shown. The supplier makes both at the first sign-in in the admin page, and does
+everything else from there. An owner using these tools with a key file (`--owner-keystore`) makes them
+with `init-keys` instead: the data password twice, the 24-word recovery code shown once, two of its
+words checked.
 
 If the network does not answer while a register is being created, the tools look for it for five
 minutes. If they still stop, check whether it exists before trying again (a new attempt makes a new
-address and a new recovery code), and save an existing one with `use-registry <address>`.
+address), and save an existing one with `use-registry <address>`.
 
 ## Other commands
 

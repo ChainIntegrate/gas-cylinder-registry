@@ -42,6 +42,12 @@ sites: ["gastrace.chainintegrate.it"],
 | **Download data** | The register as CSV files made in the page (no server): cylinders, movements (each cylinder of each document), documents, customers and refill plants. UTF-8 with a byte order mark; `;` in Italian, `,` in English; a value starting with `= + - @` gets an apostrophe so a spreadsheet never runs it. The files are not encrypted, and the page says so |
 | **Settings** | The company name (shown in the app and the e-mails) and the company's own e-mails (they receive a copy of every document); a new data password |
 
+**First sign-in.** A new register has no data key yet: the page shows only "Prepare the register's
+data". The owner chooses the data password, the page makes the data key and the 24-word recovery code
+(shown once, with a print button that prints only the words and the register's name; two words are
+checked), and one confirmation in the extension writes both wraps. Everything is made in the owner's
+browser: ChainIntegrate never sees the password or the words (review X-02).
+
 The data password opens the register's data **in the page only**: it is never sent anywhere, and closing
 the page forgets it. "I lost the password" opens the data with the 24-word recovery code and sets a new
 password.
@@ -67,12 +73,11 @@ register from the browser instead of the command line.
   is left out on purpose: it never signs ChainIntegrate's own administration. The page checks that the
   account is the factory's owner.
 - **Registers created**: name, owner, number of cylinders, each linked to the explorer.
-- **New register**: the company's name and symbol, the supplier's ChainIntegrate account (checked to be a
-  Universal Profile), the data password (typed in the page, checked, never sent) and the language of the
-  recovery code. The page makes the data key and its two wraps, shows the **24 words once** (with a print
-  button that prints only the words and the register's name), asks for two of them, then sends
-  `createRegistry` through the wallet: ChainIntegrate's profile signs and pays. At the end: the register's
-  address and the admin page's link and QR for the supplier.
+- **New register**: the company's name and symbol and the supplier's ChainIntegrate account (checked to
+  be a Universal Profile); the page sends `createRegistry` through the wallet: ChainIntegrate's profile
+  signs and pays. **No data password and no recovery code here** (review X-02): the register is created
+  without its data key, and the supplier makes both at the first sign-in in the admin page. At the end:
+  the register's address and the admin page's link and QR for the supplier.
 
 The factory must first belong to ChainIntegrate's profile: `node scripts/owner.js transfer-factory
 <profile address>` ([owner-tools.md](owner-tools.md)), once.
@@ -101,11 +106,12 @@ node scripts/operator-demo.js [screenshots-dir]
 The operator test creates a register from the page with a simulated ChainIntegrate wallet (the
 ChainIntegrate Account extension announced too, and ignored), refuses a weak password, an owner that is
 not a profile and wrong check words, and checks that the register is the factory's, owned by the
-supplier, and opened both by the password and by the 24 words shown.
+supplier, asks no password, shows no recovery code and has no data key yet.
 
 The test runs the page in Chromium with a simulated extension whose account is a contract that validates
 signatures with ERC-1271, as a ChainIntegrate account does, and checks every request against the
-extension's own catalog (from up-onboarding; CI clones it). Steps: sign-in, the data password, settings,
+extension's own catalog (from up-onboarding; CI clones it). Steps: sign-in, the first sign-in's data
+key (password, 24 words shown and two checked, both open the same key), the next sign-in with the password, settings,
 customers, a refill plant, a phone authorized by its code; the driver's app records a stock count and a
 delivery note; the page shows them (overview, cylinders, a cylinder's history, documents); the password
 is changed. It also checks that no technical word appears and that the page fits a phone's width.

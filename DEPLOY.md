@@ -47,11 +47,12 @@ million gas once, a register about half a million.
 ```bash
 node scripts/owner.js deploy-factory --network lukso
 node scripts/owner.js create-registry --network lukso --name "<the company's name>" --symbol <SYMBOL> \
-  --owner <the ChainIntegrate account's address> --language it
+  --owner <the ChainIntegrate account's address>
 ```
 
 - `--owner` is the address of the ChainIntegrate account that will manage the register from the page.
-- The data password is asked twice; the 24-word recovery code is shown once: write it down.
+- No data password and no recovery code here: the supplier makes them at the first sign-in in the admin
+  page (since review X-02; the demo register of 2026-11-13 was made the earlier way, with them).
 - `gcr-registry.json` now holds the factory's address and block: they go into the page and the app (step 3).
 
 ### Publish the contracts' source on LUKSO's explorer (once, after the factory)
@@ -155,7 +156,8 @@ and its update on the owner's computer. Done in extension 0.4.3 (2026-11-13).
 
 ## 7. First use
 
-1. https://gastrace.chainintegrate.it/ → "Accedi con ChainIntegrate Account", the data password.
+1. https://gastrace.chainintegrate.it/ → "Accedi con ChainIntegrate Account". The first time: "Prepara i
+   dati del registro" (the data password, the 24 words written down); afterwards, the data password.
 2. **Settings**: the company's name and the supplier's e-mails. **Customers**: the customers and refill plants.
 3. **Phones**: the driver's app scans the setup QR, shows its code; authorize it; type the data password on the phone.
 

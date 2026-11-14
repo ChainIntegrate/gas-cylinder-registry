@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 // The GasTrace operator page in Chromium against a local chain: ChainIntegrate's wallet (simulated through
-// EIP-6963, the factory's owner) creates a register for a supplier's account; the register then opens with
-// the data password typed in the page and with the 24 words shown there.
+// EIP-6963, the factory's owner) creates a register for a supplier's account, without its data key: no
+// password and no recovery code here, the supplier makes them at the first sign-in (review X-02).
 //
 //   npx hardhat node &
 //   node scripts/operator-demo.js [screenshots-dir]
@@ -19,7 +19,6 @@ const S = require("../shared");
 
 const RPC = process.env.RPC || "http://127.0.0.1:8545";
 const SHOTS = process.argv[2] || null;
-const PASSWORD = "le bombole di argon tornano vuote";
 
 function serve(dir) {
   const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".ico": "image/x-icon" };
@@ -97,48 +96,30 @@ async function main() {
   await see("proprietario della Factory");
   await see("Nessun registro.");
 
-  // A weak password and a non-profile owner are refused first.
+  // A non-profile owner is refused; the page asks no password and shows no recovery code.
   await page.getByLabel("Nome dell'azienda (nome della collezione)").fill("Argonia Gas Tecnici");
   await page.getByLabel("Sigla (maiuscole, 3-8 caratteri)").fill("argcyl");
   await page.getByLabel("Account ChainIntegrate del fornitore (indirizzo 0x…)").fill(accounts[1]);
-  await page.locator("input[type=password]").nth(0).fill("argonia");
-  await page.locator("input[type=password]").nth(1).fill("argonia");
-  await click("Prepara");
-  await see("Password troppo corta");
-  await page.locator("input[type=password]").nth(0).fill(PASSWORD);
-  await page.locator("input[type=password]").nth(1).fill(PASSWORD);
-  await click("Prepara");
+  const noSecrets = (await page.locator("input[type=password]").count()) === 0;
+  await click("Crea il registro");
   await see("non è una Universal Profile");
   await page.getByLabel("Account ChainIntegrate del fornitore (indirizzo 0x…)").fill(supplier);
   await shot("form");
-  await click("Prepara");
-  await see("CODICE DI RECUPERO");
-  await shot("code");
-
-  const words = await page.locator(".words li").allInnerTexts();
-  const labels = await page.locator("label").allInnerTexts();
-  const nums = labels.map((l) => /parola numero (\d+)/.exec(l)).filter(Boolean).map((m) => Number(m[1]));
-  await page.getByLabel(`Controllo: parola numero ${nums[0]}`, { exact: true }).fill(words[nums[0] - 1]);
-  await page.getByLabel(`Controllo: parola numero ${nums[1]}`, { exact: true }).fill("sbagliata");
-  await click("Crea il registro");
-  await see("Le parole di controllo non coincidono");
-  await page.getByLabel(`Controllo: parola numero ${nums[1]}`, { exact: true }).fill(words[nums[1] - 1]);
   await click("Crea il registro");
   await see("Registro creato.");
   await shot("created");
+  const pageText = await page.locator("main").innerText();
 
-  // The register: the factory's, owned by the supplier, opened by the password and by the 24 words.
+  // The register: the factory's, owned by the supplier, without its data key yet.
   const address = (await page.locator("a.mono").first().innerText()).trim();
   const ctx = await O.context({ provider, registry: address });
-  const byPassword = await O.unlockWithPassword(ctx, PASSWORD);
-  const byCode = await O.unlockWithRecoveryCode(ctx, words.join(" "));
   const reg = new ethers.Contract(address, O.REGISTRY_ABI, provider);
   const checks = [
     ["register made by the factory", await new ethers.Contract(f.address, O.FACTORY_ABI, provider).isRegistry(address)],
     ["owned by the supplier's account", (await reg.owner()) === supplier],
     ["symbol upper case", Buffer.from((await reg.getData(ethers.id("LSP4TokenSymbol"))).slice(2), "hex").toString() === "ARGCYL"],
-    ["the password opens the data", byPassword.dek.length === 32],
-    ["the 24 words open the same data key", Buffer.from(byCode.dek).equals(Buffer.from(byPassword.dek))],
+    ["no password asked, no recovery code shown", noSecrets && !/CODICE DI RECUPERO/.test(pageText)],
+    ["created without its data key (the supplier makes it)", !(await O.hasDataKey(ctx))],
     ["listed on the page", (await page.locator("main").innerText()).includes("Argonia Gas Tecnici")],
     ["no page errors", errors.length === 0],
   ];

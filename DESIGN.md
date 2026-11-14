@@ -130,7 +130,7 @@ its length says nothing (not even depot or customer); other values are padded to
   Weak passwords are refused (a phrase of 20 or more characters, or 14 or more mixing letters, digits and
   symbols).
 - **Recovery code** (slot 1, `GCRKeyWrap:1`): 24 random words (256 bits, English or Italian list), shown
-  once when the register is created, wrapping the same data key. Random and long, it cannot be guessed
+  once, wrapping the same data key. Random and long, it cannot be guessed
   offline as a chosen password could.
 - **Phones do not keep the password**: the owner types it once on the phone, the app uses it to unwrap
   the data key and forgets it; the data key stays encrypted under an Android Keystore key unlocked by
@@ -138,10 +138,15 @@ its length says nothing (not even depot or customer); other values are padded to
 - **Limits**: encrypted data on a public chain can be copied and attacked offline forever, hence the
   long password. Without the password and the recovery code the data cannot be read again.
 - **Who holds the data key** (external review X-02, X-03, A05):
-  - the register's data key, password and recovery code are made **in the browser that creates the
-    register**: today the operator page, used by ChainIntegrate with the supplier, which therefore sees
-    the 24 words (and the password, when typed there). Nothing is stored or sent, but this is trust,
-    not a guarantee: making them in the supplier's own admin page at first sign-in is planned;
+  - the register is created **without** its data key (review X-02): the operator page and
+    `create-registry` set only its name and owner. At the first sign-in the owner's admin page makes the
+    data key, asks the password, shows the 24 words once (two are checked) and writes both wraps with
+    one owner-signed `SetData`; an owner using the command-line tools does the same with `init-keys`.
+    So the key, the password and the 24 words exist only in the owner's browser: ChainIntegrate never
+    sees them. The wraps are written once: a register that has them refuses a second set
+    (`initializeKeys`), since a new key would make the data written with the first unreadable. Until
+    then the page shows only that step, and a phone set up meanwhile is told the owner must prepare the
+    data first;
   - every **authorized phone** holds the data key (protected by the Keystore);
   - the admin page's and the app's code, served by ChainIntegrate, handles the key in the browser: a
     compromised server could serve a page that sends it elsewhere;

@@ -117,22 +117,53 @@ async function deployFactory(deployer) {
 }
 
 /**
- * Prepares a registry before creating it: its future address, a new data key, the recovery code and
- * the two key wraps bound to that address. Nothing is sent. The caller shows the recovery code once.
+ * Prepares a new registry: a random salt and its predicted address. Since the external review (X-02) the
+ * register is created **without** its data key: the owner makes the key, the password and the recovery
+ * code in their own admin page at the first sign-in (prepareKeys, initializeKeys), so that whoever
+ * creates the register never sees them. `password` (tests only) still makes both wraps here.
  */
-async function prepareRegistry({ factory, password, language = "en", salt = hexlify(randomBytes(32)) }) {
+async function prepareRegistry({ factory, password = null, language = "en", salt = hexlify(randomBytes(32)) }) {
+  const address = await factory.predictRegistryAddress(salt);
+  if (password === null || password === undefined) return { salt, address, recoveryCode: null, dataKeys: [], dataValues: [] };
+  const k = await prepareKeys(address, password, language);
+  k.dek.fill(0);
+  return { salt, address, recoveryCode: k.recoveryCode, dataKeys: k.dataKeys, dataValues: k.dataValues };
+}
+
+/**
+ * Makes a register's data key, wrapped with the owner's password and with a new 24-word recovery code:
+ * { dek, recoveryCode, dataKeys, dataValues }. Nothing is written: show the code, then initializeKeys.
+ */
+async function prepareKeys(registryAddress, password, language = "it") {
   const check = S.checkPassword(password);
   if (!check.ok) throw new Error(`password refused: ${check.reason}`);
-  const address = await factory.predictRegistryAddress(salt);
+  const address = getAddress(registryAddress);
   const dek = S.generateDataKey();
   const recoveryCode = S.generateRecoveryCode(language);
   return {
-    salt,
-    address,
+    dek,
     recoveryCode,
     dataKeys: [S.KEY_WRAP_DATA_KEYS.password, S.KEY_WRAP_DATA_KEYS.recovery],
     dataValues: [await S.wrapWithPassword(dek, password, address), await S.wrapWithRecoveryCode(dek, recoveryCode, address)],
   };
+}
+
+/** True when the register already has its data key (either wrap written). */
+async function hasDataKey(ctx) {
+  const [a, b] = await Promise.all([ctx.registry.getData(S.KEY_WRAP_DATA_KEYS.password), ctx.registry.getData(S.KEY_WRAP_DATA_KEYS.recovery)]);
+  return a !== "0x" || b !== "0x";
+}
+
+/**
+ * Writes the wraps made by prepareKeys, once: a register that already has its data key is refused, since
+ * a second key would make the data written with the first unreadable. Returns { dek, keys }.
+ */
+async function initializeKeys(ctx, prepared) {
+  if (await hasDataKey(ctx)) throw new Error("this registry already has its data key");
+  await setData(ctx, prepared.dataKeys, prepared.dataValues);
+  const written = await ctx.registry.getData(S.KEY_WRAP_DATA_KEYS.password);
+  if (written !== prepared.dataValues[0]) throw new Error("the registry's data key is not the one just made: reload the page");
+  return { dek: prepared.dek, keys: await S.deriveKeys(prepared.dek, ctx.address) };
 }
 
 /** Creates the prepared registry; `factory` must be connected to the factory's owner. */
@@ -345,6 +376,9 @@ async function status(ctx) {
 }
 
 module.exports = {
+  prepareKeys,
+  hasDataKey,
+  initializeKeys,
   REGISTRY_ABI,
   FACTORY_ABI,
   directSubmitter,

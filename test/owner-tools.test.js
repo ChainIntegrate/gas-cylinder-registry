@@ -36,6 +36,26 @@ describe("owner tools", function () {
     await expectReject(O.prepareRegistry({ factory, password: "argonia" }), /password refused/);
   });
 
+  it("creates a register without its data key; the owner makes it once (review X-02)", async function () {
+    const prepared = await O.prepareRegistry({ factory });
+    expect(prepared.recoveryCode).to.equal(null);
+    expect(prepared.dataKeys).to.deep.equal([]);
+    const r = await O.createRegistry({ factory, prepared, owner: ownerWallet.address, name: "Argonia Gas Tecnici bis", symbol: "ARGBIS" });
+    const c = await O.context({ provider: ethers.provider, registry: r.address, owner: ownerWallet, submit: O.directSubmitter(chainIntegrate), fromBlock: r.block });
+    expect(await O.hasDataKey(c)).to.equal(false);
+    await expectReject(O.unlockWithPassword(c, password), /no password key wrap/);
+
+    await expectReject(O.prepareKeys(r.address, "argonia"), /password refused/);
+    const k = await O.prepareKeys(r.address, password, "it");
+    expect(k.recoveryCode.split(" ")).to.have.length(24);
+    const opened = await O.initializeKeys(c, k);
+    expect(await O.hasDataKey(c)).to.equal(true);
+    expect(Buffer.from((await O.unlockWithPassword(c, password)).dek).equals(Buffer.from(opened.dek))).to.equal(true);
+    expect(Buffer.from((await O.unlockWithRecoveryCode(c, k.recoveryCode)).dek).equals(Buffer.from(opened.dek))).to.equal(true);
+    // Never twice: a second key would make the data written with the first unreadable.
+    await expectReject(O.initializeKeys(c, await O.prepareKeys(r.address, password, "it")), /already has its data key/);
+  });
+
   it("shows the registry's status", async function () {
     const s = await O.status(ctx);
     expect(s).to.include({ name: "Argonia Gas Tecnici cylinders", owner: ownerWallet.address, operators: 0, cylinders: 0, passwordKeyWrap: true, recoveryKeyWrap: true });

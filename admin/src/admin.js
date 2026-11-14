@@ -53,6 +53,7 @@ const st = {
   editing: null, // counterparty being edited
   history: null, // { serial, entries }
   recovery: false,
+  setup: null, // first sign-in: { prepared (data key, 24 words, wraps), checks, answers }
 };
 const t = () => T[st.lang] || T.it;
 
@@ -197,13 +198,15 @@ async function chooseRegistry(r) {
     submit: O.relayerSubmitter(CONFIG.relayer, st.provider),
     fromBlock: r.block,
   });
-  st.view = "unlock";
+  // A register created without its data key (review X-02): the owner prepares it here, once.
+  st.view = (await O.hasDataKey(st.ctx)) ? "unlock" : "setupKeys";
   render();
 }
 
 function signOut() {
   if (st.dek) st.dek.fill(0);
-  Object.assign(st, { view: "connect", wallet: null, account: null, reg: null, ctx: null, keys: null, dek: null, data: null, msg: null, history: null, editing: null });
+  if (st.setup) st.setup.prepared.dek.fill(0);
+  Object.assign(st, { setup: null, view: "connect", wallet: null, account: null, reg: null, ctx: null, keys: null, dek: null, data: null, msg: null, history: null, editing: null });
   render();
 }
 
@@ -223,6 +226,49 @@ async function unlock(password) {
     st.view = "main";
   } catch (e) {
     st.msg = { text: /wrong password/.test(String(e.message)) ? t().wrongPassword : failText(e), cls: "err" };
+  }
+  st.busy = null;
+  render();
+}
+
+/** First sign-in: the data key, the password and the 24 words are made here, in the owner's browser. */
+async function prepareSetup(p1, p2, language) {
+  if (p1 !== p2) return say(t().mismatch, "err");
+  const c = S.checkPassword(p1);
+  if (!c.ok) return say(t().weak[c.reason], "err");
+  st.busy = t().opening;
+  st.msg = null;
+  render();
+  try {
+    const prepared = await O.prepareKeys(st.reg.address, p1, language);
+    st.setup = { prepared, checks: [1 + Math.floor(Math.random() * 12), 13 + Math.floor(Math.random() * 12)], answers: ["", ""] };
+  } catch (e) {
+    st.msg = { text: failText(e), cls: "err" };
+  }
+  st.busy = null;
+  render();
+}
+
+async function finishSetup() {
+  const p = st.setup;
+  const words = p.prepared.recoveryCode.split(" ");
+  if (p.answers.some((w, i) => w.trim().toLowerCase() !== words[p.checks[i] - 1])) return say(t().checkFail, "err");
+  st.msg = null;
+  st.busy = t().confirmInExtension;
+  render();
+  try {
+    const { dek, keys } = await O.initializeKeys(st.ctx, p.prepared);
+    st.dek = dek;
+    st.keys = keys;
+    st.setup = null;
+    st.busy = t().loading;
+    render();
+    await loadAll();
+    st.view = "main";
+    st.tab = "settings";
+    st.msg = { text: t().keysDone, cls: "ok" };
+  } catch (e) {
+    st.msg = { text: failText(e), cls: "err" };
   }
   st.busy = null;
   render();
@@ -364,6 +410,43 @@ function viewChoose() {
 
 function viewNoRegistry() {
   return h("section", { class: "panel" }, h("p", {}, t().noRegistry));
+}
+
+function viewSetupKeys() {
+  const tx = t();
+  const p = st.setup;
+  if (!p) {
+    const p1 = h("input", { type: "password", autocomplete: "new-password" });
+    const p2 = h("input", { type: "password", autocomplete: "new-password" });
+    const lang = h("select", {}, h("option", { value: "it", selected: st.lang === "it" }, "Italiano"), h("option", { value: "en", selected: st.lang === "en" }, "English"));
+    return h(
+      "section",
+      { class: "panel narrow" },
+      h("h2", {}, tx.keysTitle),
+      h("p", {}, tx.keysIntro),
+      h("label", {}, tx.newPassword, p1, h("span", { class: "hint" }, tx.keysPasswordHint)),
+      h("label", {}, tx.newPasswordAgain, p2),
+      h("label", {}, tx.keysLanguage, lang),
+      btn(tx.keysContinue, () => prepareSetup(p1.value, p2.value, lang.value), "primary big")
+    );
+  }
+  const words = p.prepared.recoveryCode.split(" ");
+  const check = (i) => h("input", { type: "text", autocomplete: "off", spellcheck: "false", value: p.answers[i], oninput: (e) => (p.answers[i] = e.target.value) });
+  return h(
+    "section",
+    { class: "panel code" },
+    h("h2", {}, tx.codeTitle),
+    h("p", {}, tx.codeIntro),
+    h("div", { class: "printable" },
+      h("p", { class: "print-only" }, `GasTrace · ${st.reg.name} · ${st.reg.address}`),
+      h("ol", { class: "words" }, words.map((w) => h("li", {}, w)))),
+    btn(tx.print, () => window.print(), "ghost"),
+    h("label", {}, tx.check(p.checks[0]), check(0)),
+    h("label", {}, tx.check(p.checks[1]), check(1)),
+    h("div", { class: "row" },
+      btn(tx.back, () => { p.prepared.dek.fill(0); st.setup = null; st.msg = null; render(); }, "ghost"),
+      btn(tx.keysSave, finishSetup, "primary"))
+  );
 }
 
 function viewUnlock() {
@@ -711,7 +794,7 @@ function render() {
   const tx = t();
   document.documentElement.lang = st.lang;
   document.title = tx.title;
-  const views = { connect: viewConnect, noExtension: viewNoExtension, choose: viewChoose, noRegistry: viewNoRegistry, unlock: viewUnlock, main: viewMain };
+  const views = { connect: viewConnect, noExtension: viewNoExtension, choose: viewChoose, noRegistry: viewNoRegistry, unlock: viewUnlock, setupKeys: viewSetupKeys, main: viewMain };
   const root = document.getElementById("app");
   root.replaceChildren(
     ...[

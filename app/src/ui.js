@@ -204,7 +204,9 @@ async function enterPassword(password) {
   app.msg = { text: t().unlocking, cls: "note" };
   render();
   try {
-    const dek = await S.unwrapWithPassword(await app.reg.passwordWrap(), password, app.reg.address);
+    const wrap = await app.reg.passwordWrap();
+    if (!wrap || wrap === "0x") return fail(new Error(t().noDataKeyYet)); // the owner has not prepared the data yet
+    const dek = await S.unwrapWithPassword(wrap, password, app.reg.address);
     await app.native.deviceKey.storeDataKey(hexlify(dek), prompt(t().setupStep4));
     dek.fill(0);
     app.msg = { text: t().setupDone, cls: "ok" };
