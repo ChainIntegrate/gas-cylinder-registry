@@ -119,6 +119,25 @@ For an owner that uses ChainIntegrate's command-line tools with a key file, set
 `"relayer": "https://gastrace.chainintegrate.it"` in their `gcr-registry.json`: owner operations then go
 through the relayer too.
 
+## The journal (what survives a restart)
+
+The relayer keeps on disk (`stateFile`, by default `/var/lib/gcr-relayer/journal.json`, a directory
+systemd makes for the service: `StateDirectory=gcr-relayer` in the unit) what it sent in the last seven
+days: each transaction's state, the operation it carried, the registries' daily counts, and an e-mail
+until it is sent; the e-mail's content leaves the file once sent (review A07). At start it reads the
+journal back, waits for the transactions left pending and sends the e-mails left unsent; `/gcr/status`
+answers for them as before. An e-mail can leave twice if the relayer stops between the SMTP server's
+answer and the journal's update: a duplicate rather than a loss. The file is readable by the service only
+(mode 600, directory 700).
+
+After updating to a version with the journal, install the unit once more:
+
+```bash
+sudo cp /var/www/gas-cylinder-registry/relayer/gcr-relayer.service /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl restart gcr-relayer
+ls -la /var/lib/gcr-relayer/        # journal.json appears after the first operation
+```
+
 ## Announce a new app release
 
 The app asks `/gcr/info` when it is unlocked and when the network returns; when `app.version` is newer

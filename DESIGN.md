@@ -228,6 +228,9 @@ upgradeable. Source verified on LUKSO's explorer (`scripts/verify-lukso.js`).
   first (the register's refusal comes back by name and nothing is sent), sends one transaction at a
   time, returns the same transaction for the same operation, and limits requests per IP (before any
   call to the node) and operations per register per day (counted only for operations it sends).
+- It keeps a journal on disk (the last seven days' transactions, their states and the e-mails not yet
+  sent), so that a restart loses nothing: it waits again for pending transactions and sends the e-mails
+  left unsent (review A07).
 - It holds only the LYX it spends; it cannot forge or alter anything (without a valid signature the
   register refuses). At worst it fails to send.
 - **E-mail**: the phone signs the e-mail (recipients, subject, text) bound to the document's EIP-712

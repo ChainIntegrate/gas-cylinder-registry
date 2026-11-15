@@ -62,6 +62,8 @@ function loadConfig(file) {
   c.allowedOrigins = c.allowedOrigins || [];
   c.limits = { ...DEFAULT_LIMITS, ...(c.limits || {}) };
   c.minBalanceWarn = c.minBalanceWarn || "0.5";
+  // The journal (review A07): systemd's StateDirectory makes /var/lib/gcr-relayer, writable by the service.
+  if (c.stateFile === undefined) c.stateFile = "/var/lib/gcr-relayer/journal.json";
   return c;
 }
 
@@ -86,11 +88,57 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
   const factory = new Contract(config.factory, FACTORY_ABI, provider);
   const knownRegistries = new Set();
   const byOperation = new Map(); // keccak256(signature) -> hash
-  const txs = new Map(); // hash -> { state, blockNumber, mail }
+  const txs = new Map(); // hash -> { state, blockNumber, mail } (what /gcr/status answers)
+  const pendingMail = new Map(); // hash -> the e-mail still to send (kept on disk until sent)
+  const sentAt = new Map(); // hash -> when it was sent (ms), to forget old entries
   const ipHits = new Map(); // ip -> [timestamps]
   const registryDay = new Map(); // registry|day -> count
   let queue = Promise.resolve();
   let lastLowBalanceMail = 0;
+
+  // --- the journal (external review A07) ---
+  // With config.stateFile, what the relayer sent survives a restart: each transaction's state, the
+  // operation it carried, the registries' daily counts, and an e-mail until it is sent (its content is
+  // then dropped). At start the relayer reads it back, waits for the transactions left pending and sends
+  // the e-mails left unsent. An e-mail can leave twice if the relayer stops between the SMTP server's
+  // answer and the journal's update: a duplicate rather than a loss. Entries older than seven days go.
+  const KEEP_MS = 7 * 24 * 3600 * 1000;
+  function saveJournal() {
+    if (!config.stateFile) return;
+    const now = Date.now();
+    const ops = [];
+    for (const [opKey, hash] of byOperation) {
+      const t = txs.get(hash);
+      if (!t || now - (sentAt.get(hash) || now) > KEEP_MS) continue;
+      ops.push({ opKey, hash, at: sentAt.get(hash) || now, ...t, ...(pendingMail.has(hash) ? { pendingMail: pendingMail.get(hash) } : {}) });
+    }
+    const data = JSON.stringify({ v: 1, ops, registryDay: [...registryDay] });
+    const tmp = `${config.stateFile}.tmp`;
+    fs.writeFileSync(tmp, data, { mode: 0o600 });
+    fs.renameSync(tmp, config.stateFile);
+  }
+  function loadJournal() {
+    if (!config.stateFile || !fs.existsSync(config.stateFile)) return [];
+    let j;
+    try {
+      j = JSON.parse(fs.readFileSync(config.stateFile, "utf8"));
+    } catch (e) {
+      log(`journal ${config.stateFile} unreadable (${e.message}): starting empty`);
+      return [];
+    }
+    const now = Date.now();
+    const resume = [];
+    for (const o of j.ops || []) {
+      if (now - o.at > KEEP_MS) continue;
+      byOperation.set(o.opKey, o.hash);
+      txs.set(o.hash, { state: o.state, ...(o.blockNumber ? { blockNumber: o.blockNumber } : {}), mail: o.mail });
+      sentAt.set(o.hash, o.at);
+      if (o.pendingMail) pendingMail.set(o.hash, o.pendingMail);
+      if (o.state === "pending" || o.mail === "pending") resume.push(o.hash);
+    }
+    for (const [k, n] of j.registryDay || []) registryDay.set(k, n);
+    return resume;
+  }
 
   // --- checks ---
 
@@ -211,28 +259,51 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
       const tx = await reg[method](...args, { gasLimit });
       byOperation.set(opKey, tx.hash);
       txs.set(tx.hash, { state: "pending", mail: mail ? "pending" : "none" });
-      if (txs.size > 5000) txs.delete(txs.keys().next().value);
+      sentAt.set(tx.hash, Date.now());
+      if (mail) pendingMail.set(tx.hash, mail);
+      if (txs.size > 5000) {
+        const old = txs.keys().next().value;
+        txs.delete(old);
+        sentAt.delete(old);
+        pendingMail.delete(old);
+      }
       if (byOperation.size > 5000) byOperation.delete(byOperation.keys().next().value);
+      saveJournal();
       log(`sent ${method} to ${registry}: ${tx.hash}`);
-      follow(tx, registry, mail);
+      follow(tx.hash);
       return tx.hash;
     });
     queue = send.catch(() => {});
     return { hash: await send };
   }
 
-  async function follow(tx, registry, mail) {
-    const entry = txs.get(tx.hash);
-    try {
-      const receipt = await tx.wait();
-      entry.state = receipt.status === 1 ? "confirmed" : "failed";
-      entry.blockNumber = receipt.blockNumber;
-      log(`${tx.hash} ${entry.state} in block ${receipt.blockNumber}, gas ${receipt.gasUsed}`);
-    } catch (e) {
-      entry.state = "failed";
-      log(`${tx.hash} failed: ${e.shortMessage || e.message}`);
+  /** Waits for a transaction (sent now, or left pending by a restart), then sends its e-mail. */
+  async function follow(hash) {
+    const entry = txs.get(hash);
+    if (entry.state === "pending") {
+      try {
+        // The receipt, asked every few seconds for at most 30 minutes (any provider can answer this).
+        let receipt = null;
+        const poll = config.receiptPollMs || 2000;
+        for (const until = Date.now() + 30 * 60 * 1000; !receipt; ) {
+          receipt = await provider.getTransactionReceipt(hash);
+          if (!receipt) {
+            if (Date.now() > until) throw new Error("no receipt after 30 minutes");
+            await new Promise((r) => setTimeout(r, poll));
+          }
+        }
+        entry.state = receipt.status === 1 ? "confirmed" : "failed";
+        if (receipt) entry.blockNumber = receipt.blockNumber;
+        log(`${hash} ${entry.state}${receipt ? ` in block ${receipt.blockNumber}, gas ${receipt.gasUsed}` : ""}`);
+      } catch (e) {
+        // Still unknown after 30 minutes (or the node failed): left pending, taken up at the next start.
+        log(`${hash}: no receipt yet (${e.shortMessage || e.message})`);
+        return;
+      }
+      saveJournal();
     }
-    if (mail) {
+    const mail = pendingMail.get(hash);
+    if (mail && entry.mail === "pending") {
       if (entry.state !== "confirmed") entry.mail = "not_sent";
       else if (!sendMail) entry.mail = "failed";
       else {
@@ -246,11 +317,13 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
           entry.mail = "sent";
         } catch (e) {
           entry.mail = "failed";
-          log(`mail for ${tx.hash} failed: ${e.message}`);
+          log(`mail for ${hash} failed: ${e.message}`);
         }
       }
+      pendingMail.delete(hash); // its content leaves the disk with the next save
+      saveJournal();
       // What was sent is logged, never to whom or what it said.
-      log(`mail for ${tx.hash}: ${entry.mail}, ${mail.to.length} recipient(s)`);
+      log(`mail for ${hash}: ${entry.mail}, ${mail.to.length} recipient(s)`);
     }
     checkBalance().catch(() => {});
   }
@@ -430,7 +503,12 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
     }
   });
 
-  return { server, info, checkBalance };
+  // Taken up after a restart: transactions left pending, e-mails left unsent.
+  const toResume = loadJournal();
+  if (toResume.length) log(`journal: taking up ${toResume.length} operation(s) left pending`);
+  const resumed = Promise.all(toResume.map((h) => follow(h).catch((e) => log(`resume ${h}: ${e.message}`))));
+
+  return { server, info, checkBalance, resumed };
 }
 
 // ------------------------------------------------------------------------------------------------

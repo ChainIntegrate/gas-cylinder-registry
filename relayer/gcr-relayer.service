@@ -15,7 +15,11 @@ EnvironmentFile=-/etc/gcr-relayer/smtp.env
 ExecStart=/usr/bin/env node relay.js serve --config /etc/gcr-relayer/config.json
 Restart=on-failure
 RestartSec=5
-# Hardening: the service reads its code and its config, and writes nothing.
+# The journal (review A07): /var/lib/gcr-relayer, made and owned by systemd for this user, the only place
+# the service writes.
+StateDirectory=gcr-relayer
+StateDirectoryMode=0700
+# Hardening: the service reads its code and its config, and writes only its state directory.
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true

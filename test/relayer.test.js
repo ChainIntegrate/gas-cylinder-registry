@@ -214,6 +214,44 @@ describe("relayer", function () {
     expect((await post("/gcr/document", op, { origin: "https://localhost" })).status).to.equal(200);
   });
 
+  it("keeps its work on disk: after a restart it sends the e-mail left unsent (review A07)", async function () {
+    const fs = require("fs");
+    const os = require("os");
+    const path = require("path");
+    const stateFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "gcr-")), "journal.json");
+    await new Promise((res) => server.close(res));
+    const factoryAddress = await factory.getAddress();
+    // First run: the SMTP server never answers, then the relayer "stops".
+    let first = createRelayer({ provider: ethers.provider, wallet: relayerSigner, config: { chainId: 31337, factory: factoryAddress, stateFile, receiptPollMs: 50 }, sendMail: () => new Promise(() => {}), logger: () => {} });
+    server = first.server;
+    await new Promise((res) => server.listen(0, "127.0.0.1", res));
+    base = `http://127.0.0.1:${server.address().port}`;
+    const d = await delivery(1);
+    const mail = { to: ["demo@example.com"], subject: "Argonia Gas Tecnici: DDT 7", text: "Documento" };
+    const mailSignature = await phone.signMessage(ethers.getBytes(S.mailDigest(ctx.address, d.digest, mail)));
+    const r = await post("/gcr/document", { ...d, mail, mailSignature });
+    expect(r.status).to.equal(200);
+    while (!(await ethers.provider.getTransactionReceipt(r.body.hash))) await new Promise((res) => setTimeout(res, 50));
+    const saved = JSON.parse(fs.readFileSync(stateFile, "utf8"));
+    expect(saved.ops.find((o) => o.hash === r.body.hash).pendingMail.subject).to.equal(mail.subject);
+    await new Promise((res) => server.close(res));
+
+    // Second run, same journal: the e-mail leaves, its content leaves the disk, the status is known.
+    const sent = [];
+    const second = createRelayer({ provider: ethers.provider, wallet: relayerSigner, config: { chainId: 31337, factory: factoryAddress, stateFile, receiptPollMs: 50 }, sendMail: async (m) => sent.push(m), logger: () => {} });
+    await second.resumed;
+    server = second.server;
+    await new Promise((res) => server.listen(0, "127.0.0.1", res));
+    base = `http://127.0.0.1:${server.address().port}`;
+    expect(sent.map((m) => m.subject)).to.deep.equal([mail.subject]);
+    expect((await get(`/gcr/status?hash=${r.body.hash}`)).body).to.include({ state: "confirmed", mail: "sent" });
+    expect(fs.readFileSync(stateFile, "utf8")).to.not.include("DDT 7");
+    // The same operation again is recognized after the restart: same transaction, no second e-mail.
+    expect((await post("/gcr/document", { ...d, mail, mailSignature })).body.hash).to.equal(r.body.hash);
+    expect(sent).to.have.length(1);
+    first = null;
+  });
+
   it("limits requests per registry per day", async function () {
     await new Promise((res) => server.close(res));
     const relayer = createRelayer({
