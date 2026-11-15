@@ -202,6 +202,39 @@ async function main() {
   await shot("delivery-note-done");
   await click("Chiudi");
 
+  // 3b. A cylinder changes while the driver prepares a document (review A12): another phone records a
+  // collection of AR-300; the driver's document is refused, "Make the document again" reopens it from
+  // the cylinders' current state, and it is recorded.
+  await click("Consegna / ritiro");
+  await click("Officina Demo");
+  scans.push("AR-300");
+  await click("Inquadra bombola");
+  await page.waitForFunction(() => document.querySelectorAll(".line").length === 1);
+  await page.getByLabel("Numero DDT").fill("DDT 2026/119");
+  {
+    const L = require("../app/src/logic");
+    const other = ethers.Wallet.createRandom();
+    await O.setOperator(ctx, other.address, true);
+    const reg = new L.Registry({ provider, address: r.address, fromBlock: r.block });
+    reg.keys = keys;
+    const cp = (await O.listCounterparties(ctx, keys)).find((c) => c.name === "Officina Demo");
+    const cyl = await reg.readCylinder("AR-300");
+    const now = (await provider.getBlock("latest")).timestamp;
+    const built = await L.buildDocument({ registry: reg, operator: other.address, counterparty: cp, kind: "delivery_note", number: "DDT ALTRO", lines: [{ ...cyl, ...L.propose(cyl, cp, "delivery_note", {}), gas: cyl.info.gas }], now });
+    const item = await L.signDocument({ registry: reg, operator: other.address, built, mail: null, signDigests: async (ds) => ds.map((d) => other.signingKey.sign(d).serialized), meta: {} });
+    const sent = await L.sendItem(item, { relayer: relayerUrl, pollMs: 100 });
+    if (!sent.done) throw new Error("the other phone's document was not recorded");
+  }
+  await click("Invia");
+  await see("Una bombola è cambiata nel frattempo");
+  await shot("refused");
+  await click("Rifai il documento");
+  await see("Documento rifatto");
+  const redoneText = await page.locator("#app").innerText();
+  await click("Invia");
+  await see("Registrato.");
+  await click("Chiudi");
+
   // 4. Check a cylinder.
   await click("Controlla una bombola");
   scans.push("AR-300");
@@ -223,16 +256,18 @@ async function main() {
   await shot("home-en");
 
   // Results
-  const mail = mails.at(-1);
+  const mail = mails[0]; // the delivery note of step 3
   const checks = [
     ["update notice links the release", updateLink === NEWER.url],
-    ["one e-mail", mails.length === 1],
+    ["one e-mail per document (steps 3 and 3b)", mails.length === 2 && /2026\/119/.test(mails[1].subject)],
+    ["a refused document made again from the current state (A12)", /Consegna/.test(redoneText) && /AR-300/.test(redoneText)],
     ["recipients", mail && mail.to === "demo@example.com, ufficio@example.com, titolare@example.com"],
     ["summary in the e-mail", mail && mail.text.includes("Consegna: 2 Argon") && /Ritiro: (?=.*1 Azoto)(?=.*1 Argon)(?=.*1 CO₂)/.test(mail.text)],
     ["subject", mail && mail.subject === "Argonia Gas Tecnici: DDT 2026/118"],
     ["no technical words on screen", texts.every((x) => !FORBIDDEN.test(x))],
     ["no technical words in the e-mail", mail && !FORBIDDEN.test(mail.text) && !/0x/.test(mail.text)],
-    ["no page errors", errors.length === 0],
+    // The one 400 is the relayer refusing step 3b's document on purpose; the browser logs it.
+    ["no page errors", errors.filter((e) => !/status of 400/.test(e)).length === 0 && errors.filter((e) => /status of 400/.test(e)).length <= 1],
   ];
   let ok = true;
   for (const [name, pass] of checks) {

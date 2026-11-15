@@ -376,6 +376,34 @@ async function addCylinder(code) {
   render();
 }
 
+/**
+ * Makes a refused document again (review A12): the same customer, number and cylinders, each read again
+ * from the register and proposed again from its current state; the gas of new cylinders and the
+ * conditions the driver chose are kept where the movement is the same. The driver checks and sends it.
+ * Offered only when no part of the refused document was recorded.
+ */
+async function redo(item) {
+  const tx = t();
+  const dr = item.draft;
+  const cp = app.cps.find((c) => c.id === dr.cpId && !c.archived);
+  if (!cp) return fail(new Error(tx.noCounterparties));
+  app.outbox.remove(item.id);
+  app.doc = { kind: item.kind, cp, lines: [], number: dr.number || "", extra: dr.extra || ["", "", ""], confirmed: false, busy: false };
+  setView("doc", { doc: app.doc });
+  for (const old of [...dr.lines].reverse()) {
+    await addCylinder(old.serial);
+    const l = app.doc.lines.find((x) => x.serial === old.serial);
+    if (!l) continue;
+    if (!l.known) {
+      l.gas = l.gas || old.gas;
+      l.capacityL = l.capacityL || old.capacityL;
+    }
+    if (l.movement === old.movement) l.condition = old.condition;
+  }
+  app.msg = { text: tx.redone, cls: "warn" };
+  render();
+}
+
 function recipients() {
   const d = app.doc;
   const preset = d.kind === "stock_count" ? [] : [...d.cp.emails, ...((app.settings && app.settings.emails) || [])];
@@ -409,7 +437,13 @@ async function sendDocument() {
       built,
       mail,
       signDigests: (digests) => app.native.deviceKey.signDigests(digests, prompt(subtitle)),
-      meta: { kind: d.kind, number: d.kind === "stock_count" ? "" : built.number, who: d.cp.name },
+      meta: {
+        kind: d.kind,
+        number: d.kind === "stock_count" ? "" : built.number,
+        who: d.cp.name,
+        // What the driver scanned and chose, to make the document again after a refusal (review A12).
+        draft: { cpId: d.cp.id, number: d.number, extra: d.extra, lines: d.lines.map((l) => ({ serial: l.serial, gas: l.gas, capacityL: l.capacityL, movement: l.movement, condition: l.condition })) },
+      },
     });
     app.outbox.add(item);
     setView("result", { result: item, doc: null });
@@ -558,6 +592,7 @@ function viewResult() {
     h("h2", {}, `${item.number || tx.stockCount} · ${item.who}`),
     h("p", { class: st.cls + " big-status" }, st.text),
     item.done && (item.mail === "failed" || item.mail === "unknown") ? h("a", { class: "button", href: mailtoLink(item) }, tx.sendFromPhone) : null,
+    item.failed && item.draft && !item.parts.some((p) => p.state === "confirmed") ? btn(tx.redo, () => redo(item), "big") : null,
     btn(tx.close, () => setView("home"), "primary big"),
   ];
 }
@@ -579,6 +614,7 @@ function viewOutbox() {
             h("div", { class: "row" },
               !it.failed && !it.done ? btn(tx.sendNow, () => sendOne(it)) : null,
               it.done && (it.mail === "failed" || it.mail === "unknown") ? h("a", { class: "button", href: mailtoLink(it) }, tx.sendFromPhone) : null,
+              it.failed && it.draft && !it.parts.some((p) => p.state === "confirmed") ? btn(tx.redo, () => redo(it), "primary") : null,
               it.done
                 ? btn(tx.mailHandled, () => {
                     app.outbox.remove(it.id);

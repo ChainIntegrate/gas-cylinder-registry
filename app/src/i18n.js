@@ -86,6 +86,8 @@ const T = {
     queued: "Salvato: partirà appena c'è rete.",
     waitingRetry: "In attesa: il servizio è occupato, riparte più tardi (o con Invia ora).",
     mailHandled: "Mail a posto: togli",
+    redo: "Rifai il documento",
+    redone: "Documento rifatto con lo stato attuale delle bombole: controlla le righe e invia.",
     discardPartial: "Una parte di questo documento è già registrata: se lo scarti, quella parte resta registrata senza il resto. Scartarlo?",
     confirmAnomalies: "Confermo le segnalazioni",
     anomaliesToConfirm: "Ci sono segnalazioni da confermare.",
@@ -136,6 +138,7 @@ const T = {
     errors: {
       network: "Rete non raggiungibile.",
       StaleValue: "Una bombola è cambiata nel frattempo: rifai il documento.",
+      LSP8TokenIdAlreadyMinted: "Una bombola nuova risulta già registrata da un altro telefono: rifai il documento.",
       DocumentPartAlreadyRecorded: "Questo documento risulta già registrato.",
       NotAuthorized: "Questo telefono non è più autorizzato.",
       SignatureExpired: "Documento scaduto: rifallo.",
@@ -235,6 +238,8 @@ const T = {
     queued: "Saved: it will be sent when there is network.",
     waitingRetry: "Waiting: the service is busy, it will be sent later (or with Send now).",
     mailHandled: "E-mail handled: remove",
+    redo: "Make the document again",
+    redone: "Document made again from the cylinders' current state: check the lines and send.",
     discardPartial: "Part of this document is already recorded: if you discard it, that part stays recorded without the rest. Discard it?",
     confirmAnomalies: "I confirm the warnings",
     anomaliesToConfirm: "Some warnings need your confirmation.",
@@ -282,6 +287,7 @@ const T = {
     errors: {
       network: "Network not reachable.",
       StaleValue: "A cylinder changed in the meantime: make the document again.",
+      LSP8TokenIdAlreadyMinted: "A new cylinder was already registered by another phone: make the document again.",
       DocumentPartAlreadyRecorded: "This document is already recorded.",
       NotAuthorized: "This phone is no longer authorized.",
       SignatureExpired: "Document expired: make it again.",

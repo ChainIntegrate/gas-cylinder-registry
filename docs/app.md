@@ -21,7 +21,10 @@ at the top right. It speaks plain words only: cylinders, delivery notes, custome
   when the network returns (or with "Send now"). It can still be refused then: a cylinder changed
   meanwhile, the signature older than seven days, the phone revoked; the driver makes the document
   again. If the e-mail cannot leave (or it is not known whether it left), the document stays in "To
-  send" with "Send from the phone" until the driver removes it. A document too large for one send is
+  send" with "Send from the phone" until the driver removes it. A document refused because a cylinder
+  changed, was already registered by another phone or the signature expired offers "Make the document
+  again" (when no part was recorded): the same customer, number and cylinders, read again and proposed
+  from their current state, to check and send (review A12). A document too large for one send is
   refused before signing: split it in two.
 
 ## Install
