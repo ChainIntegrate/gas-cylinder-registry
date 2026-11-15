@@ -345,7 +345,7 @@ function chooseCounterparty(kind) {
 function viewChoose() {
   const tx = t();
   const refill = app.doc.kind === "refill_note";
-  const list = app.cps.filter((c) => (refill ? c.type === "refill" : app.doc.kind === "stock_count" ? true : c.type === "customer"));
+  const list = app.cps.filter((c) => !c.archived && (refill ? c.type === "refill" : app.doc.kind === "stock_count" ? true : c.type === "customer"));
   return [
     h("h2", {}, refill ? tx.chooseRefill : tx.chooseCustomer),
     list.length ? h("div", { class: "menu" }, list.map((c) => btn(c.name, () => setView("doc", { doc: { ...app.doc, cp: c } }), "big"))) : note(tx.noCounterparties, "warn"),

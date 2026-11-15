@@ -381,7 +381,8 @@ async function main() {
     case "remove-counterparty": {
       const cpId = args._[1];
       if (!cpId) throw new Error("usage: remove-counterparty <id>");
-      return done(await O.removeCounterparty(await writeCtx(), cpId));
+      const ctx = await writeCtx();
+      return done(await O.removeCounterparty(ctx, await unlock(ctx), cpId));
     }
     case "init-keys": {
       // The register's data key, password and recovery code, made here by the owner, once.

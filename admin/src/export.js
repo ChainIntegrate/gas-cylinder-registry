@@ -77,7 +77,7 @@ function exportFiles(data, tx, lang, day) {
             dateTime(d.document.date),
             tx.docKinds[d.document.kind],
             docNumber(d.document),
-            cpName(d.document.counterparty),
+            d.document.counterpartyName || cpName(d.document.counterparty),
             l.serial,
             tx.gases[l.gas],
             tx.movements[l.movement],
@@ -99,7 +99,7 @@ function exportFiles(data, tx, lang, day) {
             dateTime(doc.date),
             tx.docKinds[doc.kind],
             docNumber(doc),
-            cpName(doc.counterparty),
+            doc.counterpartyName || cpName(doc.counterparty),
             doc.lines.length,
             ...e.movementColumns.map(n),
             doc.lines.filter((l) => l.anomaly).length || "",
@@ -110,8 +110,8 @@ function exportFiles(data, tx, lang, day) {
     ),
     customers: file(
       "customers",
-      [e.type, tx.name, e.emails],
-      data.cps.map((c) => [c.type === "customer" ? e.customer : e.refill, c.name, c.emails.join(", ")])
+      [e.type, tx.name, e.emails, e.status],
+      data.cps.map((c) => [c.type === "customer" ? e.customer : e.refill, c.name, c.emails.join(", "), c.archived ? e.archived : e.active])
     ),
   };
 }

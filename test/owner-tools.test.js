@@ -81,9 +81,11 @@ describe("owner tools", function () {
     expect((await O.readCounterparty(ctx, keys, a)).name).to.equal("Officina Demo Srl");
     expect((await O.readCounterparty(ctx, keys, a)).emails).to.deep.equal(["demo@example.com"]);
 
-    await O.removeCounterparty(ctx, b);
+    // Removing archives it (review A21): still readable, so that its documents keep its name.
+    await O.removeCounterparty(ctx, keys, b);
     list = await O.listCounterparties(ctx, keys);
-    expect(list.map((c) => c.id)).to.deep.equal([a]);
+    expect(list.filter((c) => !c.archived).map((c) => c.id)).to.deep.equal([a]);
+    expect(list.find((c) => c.id === b)).to.deep.include({ name: "Centro Ricarica Nord", archived: true });
 
     // The directory is unreadable without the data key: only ciphertext on-chain.
     const raw = await ctx.registry.getData(S.counterpartyDataKey(a));

@@ -91,8 +91,9 @@ function validateState(x) {
 }
 
 /**
- * Counterparty: { v: 1, type: "customer" | "refill", name, emails: [] }
- * Only the heading the driver needs and the addresses that receive the e-mail.
+ * Counterparty: { v: 1, type: "customer" | "refill", name, emails: [], archived? }
+ * Only the heading the driver needs and the addresses that receive the e-mail. `archived: true` takes it
+ * off the lists while its documents keep its name (review A21: removing never erases a counterparty).
  */
 function validateCounterparty(x) {
   if (!x || typeof x !== "object") fail("counterparty", "not an object");
@@ -105,11 +106,14 @@ function validateCounterparty(x) {
     type: oneOf("counterparty.type", x.type, COUNTERPARTY_TYPES),
     name: text("counterparty.name", x.name, 120),
     emails,
+    ...(x.archived === true ? { archived: true } : {}),
   };
 }
 
 /**
- * Document: { v: 1, kind, number?, date, counterparty, lines: [...], notes? }
+ * Document: { v: 1, kind, number?, date, counterparty, counterpartyName?, lines: [...], notes? }
+ * `counterpartyName`: the counterparty's name when the document was made (review A21), so that a later
+ * rename or archiving does not change what the document says.
  * line: { tokenId, serial, gas, movement, condition, anomaly? }
  * `number` is required for a delivery note and a refill note, absent for a stock count.
  */
@@ -136,6 +140,7 @@ function validateDocument(x) {
     number,
     date: time("document.date", x.date),
     counterparty: hex("document.counterparty", x.counterparty, HEX20),
+    counterpartyName: text("document.counterpartyName", x.counterpartyName, 120, true),
     lines,
     notes: text("document.notes", x.notes, 500, true),
   });

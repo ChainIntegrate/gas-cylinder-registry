@@ -76,6 +76,8 @@ function h(tag, attrs, ...children) {
 }
 const btn = (label, onclick, cls = "") => h("button", { type: "button", class: cls, onclick }, label);
 const fmtDate = (sec) => new Date(sec * 1000).toLocaleString(st.lang === "en" ? "en-GB" : "it-IT", { dateStyle: "short", timeStyle: "short" });
+// Who a document was for: the name it was made with (review A21), else the counterparty's current one.
+const docWho = (doc) => doc.counterpartyName || names()[doc.counterparty] || "—";
 const names = () => Object.fromEntries((st.data ? st.data.cps : []).map((c) => [c.id, c.name]));
 const emailList = (s) => String(s || "").split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean);
 const phoneCodeText = (a) => a.slice(2).match(/.{1,4}/g).join(" ");
@@ -506,7 +508,7 @@ function docRow(d) {
     {},
     h("td", {}, fmtDate(doc.date)),
     h("td", {}, docLabel(doc), d.corrects !== "0x" + "0".repeat(64) ? h("div", { class: "dim small" }, tx.corrects) : null),
-    h("td", {}, names()[doc.counterparty] || "—"),
+    h("td", {}, docWho(doc)),
     h("td", {}, Object.entries(counts).map(([m, n]) => h("span", { class: "chip" }, `${tx.movements[m]} ${n}`)))
   );
 }
@@ -621,7 +623,7 @@ function viewDocuments() {
           return h(
             "details",
             { class: "doc" },
-            h("summary", {}, h("span", { class: "dim" }, fmtDate(doc.date)), " ", h("b", {}, docLabel(doc)), " · ", names()[doc.counterparty] || "—", " ", h("span", { class: "chip" }, String(doc.lines.length))),
+            h("summary", {}, h("span", { class: "dim" }, fmtDate(doc.date)), " ", h("b", {}, docLabel(doc)), " · ", docWho(doc), " ", h("span", { class: "chip" }, String(doc.lines.length))),
             h(
               "table",
               {},
@@ -654,7 +656,7 @@ function cpForm(type, cp) {
 
 function cpList(type, title, empty, addLabel) {
   const tx = t();
-  const list = st.data.cps.filter((c) => c.type === type);
+  const list = st.data.cps.filter((c) => c.type === type && !c.archived); // archived ones stay only for the documents' names
   return h(
     "section",
     { class: "panel" },
@@ -668,7 +670,7 @@ function cpList(type, title, empty, addLabel) {
                 "div",
                 { class: "item" },
                 h("div", {}, h("b", {}, c.name), h("div", { class: "dim small" }, c.emails.join(", ") || "—")),
-                h("div", { class: "row" }, btn(tx.edit, () => { st.editing = { type, cp: c }; render(); }, "ghost small"), btn(tx.remove, () => confirm(tx.confirmRemove(c.name)) && change(() => O.removeCounterparty(st.ctx, c.id)), "ghost small danger"))
+                h("div", { class: "row" }, btn(tx.edit, () => { st.editing = { type, cp: c }; render(); }, "ghost small"), btn(tx.remove, () => confirm(tx.confirmRemove(c.name)) && change(() => O.removeCounterparty(st.ctx, st.keys, c.id)), "ghost small danger"))
               )
         )
       : h("p", { class: "dim" }, empty)

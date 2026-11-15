@@ -258,6 +258,7 @@ async function buildDocument({ registry, operator, counterparty, kind, number, l
     number: kind === "stock_count" ? undefined : docNumber,
     date: now,
     counterparty: counterparty.id,
+    counterpartyName: counterparty.name,
     lines: lines.map((l) => ({
       tokenId: l.tokenId,
       serial: l.serial,

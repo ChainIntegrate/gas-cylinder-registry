@@ -287,8 +287,15 @@ async function updateCounterparty(ctx, keys, cpId, fields) {
 }
 
 /** Removes a counterparty from the list (its past documents keep its id). */
-async function removeCounterparty(ctx, cpId) {
-  return setData(ctx, [S.counterpartyDataKey(cpId)], ["0x"]);
+/**
+ * Takes a counterparty off the lists: it is archived, not erased (review A21), so that its documents keep
+ * showing who they were for. The app no longer offers it; the admin page lists it as archived.
+ */
+async function removeCounterparty(ctx, keys, cpId) {
+  const current = await readCounterparty(ctx, keys, cpId);
+  if (!current) throw new Error(`no counterparty ${cpId}`);
+  const value = S.validateCounterparty({ ...current, v: 1, archived: true });
+  return setData(ctx, [S.counterpartyDataKey(cpId)], [await S.encryptValue(keys, cpId, "counterparty", value)]);
 }
 
 async function readCounterparty(ctx, keys, cpId) {

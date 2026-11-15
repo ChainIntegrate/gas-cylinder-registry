@@ -60,16 +60,26 @@ describe("admin page: data download", function () {
 
   it("never lets a spreadsheet run a typed value as a formula", function () {
     const c = rows(E.exportFiles(data, T.it, "it", "d").customers);
-    expect(c[2]).to.equal(`Centro di ricarica;"'=HYPERLINK(""x"")";`);
+    expect(c[2]).to.equal(`Centro di ricarica;"'=HYPERLINK(""x"")";;attivo`);
     expect(E.cell("-1")).to.equal("'-1");
     expect(E.cell("@a")).to.equal("'@a");
     expect(E.cell("a\nb")).to.equal('"a\nb"');
   });
 
+  it("keeps the name a document was made with, and lists archived counterparties (review A21)", function () {
+    const d2 = JSON.parse(JSON.stringify(data));
+    d2.docs[0].document.counterpartyName = "Officina Demo (old name)";
+    d2.cps[1].archived = true;
+    const f = E.exportFiles(d2, T.it, "it", "d");
+    expect(rows(f.movements).filter((r) => r.includes("DDT;"))).to.have.length(2);
+    expect(rows(f.movements).every((r) => !r.includes("DDT;") || r.includes("Officina Demo (old name)"))).to.equal(true);
+    expect(rows(f.customers)[2]).to.match(/;archiviato$/);
+  });
+
   it("uses ',' and English texts in English", function () {
     const f = E.exportFiles(data, T.en, "en", "2026-11-13");
     expect(f.customers.name).to.equal("gastrace-customers-2026-11-13.csv");
-    expect(rows(f.customers)[1]).to.equal('Customer,"Officina Demo; Nord","demo@example.com, ufficio@example.com"');
+    expect(rows(f.customers)[1]).to.equal('Customer,"Officina Demo; Nord","demo@example.com, ufficio@example.com",active');
     expect(rows(f.cylinders)[0]).to.match(/^Code,Gas,Litres,/);
   });
 });
