@@ -5,7 +5,7 @@ account.chainintegrate.it: the admin page (static files, `admin/www`) and the re
 service on port 8789). The steps are in order; each says where it runs.
 
 **Done for the demo on 2026-11-13** (steps 0 to 6; step 6, the extension's catalog, in extension 0.4.3): DNS `gastrace` →
-`31.14.140.170`; factory `0xA128e7162fa8Dc779bf31EF569F06B53a499A50e` (block 8774243) and register
+the server's address; factory `0xA128e7162fa8Dc779bf31EF569F06B53a499A50e` (block 8774243) and register
 implementation `0x3075ED17F09E0006cECC0D7e67Fe7E7A4Dc95b00`, both verified on the explorer; Argonia
 Gas Tecnici's register `0xEae1a8B84977694e5c9925028a23599bc345b801` (block 8774282), owned by its
 ChainIntegrate account `0xC335aFd1d95fA790DE419e9BCe482d9B8BC1D773`; relayer

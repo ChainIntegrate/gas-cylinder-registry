@@ -118,6 +118,20 @@ how many cylinders each touches, which key signed. Not public: serials, gases, c
 locations, conditions, e-mails. Every info and state value has the same encrypted size (221 bytes), so
 its length says nothing (not even depot or customer); other values are padded to fixed sizes.
 
+What can still be inferred (review G-05), to tell a supplier plainly:
+- everything public is **permanent**: the number of customers and refill plants (one data key each) and
+  when they are added or removed; how many cylinders each document touches, when, and from which phone;
+- each cylinder keeps the same token ID, so how often it moves can be followed for years, without
+  knowing what it is or where;
+- someone who knows one real event (a competitor who saw a delivery at a customer at 10:30) can link
+  that document and its cylinders, and so follow that customer's later deliveries, and estimate their
+  consumption;
+- the phone that signs is public: once linked to a driver, their working times are visible (see the
+  review's P-01 on employee monitoring).
+
+Possible mitigations, not implemented: documents sent in batches (less precise times), dummy writes,
+counterparty slots rotated, phone keys renewed periodically.
+
 ## 5. Encryption
 
 - **Data key**: 32 random bytes per register. HKDF-SHA256 derives `encKey` (AES-256-GCM) and `idKey`

@@ -67,13 +67,20 @@ docs/        the guides of the app, the admin page and the tools
 
 ## Development
 
+What the tests need (review A22): Linux or macOS (CI runs Ubuntu 24.04; on Windows use WSL), Node.js 22,
+port 8545 free for the local chain, Chromium for the browser tests
+(`npx playwright@1.56.1 install chromium`, then `npm install --no-save playwright@1.56.1`), and for the
+admin page test a clone of up-onboarding at the release CI uses (`UPONBOARDING_REF` in
+`.github/workflows/android.yml`), given as `UPONBOARDING_DIR` (without it the page is tested without
+the extension's catalog). The Android build needs Java 21 and the Android SDK.
+
 ```bash
 npm ci
 npx hardhat compile                 # solc 0.8.28 from npm (solc-js), no compiler download
 npx hardhat test                    # contracts, library, tools, relayer, app logic
 npx hardhat node &                  # then the two browser tests:
 node scripts/ui-demo.js [shots]     #   the app's interface, the demo step by step
-node scripts/admin-demo.js [shots]  #   the admin page, checked against the extension's catalog
+UPONBOARDING_DIR=<clone> node scripts/admin-demo.js [shots]  # the admin page, against the extension's catalog
 node scripts/operator-demo.js [shots] # the operator page: a register created from the browser
 node scripts/build-app.js           # app/www
 node scripts/build-admin.js         # admin/www

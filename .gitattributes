@@ -1,0 +1,13 @@
+# Line endings (review I-08): every text file is stored and checked out with LF, so that a clone on
+# Windows does not show the whole tree as modified. Windows scripts keep CRLF; binaries are left alone.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.png binary
+*.jpg binary
+*.webp binary
+*.ico binary
+*.jar binary
+*.apk binary
+*.p12 binary
+*.keystore binary
