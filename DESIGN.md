@@ -271,3 +271,24 @@ page against that catalog.
 - **Export to the management software**: the admin page downloads the register as CSV (cylinders,
   movements, documents, customers); a format matching the supplier's invoicing software is to agree
   with them.
+
+### 10.1 Before real use: version 2 of the contracts
+
+The current contracts serve the demo (Argonia Gas Tecnici, fictional data) and stay as they are. If a
+supplier adopts GasTrace, a new implementation and a new factory are deployed first, with the points of
+the external review (2026-11-13) that need a contract change. Registers are clones and cannot be
+upgraded: existing ones keep the current contract, and the supplier starts on a new register.
+
+| Review | What version 2 changes |
+|---|---|
+| A01 / X-01 | Owner operations that matter (ownership transfer, key wraps, phones) accepted only from a key with administrator permissions on the owner's account, read from the account (LSP6), not from any SIGN key; possibly an ownership transfer that waits some days and can be cancelled, with an e-mail alert. The extension's side (access keys limited to the projects' calls) is up-onboarding's. |
+| A05 / G-02 | A replaceable data key: key epochs, new values under the new key, the remaining phones given it again; identifiers (token IDs, document IDs) kept on a separate, stable key. A revoked phone, or an old password or recovery code, then no longer reads new data. |
+| A06 | What a phone may write: movements of existing cylinders and new cylinders, not the information of a cylinder already registered. |
+| A11 | A document's parts bound to a manifest (document ID, number of parts, signer, payload hash) recorded with the first part; parts that do not match are refused, and an interrupted document is shown as such. |
+| G-07 | A maximum validity for signatures (seven days) checked by the contract, and a way for the owner and the phones to cancel an unsent signature (use a nonce). |
+
+The other points of the review are handled outside the contracts (relayer, app, admin page, extension):
+see the commits that name them. Still open there: G-03 (the e-mail built by the relayer from a fixed
+template, recipients bound to the owner's data), A07 (the relayer's jobs kept on disk across restarts),
+A09 (the phone's cached lists and queued e-mails encrypted; the app and the page locked when idle),
+P-01 (privacy notices for drivers and customers, the processor agreement).
