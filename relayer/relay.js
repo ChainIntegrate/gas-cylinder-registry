@@ -21,7 +21,7 @@ const { Wallet, JsonRpcProvider, Contract, getAddress, isAddress, keccak256, for
   require("ethers");
 const REGISTRY_ABI = require("../shared/abi/GasCylinderRegistry.json");
 const FACTORY_ABI = require("../shared/abi/GasCylinderRegistryFactory.json");
-const { validateMail, mailDigest } = require("../shared/mail");
+const { validateMail, mailDigest, renderMail } = require("../shared/mail");
 const { recordDocumentDigest } = require("../shared/eip712");
 
 const OWNER_METHODS = ["setOperatorSigned", "setDataSigned", "transferOwnershipSigned", "acceptOwnershipSigned"];
@@ -30,6 +30,7 @@ const ERC1271_ABI = ["function isValidSignature(bytes32 hash, bytes signature) v
 const DEFAULT_LIMITS = {
   perIpPerMinute: 20,
   perRegistryPerDay: 300,
+  mailsPerRegistryPerDay: 100, // e-mails a registry's documents may send in a day (review G-03)
   maxMints: 25,
   maxUpdates: 60,
   maxDocumentBytes: 16384,
@@ -131,7 +132,7 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
     for (const o of j.ops || []) {
       if (now - o.at > KEEP_MS) continue;
       byOperation.set(o.opKey, o.hash);
-      txs.set(o.hash, { state: o.state, ...(o.blockNumber ? { blockNumber: o.blockNumber } : {}), mail: o.mail });
+      txs.set(o.hash, { state: o.state, ...(o.blockNumber ? { blockNumber: o.blockNumber } : {}), mail: o.mail, registry: o.registry });
       sentAt.set(o.hash, o.at);
       if (o.pendingMail) pendingMail.set(o.hash, o.pendingMail);
       if (o.state === "pending" || o.mail === "pending") resume.push(o.hash);
@@ -258,7 +259,7 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
       chargeQuota(registry);
       const tx = await reg[method](...args, { gasLimit });
       byOperation.set(opKey, tx.hash);
-      txs.set(tx.hash, { state: "pending", mail: mail ? "pending" : "none" });
+      txs.set(tx.hash, { state: "pending", mail: mail ? "pending" : "none", registry });
       sentAt.set(tx.hash, Date.now());
       if (mail) pendingMail.set(tx.hash, mail);
       if (txs.size > 5000) {
@@ -308,12 +309,12 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
       else if (!sendMail) entry.mail = "failed";
       else {
         try {
-          await sendMail({
-            to: mail.to.join(", "),
-            subject: mail.subject,
-            text: mail.text,
-            attachments: mail.attachment ? [{ filename: mail.attachment.filename, content: Buffer.from(mail.attachment.base64, "base64"), contentType: "application/pdf" }] : undefined,
-          });
+          // Written here from the fixed template (review G-03): the phone sent only the document's facts.
+          const mailKey = `mail|${entry.registry}|${new Date().toISOString().slice(0, 10)}`;
+          if ((registryDay.get(mailKey) || 0) >= limits.mailsPerRegistryPerDay) throw new Error("daily e-mail limit of the registry reached");
+          registryDay.set(mailKey, (registryDay.get(mailKey) || 0) + 1);
+          const m = renderMail(mail, { timeZone: config.mailTimeZone || "Europe/Rome" });
+          await sendMail({ to: m.to.join(", "), subject: m.subject, text: m.text });
           entry.mail = "sent";
         } catch (e) {
           entry.mail = "failed";

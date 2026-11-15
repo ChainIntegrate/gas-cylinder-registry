@@ -580,7 +580,7 @@ function itemStatus(item) {
 function mailtoLink(item) {
   const last = item.parts[item.parts.length - 1].body;
   if (!last.mail) return null;
-  const m = last.mail;
+  const m = S.renderMail(last.mail); // the same template the relayer uses
   return `mailto:${m.to.join(",")}?subject=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.text)}`;
 }
 

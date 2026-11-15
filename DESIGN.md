@@ -233,10 +233,12 @@ upgradeable. Source verified on LUKSO's explorer (`scripts/verify-lukso.js`).
   left unsent (review A07).
 - It holds only the LYX it spends; it cannot forge or alter anything (without a valid signature the
   register refuses). At worst it fails to send.
-- **E-mail**: the phone signs the e-mail (recipients, subject, text) bound to the document's EIP-712
-  digest, with the same fingerprint as the document; the relayer sends exactly that e-mail, and only
-  after the document's transaction is confirmed. Recipients: the customer's addresses, the supplier's,
-  and up to three typed by the driver; the app enforces this, the relayer only checks up to ten valid
+- **E-mail**: the phone signs the e-mail's facts (recipients, language, company, customer, kind,
+  number, date, cylinders, warnings) bound to the document's EIP-712 digest, with the same fingerprint
+  as the document; the relayer writes the e-mail from its fixed template and sends it only after the
+  document's transaction is confirmed (no free text, no attachment, at most 8 recipients, a daily
+  limit per register: review G-03). Recipients: the customer's addresses, the supplier's,
+  and up to three typed by the driver; the app enforces this, the relayer only checks up to eight valid
   addresses signed by the phone (it cannot read the encrypted customer list: review G-03). The relayer logs that an e-mail left and to how many people,
   never its content. The e-mail is plaintext in transit to the relayer: the one place where data leaves
   the encryption, by choice, so that its delivery can be checked.

@@ -308,28 +308,27 @@ async function buildDocument({ registry, operator, counterparty, kind, number, l
   return { docId, number: docNumber, document, parts };
 }
 
-/** The e-mail of a document, in the app's language. */
+/**
+ * The facts of a document's e-mail (review G-03): the relayer writes the e-mail from its fixed template
+ * (shared/mail.js renderMail), in the app's language; the phone signs these facts, not a text.
+ */
 function buildMail({ lang, company, counterparty, kind, number, lines, now, recipients }) {
-  const t = T[lang] || T.it;
-  const date = new Date(now * 1000).toLocaleString(lang === "en" ? "en-GB" : "it-IT", { dateStyle: "short", timeStyle: "short" });
-  const sum = summary(lines);
-  const out = [t.mailIntro(company, counterparty.name, date), ""];
-  for (const [movement, byGas] of Object.entries(sum)) {
-    const parts = Object.entries(byGas).map(([gas, n]) => `${n} ${t.gases[gas]}`);
-    out.push(`${t.movements[movement]}: ${parts.join(", ")}`);
-  }
-  out.push("", `${t.mailLines}:`);
-  for (const l of lines) out.push(`- ${l.serial}  ${t.gases[l.gas]}  ${t.movements[l.movement]}  ${t.conditions[l.condition]}`);
-  const anomalies = lines.filter((l) => l.anomaly);
-  if (anomalies.length) {
-    out.push("", `${t.mailAnomalies}:`);
-    for (const l of anomalies) out.push(`- ${l.serial}: ${anomalyText(t, l.anomaly)}`);
-  }
-  out.push("", t.mailFooter);
   return {
+    v: 2,
     to: recipients,
-    subject: t.mailSubject(kind, kind === "stock_count" ? "" : number, company),
-    text: out.join("\n"),
+    lang: lang === "en" ? "en" : "it",
+    company: company || "-",
+    who: counterparty.name,
+    kind,
+    ...(kind === "stock_count" || !number ? {} : { number: String(number) }),
+    date: now,
+    lines: lines.map((l) => ({
+      serial: l.serial,
+      gas: l.gas,
+      movement: l.movement,
+      condition: l.condition,
+      ...(l.anomaly ? { anomaly: { code: l.anomaly.code, ...(l.anomaly.name ? { name: l.anomaly.name } : {}) } } : {}),
+    })),
   };
 }
 
@@ -351,7 +350,7 @@ async function signDocument({ registry, operator, built, mail, signDigests, meta
     try {
       mail = S.validateMail(mail);
     } catch (e) {
-      throw /text|attachment/.test(String(e.message)) ? tooLarge("the e-mail") : e;
+      throw /too long|lines/.test(String(e.message)) ? tooLarge("the e-mail") : e;
     }
   }
   const mailHash = mail ? hashMessage(getBytes(S.mailDigest(registry.address, last.digest, mail))) : null;

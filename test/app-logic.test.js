@@ -133,7 +133,7 @@ describe("app logic", function () {
     expect(sent.text).to.include("Consegna: 2 Argon");
     expect(sent.text).to.include("Ritiro: 1 Argon, 1 CO₂, 1 Azoto");
     expect(sent.text).to.include("- AR-300  Argon  Consegna  Piena");
-    expect(mail.text).to.equal(sent.text);
+    expect(S.renderMail(mail).text).to.equal(sent.text); // the relayer and "send from the phone" use the same template (G-03)
     for (const word of ["blockchain", "token", "transazione", "LUKSO", "gas fee", "wallet", "0x"]) expect(sent.text).to.not.include(word);
 
     // Scanning again shows the new states.

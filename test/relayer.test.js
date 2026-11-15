@@ -33,6 +33,9 @@ describe("relayer", function () {
     throw new Error("timeout");
   }
 
+  /** The facts of a document's e-mail (review G-03): the relayer writes the text from its template. */
+  const facts = (to, extra = {}) => ({ v: 2, to, lang: "it", company: "Argonia Gas Tecnici", who: "Officina Demo", kind: "delivery_note", number: "DDT 2026/118", date: 1790000000, lines: [{ serial: "AR-1", gas: "argon", movement: "delivery", condition: "full" }], ...extra });
+
   /** A delivery of `n` new cylinders to the customer, signed by the phone. */
   async function delivery(n, number = "DDT " + Math.random()) {
     const docId = await S.documentId(keys, customer, number);
@@ -132,7 +135,7 @@ describe("relayer", function () {
 
   it("relays a document and sends its e-mail after the confirmation", async function () {
     const op = await delivery(3, "DDT 2026/118");
-    const mail = { to: ["demo@example.com", "Owner@Example.com", "demo@example.com"], subject: "Consegna DDT 2026/118", text: "3 argon consegnate." };
+    const mail = facts(["demo@example.com", "Owner@Example.com", "demo@example.com"]);
     const mailSignature = await S.signMail(phone, ctx.address, op.digest, mail);
     const { status, body } = await post("/gcr/document", { ...op, mail, mailSignature });
     expect(status, JSON.stringify(body)).to.equal(200);
@@ -140,7 +143,9 @@ describe("relayer", function () {
     expect(st).to.include({ state: "confirmed", mail: "sent" });
     expect(mails).to.have.length(1);
     expect(mails[0].to).to.equal("demo@example.com, owner@example.com");
-    expect(mails[0].subject).to.equal("Consegna DDT 2026/118");
+    expect(mails[0].subject).to.equal("Argonia Gas Tecnici: DDT 2026/118");
+    expect(mails[0].text).to.include("Documento per: Officina Demo").and.include("- AR-1  Argon  Consegna  Piena").and.include("Consegna: 1 Argon");
+    expect(mails[0].attachments).to.equal(undefined);
     expect(await ctx.registry.totalSupply()).to.equal(3n);
     expect(await ethers.provider.getBalance(phone.address)).to.equal(0n);
 
@@ -150,18 +155,42 @@ describe("relayer", function () {
     expect(mails).to.have.length(1);
   });
 
-  it("sends a PDF attachment", async function () {
+  it("writes the e-mail only from its template: no text, no attachment, at most 8 recipients (review G-03)", async function () {
     const op = await delivery(1);
-    const pdf = Buffer.from("%PDF-1.4\n% test\n").toString("base64");
-    const mail = { to: ["demo@example.com"], subject: "Consegna", text: "Allegato il riepilogo.", attachment: { filename: "consegna.pdf", base64: pdf } };
-    const { body } = await post("/gcr/document", { ...op, mail, mailSignature: await S.signMail(phone, ctx.address, op.digest, mail) });
-    expect((await waitFor(body.hash)).mail).to.equal("sent");
-    expect(mails[0].attachments[0]).to.include({ filename: "consegna.pdf", contentType: "application/pdf" });
+    for (const mail of [
+      { to: ["demo@example.com"], subject: "Fattura scaduta", text: "Paga qui: http://phishing.example" }, // the old free-text form
+      { ...facts(["demo@example.com"]), text: "free text" },
+      { ...facts(["demo@example.com"]), attachment: { filename: "x.pdf", base64: Buffer.from("%PDF-1.4").toString("base64") } },
+      facts(Array.from({ length: 9 }, (_, i) => `a${i}@b.it`)),
+      facts(["demo@example.com"], { company: "Argonia\nBcc: spam@x.com" }),
+      facts(["demo@example.com"], { lines: [{ serial: "AR-1", gas: "argon", movement: "delivery", condition: "full", anomaly: { code: "click_here" } }] }),
+    ]) {
+      const r = await post("/gcr/document", { ...op, mail, mailSignature: "0x" });
+      expect(r.status, JSON.stringify(mail)).to.equal(400);
+    }
+    expect(mails).to.have.length(0);
+  });
+
+  it("stops a registry's e-mails at its daily limit; the documents are still recorded", async function () {
+    await new Promise((res) => server.close(res));
+    const relayer = createRelayer({ provider: ethers.provider, wallet: relayerSigner, config: { chainId: 31337, factory: await factory.getAddress(), limits: { mailsPerRegistryPerDay: 1 } }, sendMail: async (m) => mails.push(m), logger: () => {} });
+    server = relayer.server;
+    await new Promise((res) => server.listen(0, "127.0.0.1", res));
+    base = `http://127.0.0.1:${server.address().port}`;
+    const states = [];
+    for (let i = 0; i < 2; i++) {
+      const op = await delivery(1);
+      const mail = facts(["demo@example.com"]);
+      const { body } = await post("/gcr/document", { ...op, mail, mailSignature: await S.signMail(phone, ctx.address, op.digest, mail) });
+      states.push(await waitFor(body.hash));
+    }
+    expect(states.map((x) => [x.state, x.mail])).to.deep.equal([["confirmed", "sent"], ["confirmed", "failed"]]);
+    expect(mails).to.have.length(1);
   });
 
   it("refuses an e-mail not signed by the phone, or changed after signing", async function () {
     const op = await delivery(1);
-    const mail = { to: ["demo@example.com"], subject: "Consegna", text: "ok" };
+    const mail = facts(["demo@example.com"]);
     const stranger = ethers.Wallet.createRandom();
     let r = await post("/gcr/document", { ...op, mail, mailSignature: await S.signMail(stranger, ctx.address, op.digest, mail) });
     expect(r.status).to.equal(403);
@@ -175,11 +204,11 @@ describe("relayer", function () {
   it("refuses invalid e-mails before sending anything", async function () {
     const op = await delivery(1);
     for (const mail of [
-      { to: [], subject: "x", text: "y" },
-      { to: ["not-an-address"], subject: "x", text: "y" },
-      { to: ["a@b.it"], subject: "x\nBcc: spam@x.com", text: "y" },
-      { to: Array.from({ length: 11 }, (_, i) => `a${i}@b.it`), subject: "x", text: "y" },
-      { to: ["a@b.it"], subject: "x", text: "y", attachment: { filename: "x.pdf", base64: Buffer.from("not a pdf").toString("base64") } },
+      facts([]),
+      facts(["not-an-address"]),
+      facts(["a(b)@c.it"]),
+      facts(["a@b.it"], { lang: "fr" }),
+      facts(["a@b.it"], { lines: [] }),
     ]) {
       const r = await post("/gcr/document", { ...op, mail, mailSignature: "0x" });
       expect(r.status, JSON.stringify(mail)).to.equal(400);
@@ -227,13 +256,13 @@ describe("relayer", function () {
     await new Promise((res) => server.listen(0, "127.0.0.1", res));
     base = `http://127.0.0.1:${server.address().port}`;
     const d = await delivery(1);
-    const mail = { to: ["demo@example.com"], subject: "Argonia Gas Tecnici: DDT 7", text: "Documento" };
+    const mail = facts(["demo@example.com"], { number: "DDT 7" });
     const mailSignature = await phone.signMessage(ethers.getBytes(S.mailDigest(ctx.address, d.digest, mail)));
     const r = await post("/gcr/document", { ...d, mail, mailSignature });
     expect(r.status).to.equal(200);
     while (!(await ethers.provider.getTransactionReceipt(r.body.hash))) await new Promise((res) => setTimeout(res, 50));
     const saved = JSON.parse(fs.readFileSync(stateFile, "utf8"));
-    expect(saved.ops.find((o) => o.hash === r.body.hash).pendingMail.subject).to.equal(mail.subject);
+    expect(saved.ops.find((o) => o.hash === r.body.hash).pendingMail.number).to.equal("DDT 7");
     await new Promise((res) => server.close(res));
 
     // Second run, same journal: the e-mail leaves, its content leaves the disk, the status is known.
@@ -243,7 +272,7 @@ describe("relayer", function () {
     server = second.server;
     await new Promise((res) => server.listen(0, "127.0.0.1", res));
     base = `http://127.0.0.1:${server.address().port}`;
-    expect(sent.map((m) => m.subject)).to.deep.equal([mail.subject]);
+    expect(sent.map((m) => m.subject)).to.deep.equal(["Argonia Gas Tecnici: DDT 7"]);
     expect((await get(`/gcr/status?hash=${r.body.hash}`)).body).to.include({ state: "confirmed", mail: "sent" });
     expect(fs.readFileSync(stateFile, "utf8")).to.not.include("DDT 7");
     // The same operation again is recognized after the restart: same transaction, no second e-mail.

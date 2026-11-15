@@ -48,9 +48,13 @@ read it; `DocumentPartAlreadyRecorded`: the same document number was sent before
 
 - Sent only after the document's transaction is confirmed, through the same SMTP settings as the
   other ChainIntegrate services (`/etc/gcr-relayer/smtp.env`, same values as Cross_Chain's).
-- The phone signs the e-mail (recipients, subject, text, optional PDF) together with the operation's
-  signature (`shared/mail.js`): the relayer sends only the e-mail that the phone that signed the
-  document wrote, for that document only. 1 to 10 recipients, one PDF of at most 400 KB.
+- The phone does not send an e-mail's text: it signs the document's facts (recipients, language,
+  company, customer, kind, number, date, cylinders, warnings), with the same fingerprint as the
+  document and bound to it (`shared/mail.js`), and the relayer writes the e-mail from a fixed template
+  (`renderMail`, the date in `mailTimeZone`, default Europe/Rome). No free text, no attachment, no
+  unknown field; 1 to 8 recipients; a registry's documents send at most `mailsPerRegistryPerDay` (100)
+  e-mails a day, beyond which the document is recorded and its e-mail reported as not sent (review
+  G-03). The app's "send from the phone" uses the same template.
 - The log records that an e-mail was sent and to how many recipients, never the addresses or the content.
 - When the relayer's balance falls below `minBalanceWarn`, it logs a warning and e-mails
   `NOTIFICATION_EMAIL` (at most once a day).
