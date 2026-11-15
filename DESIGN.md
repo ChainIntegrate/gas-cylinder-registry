@@ -283,7 +283,7 @@ upgraded: existing ones keep the current contract, and the supplier starts on a 
 |---|---|
 | A01 / X-01 | Owner operations that matter (ownership transfer, key wraps, phones) accepted only from a key with administrator permissions on the owner's account, read from the account (LSP6), not from any SIGN key; possibly an ownership transfer that waits some days and can be cancelled, with an e-mail alert. The extension's side (access keys limited to the projects' calls) is up-onboarding's. |
 | A05 / G-02 | A replaceable data key: key epochs, new values under the new key, the remaining phones given it again; identifiers (token IDs, document IDs) kept on a separate, stable key. A revoked phone, or an old password or recovery code, then no longer reads new data. |
-| A06 | What a phone may write: movements of existing cylinders and new cylinders, not the information of a cylinder already registered. |
+| A06 | What a phone may write: movements of existing cylinders and new cylinders, not the information of a cylinder already registered. Corrections stay possible, by the owner: a "Correct" button in the admin page (a cylinder's gas, litres, owner), signed in the extension and kept in the cylinder's history. Today no tool offers it (the app writes a cylinder's information only when it registers it). |
 | A11 | A document's parts bound to a manifest (document ID, number of parts, signer, payload hash) recorded with the first part; parts that do not match are refused, and an interrupted document is shown as such. |
 | G-07 | A maximum validity for signatures (seven days) checked by the contract, and a way for the owner and the phones to cancel an unsent signature (use a nonce). |
 
