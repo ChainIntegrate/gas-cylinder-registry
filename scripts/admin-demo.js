@@ -157,7 +157,8 @@ async function main() {
     await see("Fatto.");
   };
 
-  // Sign in and open the data.
+  // Sign in and open the data (a clock the test can move forward: the 30-minute lock).
+  await page.clock.install();
   await page.goto(pageUrl);
   await see("Accedi con ChainIntegrate Account");
   await shot("connect");
@@ -303,9 +304,15 @@ async function main() {
   await see("Settings");
   await shot("settings-en");
 
+  // Review A09: after 30 minutes unused the page forgets the data and asks the password again.
+  await page.clock.fastForward("31:00");
+  await see("30 minutes unused");
+  const lockedPage = await page.locator("#app").innerText();
+
   const settings = await O.readSettings(ctxCheck, (await O.unlockWithPassword(ctxCheck, "una nuova frase per il registro")).keys);
   const checks = [
     ["first sign-in: the page made the data key; the password and the 24 words open it", Buffer.from(byWords.dek).equals(Buffer.from(byPassword.dek))],
+    ["locked after 30 minutes unused (A09)", /Open the data/i.test(lockedPage) && !/Overview/.test(lockedPage)],
     ["settings written", settings && settings.company === "Argonia Gas Tecnici" && settings.emails.length === 2],
     ["customers written", cps.length === 3],
     ["phone authorized", await new ethers.Contract(r.address, O.REGISTRY_ABI, provider).isOperator(phone.address)],

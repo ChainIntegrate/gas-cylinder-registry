@@ -6,6 +6,7 @@ const S = require("../../shared");
 const L = require("./logic");
 const { T } = require("./i18n");
 const { loadNative } = require("./native");
+const { Vault } = require("./vault");
 const CONFIG = require("../app-config.json");
 // The app's version, from android/app/build.gradle (versionName), set by scripts/build-app.js.
 const APP_VERSION = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "0.0.0";
@@ -44,11 +45,16 @@ const app = {
   doc: null,
   check: null,
   result: null,
-  outbox: new L.Outbox(localStorage),
+  // What the app keeps on the phone, encrypted under the data key (review A09): readable only unlocked.
+  vault: new Vault(localStorage, ["gcr.outbox.v1", "gcr.lists", "gcr.draft"]),
+  outbox: null,
+  sending: 0, // sends in progress: the app does not lock in the middle of one
   online: navigator.onLine !== false,
   update: null, // a newer release announced by the relayer: { version, url }
 };
+app.outbox = new L.Outbox(app.vault);
 const t = () => T[app.lang];
+const LOCK_AFTER_MS = 10 * 60 * 1000; // locked after 10 minutes unused or in the background (review A09)
 const names = () => Object.fromEntries(app.cps.map((c) => [c.id, c.name]));
 
 // ------------------------------------------------------------------------------------------------
@@ -110,6 +116,7 @@ async function start() {
     checkUpdate();
   });
   checkUpdate();
+  watchIdle();
   window.addEventListener("offline", () => {
     app.online = false;
     render();
@@ -290,25 +297,94 @@ async function unlock() {
     dek.fill(0);
     const st = await app.native.deviceKey.status();
     app.phone = st.address;
+    await app.vault.unlock(app.reg.keys.cacheKey);
+    if (await revoked()) return wipeRevoked();
     await loadLists();
-    setView("home");
+    touch();
+    const draft = app.vault.getItem("gcr.draft");
+    if (draft) {
+      app.vault.removeItem("gcr.draft");
+      setView("doc", { doc: JSON.parse(draft), msg: { text: t().draftRestored, cls: "note" } });
+    } else setView("home");
     flushOutbox();
   } catch (e) {
     fail(e);
   }
 }
 
-/** The owner's settings and lists; kept on the phone for when there is no network. */
+/** The owner's settings and lists; kept on the phone, encrypted, for when there is no network. */
 async function loadLists() {
   try {
     app.settings = await app.reg.settings();
     app.cps = await app.reg.counterparties();
-    store.set("gcr.lists", { settings: app.settings, cps: app.cps });
+    app.vault.setItem("gcr.lists", JSON.stringify({ settings: app.settings, cps: app.cps }));
   } catch (e) {
     if (!L.isNetworkError(e)) throw e;
-    const cached = store.get("gcr.lists", { settings: null, cps: [] });
+    const cached = JSON.parse(app.vault.getItem("gcr.lists") || '{"settings":null,"cps":[]}');
     app.settings = cached.settings;
     app.cps = cached.cps;
+  }
+}
+
+// ------------------------------------------------------------------------------------------------
+// Lock and revocation (review A09)
+// ------------------------------------------------------------------------------------------------
+
+let lastActive = Date.now();
+let hiddenAt = null;
+function touch() {
+  lastActive = Date.now();
+}
+
+/** Forgets the keys and everything decrypted; a document half-made is kept, encrypted, for the next unlock. */
+async function lock() {
+  if (!app.reg || !app.reg.keys || app.sending || (app.doc && app.doc.busy)) return;
+  if (app.doc && ["doc", "choose"].includes(app.view) && app.doc.cp) {
+    app.vault.setItem("gcr.draft", JSON.stringify({ ...app.doc, busy: false }));
+  }
+  await app.vault.flush();
+  app.vault.lock();
+  app.reg.keys = null;
+  Object.assign(app, { settings: null, cps: [], doc: null, check: null, result: null });
+  setView("unlock", { msg: { text: t().locked, cls: "note" } });
+}
+
+function watchIdle() {
+  for (const ev of ["pointerdown", "keydown", "touchstart"]) window.addEventListener(ev, touch, { passive: true });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) hiddenAt = Date.now();
+    else {
+      if (hiddenAt && Date.now() - hiddenAt > LOCK_AFTER_MS) lock();
+      hiddenAt = null;
+      touch();
+    }
+  });
+  setInterval(() => {
+    if (Date.now() - lastActive > LOCK_AFTER_MS) lock();
+  }, 30000);
+}
+
+/** True when the register says this phone is no longer authorized (unknown without network: false). */
+async function revoked() {
+  try {
+    return !(await app.reg.isAuthorized(app.phone));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A revoked phone erases its keys and everything it kept (review A09): it could no longer write, and now
+ * it can no longer read. It can be set up again with the owner.
+ */
+async function wipeRevoked() {
+  try {
+    await app.native.deviceKey.remove();
+  } finally {
+    app.vault.wipe();
+    store.del("gcr.setup");
+    Object.assign(app, { reg: null, phone: null, settings: null, cps: [], doc: null, check: null, result: null, authorized: false });
+    setView("setup", { msg: { text: t().revokedWiped, cls: "error" } });
   }
 }
 
@@ -455,6 +531,16 @@ async function sendDocument() {
 }
 
 async function sendOne(item) {
+  app.sending++;
+  try {
+    await sendOneInner(item);
+  } finally {
+    app.sending--;
+  }
+  if (item.failed && item.failed.error === "NotAuthorized" && (await revoked())) await wipeRevoked();
+}
+
+async function sendOneInner(item) {
   await L.sendItem(item, {
     relayer: CONFIG.relayer,
     provider: app.provider,

@@ -812,4 +812,19 @@ function render() {
   );
 }
 
+// After 30 minutes without use the page forgets the data key and the decrypted data and asks the data
+// password again (review A09); the sign-in with the extension stays.
+const LOCK_AFTER_MS = 30 * 60 * 1000;
+let lastActive = Date.now();
+for (const ev of ["pointerdown", "keydown"]) window.addEventListener(ev, () => (lastActive = Date.now()), { passive: true });
+function lockIfIdle() {
+  if (!st.dek || st.busy || Date.now() - lastActive < LOCK_AFTER_MS) return;
+  st.dek.fill(0);
+  if (st.setup) st.setup.prepared.dek.fill(0);
+  Object.assign(st, { dek: null, keys: null, data: null, history: null, editing: null, setup: null, view: "unlock", msg: { text: t().lockedIdle, cls: "ok" } });
+  render();
+}
+setInterval(lockIfIdle, 30000);
+document.addEventListener("visibilitychange", () => !document.hidden && lockIfIdle());
+
 window.addEventListener("DOMContentLoaded", render);

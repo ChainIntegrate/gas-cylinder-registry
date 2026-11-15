@@ -173,7 +173,7 @@ counterparty slots rotated, phone keys renewed periodically.
 | **Change the password** | From the admin page (Settings): a new slot 0. Phones keep working. The old wrap stays in the chain's history: a change, not a protection against someone who knew the old password. |
 | **Password lost** | Admin page, "I lost the password": the 24 words open the data key, a new password is set. |
 | **Both lost** | The data cannot be read again; a new register is the way out. |
-| **Phone lost, driver leaves** | The owner revokes the phone: it can no longer write. It still holds the data key, so whoever unlocks it can still read the register until the key can be rotated: use company phones, and have a returned phone wiped. |
+| **Phone lost, driver leaves** | The owner revokes the phone: it can no longer write, and at its next unlock with network the app erases its keys and the data it kept (review A09). A phone never unlocked again still holds the data key: until the key can be rotated, use company phones and have a returned phone wiped. |
 | **A new company** | Starts a new register (its own key, password, recovery code); nothing is copied. |
 
 ## 6. Contracts
@@ -260,6 +260,12 @@ upgradeable. Source verified on LUKSO's explorer (`scripts/verify-lukso.js`).
 - **Keys** (`DeviceKeyPlugin.java`): the phone key and the data key, each encrypted under its own
   Android Keystore key usable only right after fingerprint or PIN; no backup of app data.
 
+**On the phone** (review A09): the cached customer list and settings, the documents waiting to be sent
+(with their e-mails) and a document left half-made are encrypted with a key derived from the data key
+(`cacheKey`, HKDF, never used on-chain): nothing is readable before the fingerprint or PIN. The app
+locks after 10 minutes unused or in the background; a phone that finds itself revoked erases its keys
+and its data.
+
 ## 9. The admin page
 
 `admin/`, served from `admin/www` at `https://gastrace.chainintegrate.it/`. Guide:
@@ -307,7 +313,6 @@ upgraded: existing ones keep the current contract, and the supplier starts on a 
 | G-07 | A maximum validity for signatures (seven days) checked by the contract, and a way for the owner and the phones to cancel an unsent signature (use a nonce). |
 
 The other points of the review are handled outside the contracts (relayer, app, admin page, extension):
-see the commits that name them. Still open there: G-03 (the e-mail built by the relayer from a fixed
-template, recipients bound to the owner's data), A07 (the relayer's jobs kept on disk across restarts),
-A09 (the phone's cached lists and queued e-mails encrypted; the app and the page locked when idle),
-P-01 (privacy notices for drivers and customers, the processor agreement).
+see the commits that name them (G-03 e-mails from a template, A07 the relayer's journal and A09 the
+phone's encrypted data and idle locks included). Still open there: P-01 (privacy notices for drivers
+and customers, the processor agreement) and the operational points (X-04 distribution, X-05 server).

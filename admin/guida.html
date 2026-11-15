@@ -99,7 +99,7 @@
     <section class="panel" id="password">
       <h3>Password dei dati e codice di recupero</h3>
       <ul>
-        <li>La <strong>password dei dati</strong> apre i dati delle bombole. Resta nella pagina, non viene inviata a nessuno, e chiudendo la pagina viene dimenticata.</li>
+        <li>La <strong>password dei dati</strong> apre i dati delle bombole. Resta nella pagina, non viene inviata a nessuno, e chiudendo la pagina viene dimenticata. Dopo <strong>30 minuti</strong> senza uso la pagina si blocca da sola e la richiede.</li>
         <li>Il <strong>codice di recupero</strong> è di 24 parole e compare una volta sola, al primo accesso. Tienilo stampato in un posto sicuro, lontano dal computer. Non fotografarlo, non mandarlo per mail e non darlo a nessuno: ChainIntegrate non te lo chiederà mai.</li>
         <li>Se perdi la password: nella schermata della password premi <strong>Ho perso la password</strong>, scrivi le 24 parole e scegli una nuova password.</li>
         <li>Per cambiarla: <strong>Impostazioni → Cambia password</strong>. I telefoni già configurati continuano a funzionare.</li>
@@ -141,7 +141,7 @@
         <li>Tu scrivi quel codice in <strong>Autorizza un telefono</strong>, premi <strong>Autorizza</strong> e confermi nell'estensione.</li>
         <li>L'app se ne accorge da sola e chiede la <strong>password dei dati</strong>: la scrivi tu sul telefono, una volta sola. Il telefono non la conserva.</li>
       </ol>
-      <p><strong>Revoca</strong> un telefono perso, rubato o di un autista che non lavora più con voi: da quel momento non può più registrare niente. <strong>Attenzione:</strong> il telefono conserva la chiave dei dati, quindi chi riesce a sbloccarlo può ancora leggerli. Per questo è meglio usare telefoni aziendali e farli azzerare quando vengono restituiti.</p>
+      <p><strong>Revoca</strong> un telefono perso, rubato o di un autista che non lavora più con voi: da quel momento non può più registrare niente. Al primo sblocco dopo la revoca, se c\'è rete, l\'app <strong>cancella da sola</strong> la chiave e i dati salvati sul telefono. Un telefono perso o rubato, però, potrebbe non sbloccarsi mai più: per questo è meglio usare telefoni aziendali e farli azzerare quando vengono restituiti.</p>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-phones.webp" target="_blank" rel="noopener"><img src="guide-img/page-phones.webp" alt="Telefoni: i telefoni autorizzati, il codice da scrivere e il QR da far inquadrare (qui sfocato)" loading="lazy"></a><figcaption>Telefoni: i telefoni autorizzati, il codice da scrivere e il QR da far inquadrare (qui sfocato)</figcaption></figure>
       </div>
@@ -200,7 +200,7 @@
         <li>L'app mostra il <strong>codice di questo telefono</strong>: dallo al titolare (puoi usare <strong>Copia</strong>).</li>
         <li>Quando il titolare l'ha autorizzato, l'app chiede la <strong>password dei dati</strong>: la scrive il titolare.</li>
       </ol>
-      <p>Da quel momento apri l'app con <strong>Sblocca con impronta o PIN</strong>.</p>
+      <p>Da quel momento apri l'app con <strong>Sblocca con impronta o PIN</strong>. Dopo <strong>10 minuti</strong> senza uso, o in secondo piano, l\'app si blocca da sola: si riapre con impronta o PIN, e un documento lasciato a metà viene ripreso. I dati salvati sul telefono (clienti, documenti da inviare) sono cifrati: senza impronta o PIN non si leggono.</p>
       <div class="shots phones">
         <figure class="phone"><a href="guide-img/app-setup.webp" target="_blank" rel="noopener"><img src="guide-img/app-setup.webp" alt="1. Inquadra il codice" loading="lazy"></a><figcaption>1. Inquadra il codice</figcaption></figure>
         <figure class="phone"><a href="guide-img/app-phone-code.webp" target="_blank" rel="noopener"><img src="guide-img/app-phone-code.webp" alt="2–3. Il codice del telefono" loading="lazy"></a><figcaption>2–3. Il codice del telefono</figcaption></figure>
@@ -286,7 +286,7 @@
       <h3>"Questo documento risulta già registrato"</h3>
       <p>Lo stesso numero di documento è già stato inviato. Controlla in "Da inviare" o chiedi al titolare di guardare in Documenti.</p>
       <h3>"Questo telefono non è più autorizzato"</h3>
-      <p>Il titolare l'ha revocato. Se è un errore, va configurato di nuovo.</p>
+      <p>Il titolare l'ha revocato: l'app ha cancellato la chiave e i dati del telefono. Se è un errore, va configurato di nuovo con il titolare.</p>
       <h3>Telefono perso, rubato o cambiato</h3>
       <p>Il titolare lo revoca subito da <strong>Telefoni</strong>. Il telefono nuovo si configura da capo, come la prima volta.</p>
       <h3>L'impronta non va più, o è stato tolto il blocco schermo</h3>

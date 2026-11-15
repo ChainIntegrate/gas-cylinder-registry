@@ -99,7 +99,7 @@
     <section class="panel" id="password">
       <h3>Data password and recovery code</h3>
       <ul>
-        <li>The <strong>data password</strong> opens the cylinders' data. It stays in the page, is never sent anywhere, and is forgotten when the page closes.</li>
+        <li>The <strong>data password</strong> opens the cylinders' data. It stays in the page, is never sent anywhere, and is forgotten when the page closes. After <strong>30 minutes</strong> unused the page locks itself and asks for it again.</li>
         <li>The <strong>recovery code</strong> is 24 words, shown once, at the first sign-in. Keep it printed in a safe place, away from the computer. Do not photograph it, e-mail it or give it to anyone: ChainIntegrate will never ask for it.</li>
         <li>Lost the password: on the password screen press <strong>I lost the password</strong>, type the 24 words and choose a new password.</li>
         <li>To change it: <strong>Settings → Change password</strong>. Phones already set up keep working.</li>
@@ -141,7 +141,7 @@
         <li>You type that code in <strong>Authorize a phone</strong>, press <strong>Authorize</strong> and confirm in the extension.</li>
         <li>The app notices by itself and asks for the <strong>data password</strong>: you type it on the phone, once. The phone does not keep it.</li>
       </ol>
-      <p><strong>Revoke</strong> a phone that is lost, stolen, or belongs to a driver who no longer works with you: from then on it cannot record anything. <strong>Note:</strong> the phone keeps the data key, so whoever manages to unlock it can still read the data. That is why company phones are better, wiped when they are returned.</p>
+      <p><strong>Revoke</strong> a phone that is lost, stolen, or belongs to a driver who no longer works with you: from then on it cannot record anything. At its first unlock after the revocation, with network, the app <strong>erases by itself</strong> the key and the data kept on the phone. A lost or stolen phone, though, may never be unlocked again: that is why company phones are better, wiped when they are returned.</p>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-phones.webp" target="_blank" rel="noopener"><img src="guide-img/page-phones.webp" alt="Phones: the authorized phones, the code to type and the QR to scan (blurred here)" loading="lazy"></a><figcaption>Phones: the authorized phones, the code to type and the QR to scan (blurred here)</figcaption></figure>
       </div>
@@ -200,7 +200,7 @@
         <li>The app shows <strong>this phone's code</strong>: give it to the owner (you can use <strong>Copy</strong>).</li>
         <li>Once the owner has authorized it, the app asks for the <strong>data password</strong>: the owner types it.</li>
       </ol>
-      <p>From then on open the app with <strong>Unlock with fingerprint or PIN</strong>.</p>
+      <p>From then on open the app with <strong>Unlock with fingerprint or PIN</strong>. After <strong>10 minutes</strong> unused, or in the background, the app locks itself: it opens again with fingerprint or PIN, and a document left half-made comes back. What the phone keeps (customers, documents to send) is encrypted: without fingerprint or PIN it cannot be read.</p>
       <div class="shots phones">
         <figure class="phone"><a href="guide-img/app-setup.webp" target="_blank" rel="noopener"><img src="guide-img/app-setup.webp" alt="1. Scan the code" loading="lazy"></a><figcaption>1. Scan the code</figcaption></figure>
         <figure class="phone"><a href="guide-img/app-phone-code.webp" target="_blank" rel="noopener"><img src="guide-img/app-phone-code.webp" alt="2–3. The phone's code" loading="lazy"></a><figcaption>2–3. The phone's code</figcaption></figure>
@@ -286,7 +286,7 @@
       <h3>"This document is already recorded"</h3>
       <p>The same document number was already sent. Look in "To send", or ask the owner to look in Documents.</p>
       <h3>"This phone is no longer authorized"</h3>
-      <p>The owner revoked it. If that was a mistake, it has to be set up again.</p>
+      <p>The owner revoked it: the app erased the phone's key and data. If that was a mistake, set it up again with the owner.</p>
       <h3>Phone lost, stolen or replaced</h3>
       <p>The owner revokes it at once in <strong>Phones</strong>. The new phone is set up from scratch, like the first time.</p>
       <h3>The fingerprint no longer works, or the screen lock was removed</h3>

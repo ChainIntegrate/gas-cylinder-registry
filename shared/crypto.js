@@ -87,6 +87,8 @@ async function deriveKeys(dek, registry) {
     registry: getAddress(registry),
     encKey: await hkdf(ikm, salt, "GCR v1 enc", ["encrypt", "decrypt"]),
     idKey: await hkdf(ikm, salt, "GCR v1 id", "hmac"),
+    // The app's own key for what it keeps on the phone (review A09): never used for on-chain values.
+    cacheKey: await hkdf(ikm, salt, "GCR v1 phone cache", ["encrypt", "decrypt"]),
   };
 }
 

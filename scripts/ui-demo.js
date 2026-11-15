@@ -89,6 +89,7 @@ async function main() {
   // The simulated native side: the phone key (a wallet here) and the camera (a queue of codes).
   let created = false;
   let dataKey = null;
+  let removed = false;
   const scans = [];
   await page.exposeFunction("__nativeCall", async (name, arg) => {
     if (name === "status") return { exists: created, address: created ? phone.address : null, canAuth: true, hasDataKey: !!dataKey };
@@ -99,6 +100,7 @@ async function main() {
     if (name === "signDigests") return arg.map((d) => phone.signingKey.sign(d).serialized);
     if (name === "storeDataKey") return void (dataKey = arg);
     if (name === "loadDataKey") return dataKey;
+    if (name === "remove") return void ((created = false), (dataKey = null), (removed = true));
     if (name === "scan") return scans.shift() || null;
     throw new Error("unknown " + name);
   });
@@ -111,7 +113,7 @@ async function main() {
         signDigests: (d) => c("signDigests", d),
         storeDataKey: (k) => c("storeDataKey", k),
         loadDataKey: () => c("loadDataKey"),
-        remove: () => null,
+        remove: () => c("remove"),
       },
       scan: () => c("scan"),
     };
@@ -140,6 +142,8 @@ async function main() {
   };
 
   // 1. Setup
+  // A clock the test can move forward (the 10-minute lock), otherwise flowing as usual.
+  await page.clock.install();
   await page.goto(appUrl);
   await see("Configurazione del telefono");
   await shot("setup");
@@ -254,11 +258,27 @@ async function main() {
   await click("EN");
   await see("Check a cylinder");
   await shot("home-en");
+  await click("IT");
+
+  // 7. Review A09: nothing readable on the phone; locked after 10 minutes unused; a revoked phone
+  // erases its key and its data.
+  const stored = await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.entries(localStorage))));
+  await page.clock.fastForward("11:00");
+  await see("App bloccata");
+  const lockedText = await page.locator("#app").innerText();
+  await O.setOperator(ctx, phone.address, false); // the owner revokes the phone
+  await click("Sblocca con impronta o PIN");
+  await see("è stato revocato");
+  await shot("revoked");
+  const afterWipe = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("gcr.") && k !== "gcr.lang"));
 
   // Results
   const mail = mails[0]; // the delivery note of step 3
   const checks = [
     ["update notice links the release", updateLink === NEWER.url],
+    ["nothing readable stored on the phone (A09)", stored.length > 0 && !/Officina|example\.com|AR-300/.test(stored) && /gcrv1:/.test(stored)],
+    ["locked after 10 minutes unused (A09)", /Sblocca/.test(lockedText) && !/Consegna \/ ritiro/.test(lockedText)],
+    ["a revoked phone erases its key and data (A09)", removed && afterWipe.length === 0],
     ["one e-mail per document (steps 3 and 3b)", mails.length === 2 && /2026\/119/.test(mails[1].subject)],
     ["a refused document made again from the current state (A12)", /Consegna/.test(redoneText) && /AR-300/.test(redoneText)],
     ["recipients", mail && mail.to === "demo@example.com, ufficio@example.com, titolare@example.com"],

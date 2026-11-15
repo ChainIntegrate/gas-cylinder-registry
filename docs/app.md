@@ -56,9 +56,17 @@ owner). Clearing the app's data, removing the phone's screen lock or a factory r
    once. The phone keeps the data key protected by the fingerprint; the password is not stored.
 
 Each time the app opens, the driver unlocks it with the fingerprint or PIN. A lost phone, or a driver who
-leaves: the owner revokes the phone from the admin page. Revoking stops the phone from writing; it
-still holds the data key and can read until the key can be replaced, so a returned phone should be
-wiped (company phones make this simple).
+leaves: the owner revokes the phone from the admin page. Revoking stops the phone from writing; at
+its next unlock with network the app sees it and erases its keys and everything it kept (review A09). A
+phone that is never unlocked again still holds the data key (protected by the Keystore), so a returned
+phone should be wiped (company phones make this simple).
+
+What the app keeps on the phone (the customer list and settings, the documents waiting to be sent with
+their e-mails, a document left half-made) is encrypted with a key derived from the data key
+(`app/src/vault.js`): nothing can be read before the fingerprint or PIN. The app locks itself after 10
+minutes unused or in the background (the keys and the decrypted data forgotten, a document in progress
+kept encrypted and reopened at the next unlock); the admin page locks after 30 minutes and asks the
+data password again.
 
 ## Build
 

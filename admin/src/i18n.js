@@ -20,6 +20,7 @@ const T = {
     signOut: "Esci",
     // Unlock
     unlockTitle: "Apri i dati",
+    lockedIdle: "Pagina bloccata dopo 30 minuti senza uso: scrivi di nuovo la password dei dati.",
     unlockIntro: "I dati del registro sono cifrati: scrivi la password dei dati. Resta solo in questa pagina e non viene inviata a nessuno.",
     password: "Password dei dati",
     open: "Apri",
@@ -188,6 +189,7 @@ const T = {
     account: "Account",
     signOut: "Sign out",
     unlockTitle: "Open the data",
+    lockedIdle: "Page locked after 30 minutes unused: type the data password again.",
     unlockIntro: "The register's data is encrypted: type the data password. It stays in this page only and is sent to no one.",
     password: "Data password",
     open: "Open",
