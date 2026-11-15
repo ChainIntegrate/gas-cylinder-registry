@@ -17,7 +17,8 @@
     "perIpPerMinute": 20,
     "perRegistryPerDay": 300,
     "maxMints": 25,
-    "maxUpdates": 60
+    "maxUpdates": 60,
+    "mailsPerRegistryPerDay": 100
   },
   "appReleaseFile": "/etc/gcr-relayer/app-release.json"
 }

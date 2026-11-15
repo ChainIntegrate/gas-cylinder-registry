@@ -17,7 +17,7 @@ license texts are in the packages themselves (`node_modules/<package>/LICENSE` a
 | Component | Version | Use | License |
 |---|---|---|---|
 | `ethers` | 6.17.0 | RPC, signatures | MIT |
-| `nodemailer` | 10.0.13 | E-mail through SMTP | MIT-0 |
+| `nodemailer` | 10.5.0 | E-mail through SMTP | MIT-0 |
 
 ## Development tools
 
@@ -37,4 +37,4 @@ license texts are in the packages themselves (`node_modules/<package>/LICENSE` a
 | `esbuild` | 0.28.2 | Bundling | MIT |
 | `androidx.biometric:biometric` | 1.1.0 | Fingerprint prompt | Apache-2.0 |
 | `org.bouncycastle:bcprov-jdk18on` | 1.78.1 | secp256k1 and Keccak-256 | MIT (Bouncy Castle licence) |
-| `qrcode-generator` | 1.4.4 | The setup code's QR in the owner tools | MIT |
+| `qrcode-generator` | 1.4.4 | The setup code's QR in the admin page and the owner tools | MIT |

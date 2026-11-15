@@ -21,15 +21,7 @@ people who may administer the register.
 **The extension's catalog.** The extension serves only the sites and requests declared in its catalog
 (`extension/shared/catalog.js` in up-onboarding). For GasTrace the four requests (`SetOperator`,
 `SetData`, `TransferOwnership`, `AcceptOwnership`) are declared, with the factory and the site (from
-extension 0.4.3). From extension 0.5.1 (review A02/G-04) the page sends each `SetData`'s values beside
-the signed hash (`dataValues`, a top-level field of the `eth_signTypedData_v4` request that other
-wallets ignore): the extension recomputes the hash (a mismatch is refused), accepts only GasTrace's five
-kinds of data key, reads the registry's current values and says what the change is ("Prepare the
-encryption of the registry's data… (first time)", "Change the data password", "Add 1 customer or refill
-centre", "The company's settings"…), never both key wraps once they exist; it shows how long the request
-is valid and refuses more than seven days. The values are encrypted: the window names the kind of change,
-not its content. The browser test checks every request against the catalog of the release named in CI
-(`UPONBOARDING_REF`):
+extension 0.4.3):
 
 ```js
 const CYLINDER_FACTORY = "0xA128e7162fa8Dc779bf31EF569F06B53a499A50e";
@@ -37,6 +29,15 @@ const CYLINDER_FACTORY = "0xA128e7162fa8Dc779bf31EF569F06B53a499A50e";
 sites: ["gastrace.chainintegrate.it"],
 ```
 
+From extension 0.5.1 (review A02/G-04) the page sends each `SetData`'s values beside
+the signed hash (`dataValues`, a top-level field of the `eth_signTypedData_v4` request that other
+wallets ignore): the extension recomputes the hash (a mismatch is refused), accepts only GasTrace's five
+kinds of data key, reads the registry's current values and says what the change is ("Prepare the
+encryption of the registry's data… (first time)", "Change the data password", "Add 1 customer or refill
+centre", "The company's settings"…), never both key wraps once they exist; it shows how long the request
+is valid and refuses more than seven days. The values are encrypted: the window names the kind of change,
+not its content. The browser test checks every request against the catalog of the release named in CI
+(`UPONBOARDING_REF`).
 
 ## What the supplier does there
 
@@ -57,8 +58,8 @@ checked), and one confirmation in the extension writes both wraps. Everything is
 browser: ChainIntegrate never sees the password or the words (review X-02).
 
 The data password opens the register's data **in the page only**: it is never sent anywhere, and closing
-the page forgets it. "I lost the password" opens the data with the 24-word recovery code and sets a new
-password.
+the page forgets it; after 30 minutes unused the page forgets it too and asks again (review A09). "I
+lost the password" opens the data with the 24-word recovery code and sets a new password.
 
 ## The users' guide
 
@@ -94,7 +95,7 @@ The factory must first belong to ChainIntegrate's profile: `node scripts/owner.j
 
 ```bash
 # admin/admin-config.json: rpc, chainId, relayer, factory and the factory's deployment block
-node scripts/build-admin.js      # admin/www: index.html, operator.html, their scripts, admin.css, logo, favicon
+node scripts/build-admin.js      # admin/www: index.html, operator.html, their scripts, admin.css, logo, favicon, the guide and its pictures
 ```
 
 `admin/www` is committed: the server serves it from its clone (`/var/www/gas-cylinder-registry`) with no
@@ -112,14 +113,16 @@ node scripts/operator-demo.js [screenshots-dir]
 ```
 
 The operator test creates a register from the page with a simulated ChainIntegrate wallet (the
-ChainIntegrate Account extension announced too, and ignored), refuses a weak password, an owner that is
-not a profile and wrong check words, and checks that the register is the factory's, owned by the
-supplier, asks no password, shows no recovery code and has no data key yet.
+ChainIntegrate Account extension announced too, and ignored), refuses an owner that is not a profile,
+and checks that the register is the factory's, owned by the supplier, asks no password, shows no
+recovery code and has no data key yet.
 
 The test runs the page in Chromium with a simulated extension whose account is a contract that validates
 signatures with ERC-1271, as a ChainIntegrate account does, and checks every request against the
 extension's own catalog (from up-onboarding; CI clones it). Steps: sign-in, the first sign-in's data
 key (password, 24 words shown and two checked, both open the same key), the next sign-in with the password, settings,
 customers, a refill plant, a phone authorized by its code; the driver's app records a stock count and a
-delivery note; the page shows them (overview, cylinders, a cylinder's history, documents); the password
-is changed. It also checks that no technical word appears and that the page fits a phone's width.
+delivery note; the page shows them (overview, cylinders, a cylinder's history, documents) and downloads
+them (CSV); the password is changed; after 30 minutes the page locks. With the extension's catalog it
+checks each request's description (no "content not verifiable") and that values changed after the
+hash are refused. It also checks that no technical word appears and that the page fits a phone's width.

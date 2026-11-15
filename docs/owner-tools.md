@@ -9,6 +9,8 @@ admin page ([admin.md](admin.md)), not from here.
 They run with Node.js 20 or later, from a clone of this repository after `npm ci --omit=dev` (`npm ci`
 for the source verification, which needs the compiler). On the server they live in the user's home
 (`~/gastrace-tools`), apart from the clone that serves the site, because they hold ChainIntegrate's key.
+Now that the factory belongs to ChainIntegrate's Universal Profile, that key is no longer needed on the
+public server: keep it offline (review X-05).
 
 ```bash
 node scripts/owner.js help

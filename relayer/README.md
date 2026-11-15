@@ -40,8 +40,8 @@ read it; `DocumentPartAlreadyRecorded`: the same document number was sent before
   operations per registry per day (`perRegistryPerDay`), counted only for an operation that passed
   every check and the simulation, when it is sent, so malformed or badly signed requests naming a
   registry cannot use up its day (and the same operation sent again is not counted twice). An address
-  that is not one of the factory's registries is remembered for ten minutes. The counters live in
-  memory: a restart resets them. Requests up to 700 KB; a browser `Origin`, when present, must be in
+  that is not one of the factory's registries is remembered for ten minutes. The registries' daily
+  counts are kept in the journal across restarts; the per-IP counts live in memory. Requests up to 700 KB; a browser `Origin`, when present, must be in
   `allowedOrigins` (the app's).
 
 ## The e-mail
@@ -87,8 +87,9 @@ sudo install -m 600 -o gcr-relayer -g gcr-relayer /dev/null /etc/gcr-relayer/rpc
 sudo nano /etc/gcr-relayer/rpc-url            # one line: the RPC URL (ChainIntegrate's node with its key, or LUKSO's public one)
 ```
 
-The service refuses to start if the key file is readable by other users, if the RPC is on another
-chain, or if there is no contract at the factory.
+The service refuses to start if the key file is readable by other users, if the node answers another
+chain (`eth_chainId`, asked), or if the factory does not answer as GasTrace's factory with its
+implementation in place.
 
 **3. SMTP**: the same values as `/etc/crosschain-relayer/smtp.env`.
 
@@ -156,7 +157,7 @@ curl -s https://gastrace.chainintegrate.it/gcr/info    # "app": { "version": …
 ```
 
 ```json
-{ "version": "0.2.1", "url": "https://github.com/ChainIntegrate/gas-cylinder-registry/releases/download/v0.2.1/gastrace-v0.2.1.apk" }
+{ "version": "0.2.4", "url": "https://github.com/ChainIntegrate/gas-cylinder-registry/releases/download/v0.2.4/gastrace-v0.2.4.apk" }
 ```
 
 The relayer announces only a `x.y.z` version with a link to that version's APK in this repository's
@@ -167,6 +168,7 @@ announces nothing. Write it only after the release's build has attached the APK.
 
 ```bash
 cd /var/www/gas-cylinder-registry && sudo git pull && (cd relayer && sudo npm ci --omit=dev) && sudo systemctl restart gcr-relayer
+sudo cp relayer/gcr-relayer.service /etc/systemd/system/ && sudo systemctl daemon-reload   # when the unit changed
 journalctl -u gcr-relayer -f
 sudo systemctl stop gcr-relayer
 ```

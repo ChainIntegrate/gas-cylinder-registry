@@ -17,7 +17,7 @@ at the top right. It speaks plain words only: cylinders, delivery notes, custome
 - **Check a cylinder**: gas, where it is, its condition and last movement.
 - **Send**: one fingerprint (or PIN) confirms the whole document and its e-mail. The relayer records
   it, then e-mails it to the customer's and the supplier's addresses and up to three typed for that
-  document. Without network, or when the service is busy, the document waits in "To send" and leaves
+  document; the e-mail's text is written by the service from a fixed template (review G-03). Without network, or when the service is busy, the document waits in "To send" and leaves
   when the network returns (or with "Send now"). It can still be refused then: a cylinder changed
   meanwhile, the signature older than seven days, the phone revoked; the driver makes the document
   again. If the e-mail cannot leave (or it is not known whether it left), the document stays in "To
@@ -72,7 +72,7 @@ data password again.
 
 ```bash
 npm ci
-node scripts/build-app.js        # app/www from app/src (esbuild); app/app-config.json: RPC, relayer
+node scripts/build-app.js        # app/www from app/src (esbuild); app/app-config.json: RPC, relayer, factory
 npx cap sync android
 cd android && ./gradlew assembleDebug      # needs the Android SDK and JDK 21
 ```
@@ -90,9 +90,10 @@ A GitHub release with the tag `v<versionName>` (`android/app/build.gradle`) buil
 the release key and attaches it. The tag must match `versionName`; `versionCode` goes up by one for each
 release. Release notes are in English.
 
-The release key never enters the repository. CI reads it from the repository's secrets:
-`GCR_KEYSTORE_B64` (the PKCS#12 file in base64) and `GCR_KEYSTORE_PASSWORD` (`GCR_KEY_ALIAS` if the alias
-is not `gascylinders`). Keep a copy of the key file and its password offline: without them no update of
+The release key never enters the repository. CI reads it from the secrets of the GitHub environment
+`release` (done on 2026-11-14; the repository's secrets are the fallback): `GCR_KEYSTORE_B64` (the
+PKCS#12 file in base64) and `GCR_KEYSTORE_PASSWORD` (`GCR_KEY_ALIAS` if the alias is not
+`gascylinders`). Keep a copy of the key file and its password offline: without them no update of
 the installed app is possible.
 
 CI has two jobs (`.github/workflows/android.yml`, external review G-06). **test** runs at every push:
@@ -100,10 +101,9 @@ all the tests, then the APK built **unsigned**, plus a debug APK to try on a pho
 `gastrace-apk`); it has read-only access and no secret, so the npm packages, Playwright and the local
 chain it runs never see the release key. **release** runs only for a published release, in the GitHub
 environment `release`: it installs nothing, signs the unsigned APK with the release key (the Android
-SDK's `zipalign` and `apksigner`), checks the tag matches `versionName` and attaches the APK. Protect the
-environment once (Settings → Environments → `release` → Required reviewers: yourself), and move the
-three secrets from the repository's secrets to the environment's: then only an approved release can
-use the key. Actions are pinned by commit, and the admin page test uses the catalog of a released
+SDK's `zipalign` and `apksigner`), checks the tag matches `versionName` and attaches the APK. The
+environment requires a reviewer's approval (Settings → Environments → `release`): after the tests,
+GitHub waits for "Review deployments → Approve and deploy" before the key is used. Actions are pinned by commit, and the admin page test uses the catalog of a released
 extension (`UPONBOARDING_REF`).
 
 If a release's build fails, delete the release and its tag, fix `main`, and create the release again
@@ -126,6 +126,7 @@ version 0.2.1 on: a phone with 0.2.0 is updated by hand once.
 | `app/src/logic.js` | Reading cylinders, proposals, documents, signing, the outbox (no interface; tested in Node) |
 | `app/src/ui.js`, `app/src/i18n.js` | The interface and its texts |
 | `app/src/native.js` | The native side: the DeviceKey plugin and ML Kit's scanner |
+| `app/src/vault.js` | What the app keeps on the phone, encrypted under `cacheKey` (review A09) |
 | `android/.../DeviceKeyPlugin.java` | The phone key and the data key, each behind its own Keystore key and the fingerprint |
 | `android/.../Secp256k1.java` | Signatures (UP Wallet's file, with its tests) |
 | `app/icon/` | The icon and the script that renders the launcher icons and splash screens |

@@ -13,7 +13,10 @@ ChainIntegrate account `0xC335aFd1d95fA790DE419e9BCe482d9B8BC1D773`; relayer
 of step 5 as expected; app release v0.2.0. The factory was then handed to ChainIntegrate's Universal
 Profile `0x4a2605796e0d91A9667d6E30365aEEC384C48c27` (`transfer-factory`), and the operator page lists the
 demo register. App release v0.2.1 followed, with the update notice: the relayer announces it from
-`/etc/gcr-relayer/app-release.json` (`appReleaseFile` in its configuration).
+`/etc/gcr-relayer/app-release.json` (`appReleaseFile` in its configuration). On 2026-11-14 and 15 the
+external review's fixes were deployed ([docs/security-review-2026-11.md](docs/security-review-2026-11.md)):
+app releases up to v0.2.4 (signed in the protected `release` environment), the relayer with its journal
+in `/var/lib/gcr-relayer` (the systemd unit installed again), extension 0.5.1 on the owner's computer.
 
 | Part | Where | Port |
 |---|---|---|
@@ -89,8 +92,9 @@ node scripts/build-admin.js     # admin/www, committed: the server serves it fro
 git add admin && git commit -m "Admin page: LUKSO factory" && git push
 ```
 
-`app/app-config.json` needs no factory (the phone learns its register from the setup code); after this
-step a new app release (tag `v0.2.0`) gives the drivers the APK that talks to gastrace.chainintegrate.it.
+`app/app-config.json` needs the factory too (`factory`: the app checks that a setup code's register is
+one of its registers; the phone learns its register from the setup code); after this step a new app
+release gives the drivers the APK that talks to gastrace.chainintegrate.it.
 
 ## 4. The relayer (on the server)
 
@@ -118,6 +122,7 @@ sudo install -m 600 -o gcr-relayer -g gcr-relayer /etc/crosschain-relayer/smtp.e
 sudo cp /var/www/gas-cylinder-registry/relayer/gcr-relayer.service /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl enable --now gcr-relayer
 sudo journalctl -u gcr-relayer -n 5               # "relayer 0x… on chain 42, …, mail on", "listening on http://127.0.0.1:8789"
+# the unit makes /var/lib/gcr-relayer (StateDirectory) for the relayer's journal
 curl -s http://127.0.0.1:8789/gcr/info
 ```
 
@@ -166,6 +171,8 @@ and its update on the owner's computer. Done in extension 0.4.3 (2026-11-13).
 ```bash
 cd /var/www/gas-cylinder-registry && sudo git pull --ff-only
 (cd relayer && sudo npm ci --omit=dev) && sudo systemctl restart gcr-relayer      # when relayer/ or shared/ changed
+sudo cp relayer/gcr-relayer.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl restart gcr-relayer   # when the unit changed
+sudo git log -1 --format="%h %s"                  # the clone belongs to root: git needs sudo here
 ```
 
 The page is served from the clone (`admin/www`) with `Cache-Control: no-cache`: a pull is enough.

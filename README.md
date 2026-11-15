@@ -1,10 +1,11 @@
 # GasTrace (gas-cylinder-registry)
 
 Tracking of technical gas cylinders on LUKSO, for gas suppliers and their drivers. Each cylinder is an
-LSP8 token in the supplier's own register; its data is encrypted on-chain with the register's data
-key, opened by the supplier's password (and held by the authorized phones: see
-[DESIGN.md](DESIGN.md), "Who holds the data key"). Drivers scan the barcodes with an Android app at delivery and collection; the supplier manages
-the register from a web page; nobody at the supplier ever holds LYX.
+LSP8 token in the supplier's own register; its data is encrypted on-chain with the register's data key,
+made by the supplier at the first sign-in and opened by their password (and held by the authorized
+phones: see [DESIGN.md](DESIGN.md), "Who holds the data key"). Drivers scan the barcodes with an Android
+app at delivery and collection; the supplier manages the register from a web page; nobody at the
+supplier ever holds LYX.
 
 **Status: live on LUKSO mainnet for a demo** (Argonia Gas Tecnici, a fictional supplier). A first
 external review (2026-11-13) is closed for the demo: what was fixed, documented or planned is in
@@ -18,7 +19,7 @@ of the contracts and the owner's points listed there are needed.
 | **Contracts** | The register (one LSP8 collection per supplier) and the factory that creates them | `contracts/` | [DESIGN.md](DESIGN.md) |
 | **Shared library** | Encryption, key wraps, identifiers, formats, EIP-712 types, the signed e-mail | `shared/` | [DESIGN.md](DESIGN.md) |
 | **Drivers' app "GasTrace"** | Android (Capacitor): scan, deliver, collect, stock count, refill; signs with a key kept on the phone | `app/`, `android/` | [docs/app.md](docs/app.md) |
-| **Admin page "GasTrace"** | The supplier's web page: overview, cylinders and their history, documents, customers, phones, settings; signed in with the ChainIntegrate Account extension | `admin/` | [docs/admin.md](docs/admin.md) |
+| **Admin page "GasTrace"** | The supplier's web page: the data key prepared at the first sign-in, overview, cylinders and their history, documents, customers, phones, settings, data download (CSV); signed in with the ChainIntegrate Account extension | `admin/` | [docs/admin.md](docs/admin.md) |
 | **Relayer** | Sends the signed operations, pays the gas, sends each document's e-mail | `relayer/` | [relayer/README.md](relayer/README.md) |
 | **Operator page** | ChainIntegrate's page to create a supplier's register from the browser (`operator.html`), signed by ChainIntegrate's Universal Profile | `admin/` | [docs/admin.md](docs/admin.md#the-operator-page-chainintegrate-only) |
 | **ChainIntegrate's tools** | Command line: deploy the factory, hand it to ChainIntegrate's profile, create registers, verify the source, owner operations for an owner using a key file | `scripts/` | [docs/owner-tools.md](docs/owner-tools.md) |
@@ -60,10 +61,10 @@ app/         the drivers' app: logic, interface, native bridge, icon (built into
 android/     the Capacitor Android project: the phone key plugin (DeviceKeyPlugin), signing
 admin/       the admin and operator pages (src/), the users' guide (guida.html, guide.html), their build (www/, committed)
 relayer/     the relayer service, its systemd unit and configuration example
-scripts/     ChainIntegrate's tools, builds, the browser tests (ui-demo, admin-demo), source verification
-test/        contract, library, relayer, owner tools and app logic tests (Hardhat)
+scripts/     ChainIntegrate's tools, builds, the browser tests (ui-demo, admin-demo, operator-demo), source verification
+test/        contract, library, relayer, owner tools, app logic, admin export and phone vault tests (Hardhat)
 tools/nginx/ the site's nginx configuration
-docs/        the guides of the app, the admin page and the tools
+docs/        the guides of the app, the admin page and the tools; the external review's record
 ```
 
 ## Development
@@ -79,7 +80,7 @@ the extension's catalog). The Android build needs Java 21 and the Android SDK.
 npm ci
 npx hardhat compile                 # solc 0.8.28 from npm (solc-js), no compiler download
 npx hardhat test                    # contracts, library, tools, relayer, app logic
-npx hardhat node &                  # then the two browser tests:
+npx hardhat node &                  # then the three browser tests:
 node scripts/ui-demo.js [shots]     #   the app's interface, the demo step by step
 UPONBOARDING_DIR=<clone> node scripts/admin-demo.js [shots]  # the admin page, against the extension's catalog
 node scripts/operator-demo.js [shots] # the operator page: a register created from the browser
@@ -89,7 +90,7 @@ node scripts/export-abi.js          # after changing the contracts: ABIs for the
 ```
 
 GitHub Actions runs all of it at every push and builds the APK; a release `v<versionName>` attaches the
-signed APK ([docs/app.md](docs/app.md#signing)).
+signed APK ([docs/app.md](docs/app.md#releases-and-signing)).
 
 ## Rules of this repository
 

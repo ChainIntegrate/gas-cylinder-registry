@@ -33,10 +33,10 @@ encrypted, and an e-mail summary is sent.
 
 | Who | With what | Does |
 |---|---|---|
-| **The supplier** (register owner) | The admin page, signed in with the ChainIntegrate Account extension | Customers and refill plants, drivers' phones, settings, the data password; sees cylinders, histories, documents |
+| **The supplier** (register owner) | The admin page, signed in with the ChainIntegrate Account extension | Prepares the data key at the first sign-in (password, recovery code); customers and refill plants, drivers' phones, settings; sees cylinders, histories, documents; downloads the data |
 | **A driver** (operator) | The GasTrace app, with a key kept on the phone | Stock counts, deliveries, collections, refills |
 | **The relayer** | ChainIntegrate's server | Checks and sends signed operations, pays the gas, sends each document's e-mail |
-| **ChainIntegrate** (factory owner) | Its command-line tools and key | Deploys the factory, creates a register for each supplier; no power inside a register |
+| **ChainIntegrate** (factory owner) | Its Universal Profile (the operator page) and its command-line tools | Deploys the factory once, creates a register for each supplier (without its data key); no power inside a register |
 | **Customers, refill plants** | Nothing | Encrypted entries of the register; they receive the e-mails |
 
 ## 4. Data
@@ -82,9 +82,9 @@ owned by someone else.
 Stored in the register's own ERC725Y data, one entry each, encrypted:
 
 - a counterparty: key LSP2 Mapping `bytes10(keccak256("GCRCounterparty")) + 0x0000 + id` (a random
-  20-byte id); value `{ type: customer | refill, name, emails[] }`, the heading the driver needs and the
-  addresses that receive its documents' e-mails. Removing one writes an empty value; its past documents
-  keep its id.
+  20-byte id); value `{ type: customer | refill, name, emails[], archived? }`, the heading the driver
+  needs and the addresses that receive its documents' e-mails. Removing one archives it (the app no
+  longer offers it), never erases it; each document also keeps the name it was made with (review A21).
 - the settings: key `keccak256("GCRSettings")`; value `{ company, emails[] }`, the name shown by the app
   and the e-mails, and the supplier's own addresses, which receive a copy of every document.
 
@@ -101,8 +101,8 @@ movements.
   starts again each year, or the same number in another kind of document, makes a different one (review
   A10; documents recorded before 2026-11-14 used the number alone).
 - One transaction records the movements and emits `DocumentRecorded(docId, part, parts, signer,
-  corrects, document)`, `document` being the encrypted document (number, date, counterparty, every
-  line with serial, gas, movement, condition and confirmed warning).
+  corrects, document)`, `document` being the encrypted document (number, date, counterparty and its
+  name at that moment, every line with serial, gas, movement, condition and confirmed warning).
 - A document too large for one transaction is split into parts (25 new cylinders, or 60 data writes, per
   part); the encrypted document travels in the last one. Before anything is signed the app checks the
   whole document against every limit: the encrypted document at most 16 KB (about 80 to 95 cylinders,
@@ -135,7 +135,8 @@ counterparty slots rotated, phone keys renewed periodically.
 ## 5. Encryption
 
 - **Data key**: 32 random bytes per register. HKDF-SHA256 derives `encKey` (AES-256-GCM) and `idKey`
-  (HMAC for token, counterparty and document ids).
+  (HMAC for token, counterparty and document ids), and `cacheKey` for what the app keeps on the phone
+  (never used on-chain).
 - **Every value**: `version | IV (12) | ciphertext | tag (16)`, with the register's address, the entry id
   and the field name as associated data: a value copied to another cylinder or field does not decrypt.
 - **Password wrap** (slot 0, `GCRKeyWrap:0`): the data key wrapped with a key from the data password
@@ -187,7 +188,8 @@ upgradeable. Source verified on LUKSO's explorer (`scripts/verify-lukso.js`).
   by ChainIntegrate's key, then handed over with `transfer-factory`); only the owner calls
   `createRegistry(salt, owner, name, symbol, dataKeys,
   dataValues)`, which deploys an EIP-1167 clone of one register implementation at a predictable address
-  (`predictRegistryAddress(salt)`: the key wraps written at creation are bound to that address).
+  (`predictRegistryAddress(salt)`). Registers are now created with no data (`dataKeys` empty): the owner
+  writes the key wraps at the first sign-in, bound to the register's address.
 - `isRegistry(address)`, `registryCount()`, `registries(start, count)`: the relayer, the page and the
   extension's catalog accept only registers made here.
 - It has no rights inside a register.
@@ -237,10 +239,10 @@ upgradeable. Source verified on LUKSO's explorer (`scripts/verify-lukso.js`).
   number, date, cylinders, warnings) bound to the document's EIP-712 digest, with the same fingerprint
   as the document; the relayer writes the e-mail from its fixed template and sends it only after the
   document's transaction is confirmed (no free text, no attachment, at most 8 recipients, a daily
-  limit per register: review G-03). Recipients: the customer's addresses, the supplier's,
-  and up to three typed by the driver; the app enforces this, the relayer only checks up to eight valid
-  addresses signed by the phone (it cannot read the encrypted customer list: review G-03). The relayer logs that an e-mail left and to how many people,
-  never its content. The e-mail is plaintext in transit to the relayer: the one place where data leaves
+  limit per register: review G-03). Recipients: the customer's addresses, the supplier's, and up to
+  three typed by the driver; the app enforces this, the relayer checks at most eight valid addresses
+  signed by the phone (it cannot read the encrypted customer list). The relayer logs that an e-mail left
+  and to how many people, never its content. The e-mail is plaintext in transit to the relayer: the one place where data leaves
   the encryption, by choice, so that its delivery can be checked.
 
 ## 8. The app
@@ -254,9 +256,10 @@ upgradeable. Source verified on LUKSO's explorer (`scripts/verify-lukso.js`).
 - **A document**: pick the customer, scan each cylinder (Google's ML Kit scanner, no camera permission)
   or type its code, adjust movement and condition, give the gas of new cylinders, type the delivery
   note number, send: one fingerprint signs every part and the e-mail.
-- **Offline**: signed documents wait in "To send" and leave when the network returns; the last
-  states read are kept for scanning without network. If the relayer has restarted and no longer knows a
-  document, the app checks the network itself.
+- **Offline**: signed documents wait in "To send" and leave when the network returns or the service is
+  free again; the last states read are kept for scanning without network. If the relayer has restarted
+  and no longer knows a document, the app checks the network itself. A document refused (a cylinder
+  changed meanwhile, the signature expired) can be made again from the cylinders' current state.
 - **Keys** (`DeviceKeyPlugin.java`): the phone key and the data key, each encrypted under its own
   Android Keystore key usable only right after fingerprint or PIN; no backup of app data.
 
@@ -272,10 +275,12 @@ and its data.
 [docs/admin.md](docs/admin.md).
 
 The supplier signs in with the **ChainIntegrate Account** extension (up-onboarding), found through
-EIP-6963; the page finds the registers owned by the account through the factory, asks for the data
-password, and shows overview, cylinders with their history, documents, customers, phones and settings.
-Each change is an EIP-712 request the extension describes and the owner confirms; the relayer sends it.
-The extension serves the page only with the factory and the site set in its catalog
+EIP-6963; the page finds the registers owned by the account through the factory. At the first sign-in
+it prepares the data key (password, 24 words); afterwards it asks for the data password, and shows
+overview, cylinders with their history, documents, customers, phones, settings and the data download.
+It locks after 30 minutes unused. Each change is an EIP-712 request the extension describes (from 0.5.1
+by its kind: password, customers, settings…) and the owner confirms; the relayer sends it. The
+extension serves the page only with the factory and the site set in its catalog
 (`extension/shared/catalog.js` in up-onboarding); `scripts/admin-demo.js` checks every request of the
 page against that catalog.
 
