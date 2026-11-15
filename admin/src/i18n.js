@@ -172,6 +172,7 @@ const T = {
     },
     footer: "GasTrace è un servizio di ChainIntegrate.",
     guide: "Guida",
+    support: "Assistenza",
   },
   en: {
     lang: "Italiano",
@@ -332,6 +333,7 @@ const T = {
     },
     footer: "GasTrace is a ChainIntegrate service.",
     guide: "Guide",
+    support: "Support",
   },
 };
 
