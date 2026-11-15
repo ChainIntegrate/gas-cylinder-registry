@@ -7,8 +7,9 @@ key, opened by the supplier's password (and held by the authorized phones: see
 the register from a web page; nobody at the supplier ever holds LYX.
 
 **Status: live on LUKSO mainnet for a demo** (Argonia Gas Tecnici, a fictional supplier). A first
-external review (2026-11-13) found issues that are being addressed; not yet suitable for real customer
-data.
+external review (2026-11-13) is closed for the demo: what was fixed, documented or planned is in
+[docs/security-review-2026-11.md](docs/security-review-2026-11.md). Before real customer data, version 2
+of the contracts and the owner's points listed there are needed.
 
 ## The parts
 
