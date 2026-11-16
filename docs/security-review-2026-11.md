@@ -37,7 +37,7 @@ change: planned before real use, [DESIGN.md §10.1](../DESIGN.md)), **Owner** (o
 | A07 | A relayer restart lost e-mails and states | **Fixed**: journal on disk, taken up at start | `56d7406` |
 | A09 · G-02 (part) | Plain caches on the phone; no idle lock; revoked phones kept their data | **Fixed**: caches sealed under a key derived from the data key; app locks after 10 minutes, page after 30; a revoked phone erases its keys and data | `f50a9b1` |
 | A05 · G-02 | A revoked phone, or an old password, can still read new data (the data key cannot be replaced) | **Version 2** (key epochs); until then documented, with company phones advised | `2ff8b8f`, `429e3d0` |
-| A01 · X-01 | Any key of the owner's account with SIGN can sign the register's owner operations | **Version 2** (administrator keys only for transfers, key wraps, phones); documented; the extension's side in up-onboarding | `2ff8b8f`, `429e3d0` |
+| A01 · X-01 | Any key of the owner's account with SIGN can sign the register's owner operations | **Partly fixed**: from extension 0.6.0 (2026-11-16) the owner's requests are confirmed only on an administrator computer, and the admin page says so when an access computer is refused; **Version 2** for the register's own check (administrator keys only for transfers, key wraps, phones) | `2ff8b8f`, `429e3d0` |
 | A11 | Multipart documents have no manifest | **Version 2** | `429e3d0` |
 | G-07 | Signatures without maximum validity, not cancellable | **Version 2** in the contract; the extension 0.5.1 already refuses more than seven days | `429e3d0` |
 | A21 | Removing or renaming a customer changed old documents | **Fixed**: archived, documents keep the name they were made with | `1cd101b` |

@@ -100,12 +100,18 @@ async function main() {
   // The simulated extension: EIP-6963 with ChainIntegrate Account's rdns; typed data checked against the catalog.
   const catalogChecks = [];
   let tampered = null; // the catalog's answer to a SetData whose values do not match its hash
+  let fromAccessComputer = false; // the next request comes from an "access" computer: refused (extension 0.6.0)
+  const signers = new Set(); // the catalog's signer for GasTrace's requests ("admin" from extension 0.6.0)
   await page.exposeFunction("__ext", async (method, params) => {
     if (method === "eth_requestAccounts" || method === "eth_accounts") return [owner];
     if (method === "eth_chainId") return "0x" + Number(chainId).toString(16);
     if (method === "eth_signTypedData_v4") {
       const typed = JSON.parse(params[1]);
       if (ethers.getAddress(params[0]) !== owner) throw new Error("other account");
+      if (fromAccessComputer) {
+        fromAccessComputer = false;
+        return { __error: { code: 4100, message: "Not allowed by ChainIntegrate Account (admin_only)." } };
+      }
       if (catalog) {
         // As the extension does: a first look names the registry values it needs, then the precise
         // description with the current values (UPCatalog.readCurrent), from extension-v0.5.1.
@@ -116,6 +122,7 @@ async function main() {
         }
         catalogChecks.push(c.ok ? `${typed.primaryType}: ${c.lines.map((l) => (typeof l === "string" ? l : l.it)).join(" | ")}` : `REFUSED ${typed.primaryType}: ${c.error}`);
         if (!c.ok) throw new Error("refused by the catalog: " + c.error);
+        signers.add(c.signer);
         if (typed.primaryType === "SetData" && !tampered) {
           // The same request with one value changed after the hash: the catalog must refuse it.
           const bad = JSON.parse(JSON.stringify(typed));
@@ -130,7 +137,13 @@ async function main() {
     throw new Error("method not allowed: " + method);
   });
   await page.addInitScript(() => {
-    const provider = { request: ({ method, params }) => window.__ext(method, params || []) };
+    const provider = {
+      request: async ({ method, params }) => {
+        const r = await window.__ext(method, params || []);
+        if (r && r.__error) throw Object.assign(new Error(r.__error.message), { code: r.__error.code });
+        return r;
+      },
+    };
     const info = { uuid: "00000000-0000-4000-8000-000000000001", name: "ChainIntegrate Account", icon: "data:,", rdns: "it.chainintegrate.account" };
     window.addEventListener("eip6963:requestProvider", () => window.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail: { info, provider } })));
   });
@@ -199,6 +212,13 @@ async function main() {
   await page.getByLabel("Nome dell'azienda").fill("Argonia Gas Tecnici");
   await page.getByLabel("Email dell'azienda (separate da virgola)").fill("ufficio@example.com, magazzino@example.com");
   await shot("settings");
+  // From an "access" computer of the account the extension refuses the owner's requests (A01 / X-01).
+  fromAccessComputer = true;
+  await click("Salva");
+  await see("Questa operazione si conferma da un computer amministratore del tuo account.");
+  const adminOnlyShown = true;
+  await page.getByLabel("Nome dell'azienda").fill("Argonia Gas Tecnici"); // as on the administrator computer
+  await page.getByLabel("Email dell'azienda (separate da virgola)").fill("ufficio@example.com, magazzino@example.com");
   await click("Salva");
   await done();
   await click("Clienti");
@@ -331,6 +351,8 @@ async function main() {
         !catalogChecks.some((c) => /non verificabile/.test(c))
       : true],
     ["values changed after the hash are refused (data_values_mismatch)", catalog && catalog.readCurrent ? tampered && tampered.error === "data_values_mismatch" : true],
+    ["from an access computer: the page says to use an administrator computer (A01)", adminOnlyShown],
+    ["the catalog's signer for GasTrace is the administrator (extension 0.6.0)", !catalog || [...signers].every((x) => x === "admin" || x == null)],
     ["every request accepted by the extension's catalog", catalog ? catalogChecks.length > 0 && catalogChecks.every((c) => !c.startsWith("REFUSED")) : true],
     ["no page errors", errors.length === 0],
   ];

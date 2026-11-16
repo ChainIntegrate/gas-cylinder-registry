@@ -206,7 +206,9 @@ upgradeable. Source verified on LUKSO's explorer (`scripts/verify-lukso.js`).
     `transferOwnershipSigned` then `acceptOwnershipSigned` by the new owner. An owner with LYX can also
     call `setOperator`, `transferOwnership`, `acceptOwnership` directly. `renounceOwnership` is disabled.
 - **Signatures**: `ecrecover` for keys, **ERC-1271** for accounts (a Universal Profile accepts a
-  signature from its controllers with the SIGN permission).
+  signature from its controllers with the SIGN permission). The ChainIntegrate Account extension
+  (0.6.0) confirms the owner's requests only on an administrator computer of the account (review A01 /
+  X-01); the register itself still accepts any SIGN key until version 2 (§10.1).
 - **Optimistic concurrency**: every write carries the hash of the value it replaces; if a cylinder
   changed meanwhile (two phones, an offline queue), the whole document is refused (`StaleValue`).
 - **Nonces** are unordered (a bitmap per signer, random 256-bit values): documents queued offline need
@@ -279,7 +281,8 @@ EIP-6963; the page finds the registers owned by the account through the factory.
 it prepares the data key (password, 24 words); afterwards it asks for the data password, and shows
 overview, cylinders with their history, documents, customers, phones, settings and the data download.
 It locks after 30 minutes unused. Each change is an EIP-712 request the extension describes (from 0.5.1
-by its kind: password, customers, settings…) and the owner confirms; the relayer sends it. The
+by its kind: password, customers, settings…) and the owner confirms on an administrator computer of the
+account (from 0.6.0; an access computer is refused and the page says so); the relayer sends it. The
 extension serves the page only with the factory and the site set in its catalog
 (`extension/shared/catalog.js` in up-onboarding); `scripts/admin-demo.js` checks every request of the
 page against that catalog.
@@ -294,10 +297,11 @@ page against that catalog.
   written by the owner, no new contract).
 - **Scale**: past a few thousand cylinders, an indexer of the register's events (Envio) instead of
   reading the logs from the page.
-- **Second device on an account**: done in the ChainIntegrate Account extension 0.5.0 ("Authorize
-  another computer"); GasTrace needed nothing for it. Any key of the account with SIGN can sign the
-  register's owner operations, ownership transfer included (review X-01): give other computers only to
-  people who may administer the register.
+- **Other computers on an account**: the extension authorizes them as administrator or access
+  computers; from 0.6.0 only an administrator computer confirms GasTrace's owner requests, and an access
+  key is limited to the catalog's calls (CALL with AllowedCalls; GasTrace makes no direct calls from the
+  account). An access key still has SIGN and, outside the extension, could sign the register's owner
+  operations (ERC-1271): accepted for the demo, closed by version 2 (§10.1, A01 / X-01).
 - **Export to the management software**: the admin page downloads the register as CSV (cylinders,
   movements, documents, customers); a format matching the supplier's invoicing software is to agree
   with them.
@@ -311,7 +315,7 @@ upgraded: existing ones keep the current contract, and the supplier starts on a 
 
 | Review | What version 2 changes |
 |---|---|
-| A01 / X-01 | Owner operations that matter (ownership transfer, key wraps, phones) accepted only from a key with administrator permissions on the owner's account, read from the account (LSP6), not from any SIGN key; possibly an ownership transfer that waits some days and can be cancelled, with an e-mail alert. The extension's side (access keys limited to the projects' calls) is up-onboarding's. |
+| A01 / X-01 | Owner operations that matter (ownership transfer, key wraps, phones) accepted only from a key with administrator permissions on the owner's account, read from the account (LSP6), not from any SIGN key; possibly an ownership transfer that waits some days and can be cancelled, with an e-mail alert. The extension's side is done in up-onboarding 0.6.0: owner requests confirmed only on administrator computers, access keys limited to the catalog's calls. |
 | A05 / G-02 | A replaceable data key: key epochs, new values under the new key, the remaining phones given it again; identifiers (token IDs, document IDs) kept on a separate, stable key. A revoked phone, or an old password or recovery code, then no longer reads new data. |
 | A06 | What a phone may write: movements of existing cylinders and new cylinders, not the information of a cylinder already registered. Corrections stay possible, by the owner: a "Correct" button in the admin page (a cylinder's gas, litres, owner), signed in the extension and kept in the cylinder's history. Today no tool offers it (the app writes a cylinder's information only when it registers it). |
 | A11 | A document's parts bound to a manifest (document ID, number of parts, signer, payload hash) recorded with the first part; parts that do not match are refused, and an interrupted document is shown as such. |

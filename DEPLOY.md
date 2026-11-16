@@ -16,7 +16,9 @@ demo register. App release v0.2.1 followed, with the update notice: the relayer 
 `/etc/gcr-relayer/app-release.json` (`appReleaseFile` in its configuration). On 2026-11-14 and 15 the
 external review's fixes were deployed ([docs/security-review-2026-11.md](docs/security-review-2026-11.md)):
 app releases up to v0.2.4 (signed in the protected `release` environment), the relayer with its journal
-in `/var/lib/gcr-relayer` (the systemd unit installed again), extension 0.5.1 on the owner's computer.
+in `/var/lib/gcr-relayer` (the systemd unit installed again), extension 0.5.1 on the owner's computer. On 2026-11-16 extension 0.6.0: the owner's requests are
+confirmed only on an administrator computer of the account (the demo account has administrator keys
+only).
 
 | Part | Where | Port |
 |---|---|---|

@@ -131,6 +131,7 @@ const T = {
     recording: "Registrazione in corso…",
     done: "Fatto.",
     refused: "Operazione annullata.",
+    adminOnly: "Questa operazione si conferma da un computer amministratore del tuo account.",
     failed: (m) => `Non riuscito: ${m}`,
     // Values
     movements: { delivery: "Consegna", collection: "Ritiro", to_refill: "Invio a ricarica", from_refill: "Rientro da ricarica", stock_count: "Giacenza", register: "Registrazione", defect: "Difettosa", retire: "Dismessa" },
@@ -293,6 +294,7 @@ const T = {
     recording: "Recording…",
     done: "Done.",
     refused: "Cancelled.",
+    adminOnly: "This operation is confirmed from an administrator computer of your account.",
     failed: (m) => `Failed: ${m}`,
     movements: { delivery: "Delivery", collection: "Collection", to_refill: "Sent to refill", from_refill: "Back from refill", stock_count: "Stock count", register: "Registration", defect: "Defective", retire: "Retired" },
     conditions: { full: "Full", empty: "Empty", defective: "Defective" },

@@ -19,7 +19,7 @@ permissions:
 
 env:
   # The ChainIntegrate Account extension's release whose catalog the admin page test checks against.
-  UPONBOARDING_REF: extension-v0.5.1
+  UPONBOARDING_REF: extension-v0.6.0
 
 jobs:
   test:

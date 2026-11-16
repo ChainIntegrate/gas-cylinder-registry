@@ -98,6 +98,9 @@ function say(text, cls = "ok") {
 
 function failText(e) {
   if (e && (e.code === 4001 || e.code === "ACTION_REJECTED")) return t().refused;
+  // Extension 0.6.0: the owner's requests are confirmed only on an administrator computer of the account
+  // (review A01 / X-01); from an "access" computer the extension answers 4100 "... (admin_only)".
+  if (e && /admin_only/.test(String(e.message || ""))) return t().adminOnly;
   return t().failed((e && (e.shortMessage || e.message)) || "?");
 }
 

@@ -12,11 +12,17 @@ that account owns. The register's owner is that account (a Universal Profile); i
 in the extension's own confirmation window, and the register checks the signature through the account
 (ERC-1271). The supplier never holds LYX: the relayer sends every change and pays for it.
 
-Any key of the account with the SIGN permission can sign in: a second computer can restore the same
-access from the extension's backup copy, or get a key of its own ("Authorize another computer", from
-extension 0.5.0). Every such key can sign **all** the register's owner operations, handing the register
-over included, whatever role the extension gives it (review X-01): authorize other computers only for
-people who may administer the register.
+A second computer can restore the same access from the extension's backup copy, or get a key of its
+own ("Authorize another computer" in the extension), as an **administrator** or an **access** computer.
+From extension 0.6.0 the owner's requests are confirmed only on an **administrator** computer: the
+confirmation window reads the computer's permissions on the account and, from an access computer,
+refuses GasTrace's requests (error 4100, `admin_only`); the page then says "This operation is confirmed
+from an administrator computer of your account" (review A01 / X-01). The accepted risk: an access key
+still has SIGN, so outside the extension it could sign for the account (ERC-1271) and the register would
+accept it. The register's own check (administrator keys only for handing the register over and for the
+key wraps) comes with version 2 of the contracts ([DESIGN.md §10.1](../DESIGN.md)); until then authorize
+other computers only for people who may administer the register. The demo account has administrator
+keys only.
 
 **The extension's catalog.** The extension serves only the sites and requests declared in its catalog
 (`extension/shared/catalog.js` in up-onboarding). For GasTrace the four requests (`SetOperator`,
@@ -29,15 +35,16 @@ const CYLINDER_FACTORY = "0xA128e7162fa8Dc779bf31EF569F06B53a499A50e";
 sites: ["gastrace.chainintegrate.it"],
 ```
 
-From extension 0.5.1 (review A02/G-04) the page sends each `SetData`'s values beside
+From extension 0.5.1 (review A02/G-04; the current release is 0.6.0) the page sends each `SetData`'s values beside
 the signed hash (`dataValues`, a top-level field of the `eth_signTypedData_v4` request that other
 wallets ignore): the extension recomputes the hash (a mismatch is refused), accepts only GasTrace's five
 kinds of data key, reads the registry's current values and says what the change is ("Prepare the
 encryption of the registry's data… (first time)", "Change the data password", "Add 1 customer or refill
 centre", "The company's settings"…), never both key wraps once they exist; it shows how long the request
 is valid and refuses more than seven days. The values are encrypted: the window names the kind of change,
-not its content. The browser test checks every request against the catalog of the release named in CI
-(`UPONBOARDING_REF`).
+not its content. From 0.6.0 the catalog also marks GasTrace's requests `signer: "admin"`. The browser
+test checks every request against the catalog of the release named in CI (`UPONBOARDING_REF`,
+`extension-v0.6.0`), and the page's message when an access computer is refused.
 
 ## What the supplier does there
 
