@@ -24,17 +24,20 @@ async function main() {
   let factoryAddress = process.env.FACTORY;
   if (!factoryAddress && fs.existsSync("gcr-registry.json")) factoryAddress = JSON.parse(fs.readFileSync("gcr-registry.json", "utf8")).factory;
   if (!factoryAddress) throw new Error("no factory: set FACTORY=0x… or run from the folder with gcr-registry.json");
-  const factory = await hre.ethers.getContractAt("GasCylinderRegistryFactory", factoryAddress);
+  // Version 2 factories answer VERSION() (contracts/GasCylinderRegistryFactoryV2.sol); version 1 does not.
+  const v2 = await (await hre.ethers.getContractAt(["function VERSION() view returns (uint256)"], factoryAddress)).VERSION().then((v) => v === 2n, () => false);
+  const [registryName, factoryName] = v2 ? ["GasCylinderRegistryV2", "GasCylinderRegistryFactoryV2"] : ["GasCylinderRegistry", "GasCylinderRegistryFactory"];
+  const factory = await hre.ethers.getContractAt(factoryName, factoryAddress);
   // The constructor's argument was the deployer, the factory's first owner; read it from the deployment
   // receipt's OwnershipTransferred event if the owner has changed since.
   const logs = await factory.queryFilter(factory.filters.OwnershipTransferred(hre.ethers.ZeroAddress));
   const firstOwner = logs.length ? logs[0].args.newOwner : await factory.owner();
   const implementation = await factory.implementation();
-  console.log(`factory ${factoryAddress} (first owner ${firstOwner}), implementation ${implementation}`);
-  await verify(implementation, [], "contracts/GasCylinderRegistry.sol:GasCylinderRegistry");
+  console.log(`factory ${factoryAddress} (version ${v2 ? 2 : 1}, first owner ${firstOwner}), implementation ${implementation}`);
+  await verify(implementation, [], `contracts/${registryName}.sol:${registryName}`);
   // force: LUKSO's explorer takes the factory for a proxy (it has an implementation() getter) and answers
   // "already verified" with the implementation's source; the factory's own needs submitting anyway.
-  await verify(factoryAddress, [firstOwner], "contracts/GasCylinderRegistryFactory.sol:GasCylinderRegistryFactory", true);
+  await verify(factoryAddress, [firstOwner], `contracts/${factoryName}.sol:${factoryName}`, true);
   const base = hre.network.config.chainId === 42 ? "https://explorer.execution.mainnet.lukso.network" : "https://explorer.execution.testnet.lukso.network";
   console.log(`\n${base}/address/${factoryAddress}?tab=contract\n${base}/address/${implementation}?tab=contract`);
 }

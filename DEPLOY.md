@@ -168,6 +168,31 @@ and its update on the owner's computer. Done in extension 0.4.3 (2026-11-13).
 2. **Settings**: the company's name and the supplier's e-mails. **Customers**: the customers and refill plants.
 3. **Phones**: the driver's app scans the setup QR, shows its code; authorize it; type the data password on the phone.
 
+## 8. Version 2 of the contracts (on your computer, owner tools)
+
+The factory of version 2 ([DESIGN.md §10.1](DESIGN.md)) is deployed on its own, with its own config
+file: the version 1 factory and the demo register stay as they are. Nothing uses the new factory until
+the app, the pages, the relayer and the extension's catalog move to it; no register is created now.
+
+```bash
+cd ~/gastrace-tools && git pull && npm ci
+node scripts/owner.js deploy-factory --version 2 --network lukso --config gcr-v2.json
+FACTORY=<the address it prints> npx hardhat run --network luksoMainnet scripts/verify-lukso.js
+node scripts/owner.js transfer-factory 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 --config gcr-v2.json
+```
+
+- The deployment is about 5.6 million gas, paid by ChainIntegrate's key (`chainintegrate.keystore.json`):
+  well under 1 LYX.
+- `deploy-factory` refuses a config file that already has a factory, so `gcr-registry.json` (version 1)
+  is never overwritten. `gcr-v2.json` holds the new factory's address, block and version.
+- `verify-lukso.js` recognises version 2 (`VERSION()`) and verifies `GasCylinderRegistryV2` and
+  `GasCylinderRegistryFactoryV2`.
+- `transfer-factory` hands the factory to ChainIntegrate's profile, as for version 1 (it asks for the last
+  six characters of the address).
+
+Tried on 2026-11-17 against a local chain with the same commands (deploy, a second deploy refused,
+transfer to a Universal Profile).
+
 ## Every update
 
 ```bash

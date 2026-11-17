@@ -25,6 +25,7 @@ license texts are in the packages themselves (`node_modules/<package>/LICENSE` a
 |---|---|---|---|
 | `hardhat`, `@nomicfoundation/hardhat-toolbox` | 2.x, 5.x | Compilation, tests | MIT |
 | `solc` | 0.8.28 | Solidity compiler (solc-js) | MIT |
+| `@lukso/lsp0-contracts`, `@lukso/lsp6-contracts` (with `lsp14`, `lsp20`, `lsp25`) | 0.16.3 (lsp25 0.15.5) | A real Universal Profile and Key Manager in version 2's tests; not in the deployed contracts | Apache-2.0 |
 | `ethers` | 6.x | Signing and encoding (tests, shared library) | MIT |
 
 ## App

@@ -19,7 +19,9 @@
     "@capacitor/android": "^8.5.2",
     "@capacitor/cli": "^8.5.2",
     "@capacitor/core": "^8.5.2",
+    "@lukso/lsp0-contracts": "^0.16.3",
     "@lukso/lsp4-contracts": "^0.17.3",
+    "@lukso/lsp6-contracts": "^0.16.3",
     "@lukso/lsp8-contracts": "^0.18.1",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@openzeppelin/contracts": "^4.9.6",
@@ -31,5 +33,8 @@
   "dependencies": {
     "ethers": "^6.17.0",
     "qrcode-generator": "^1.4.4"
+  },
+  "overrides": {
+    "@lukso/lsp25-contracts": "0.15.5"
   }
 }

@@ -24,7 +24,8 @@ Keys
   new-key <file>                     Create an encrypted key file (owner or ChainIntegrate) and show its address.
 
 ChainIntegrate (the factory's owner; also sends the owner's signed operations until the relayer exists)
-  deploy-factory                     Deploy the factory; writes its address to the config file.
+  deploy-factory [--version 2]       Deploy the factory; writes its address to the config file (a config
+                                     without a factory: use --config <new file> for version 2).
   transfer-factory <address>         Hand the factory over to ChainIntegrate's Universal Profile, so that
                                      registers are created from the operator page. One step, final: the
                                      address must be a Universal Profile, and you retype its end.
@@ -201,10 +202,13 @@ async function main() {
   }
 
   if (command === "deploy-factory") {
+    if (config.factory) throw new Error(`${configFile} already has a factory (${config.factory}); use --config <new file>`);
+    const version = Number(args.version || 1);
+    if (version !== 1 && version !== 2) throw new Error("--version 1 or 2");
     const deployer = await openKeystore(ciKeystore, "ChainIntegrate", provider);
-    console.log(`Deploying the factory on ${network} from ${deployer.address}...`);
-    const f = await O.deployFactory(deployer);
-    saveConfig(configFile, { ...config, network, chainintegrateKeystore: ciKeystore, factory: f.address, factoryBlock: f.block });
+    console.log(`Deploying the factory (version ${version}) on ${network} from ${deployer.address}...`);
+    const f = await O.deployFactory(deployer, version);
+    saveConfig(configFile, { ...config, network, chainintegrateKeystore: ciKeystore, factory: f.address, factoryBlock: f.block, factoryVersion: version });
     console.log(`Factory: ${f.address} (block ${f.block}), saved to ${configFile}`);
     return;
   }
@@ -268,7 +272,9 @@ async function main() {
     const now = getAddress(await factory.owner());
     if (now !== target) throw new Error(`not confirmed yet: check the factory's owner later (now ${now})`);
     saveConfig(configFile, { ...config, factoryOwner: target });
-    console.log(`The factory belongs to ${target}. Create registers from the operator page.`);
+    console.log(config.factoryVersion === 2
+      ? `The factory belongs to ${target}. Registers are created from the operator page once it moves to version 2.`
+      : `The factory belongs to ${target}. Create registers from the operator page.`);
     return;
   }
 

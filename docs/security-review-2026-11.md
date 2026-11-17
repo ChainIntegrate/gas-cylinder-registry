@@ -29,17 +29,17 @@ change: planned before real use, [DESIGN.md §10.1](../DESIGN.md)), **Owner** (o
 | G-06 · A17 | APK signing key exposed in CI; actions unpinned; nodemailer advisories | **Fixed**: tests read-only without secrets, signing in a separate job in the protected `release` environment; actions pinned by commit; nodemailer 10.5.0; the up-onboarding release pinned | `1f6b1e3`, `92aef85` |
 | A17 (rest) | Advisories in development-only packages | **Open, low**: build tools, not deployed | |
 | G-08 · A06 (part) | One unreadable value stopped the admin page | **Fixed**: values read one by one, problems counted | `9e88fef` |
-| A06 | A phone can rewrite a registered cylinder's information | **Version 2** (owner corrections kept) | `429e3d0`, `3fa7a9f` |
+| A06 | A phone can rewrite a registered cylinder's information | **Version 2**: in the version 2 contract (a phone writes it only when registering the cylinder; corrections by the owner) | `429e3d0`, `3fa7a9f`, version 2 |
 | G-10 · D-16 | No export for the office | **Fixed**: CSV download of cylinders, movements, documents, customers (formula injection neutralized) | `0bc15c3` |
 | X-02 | ChainIntegrate generated and saw the data password and recovery code | **Fixed**: registers created without a data key; the owner makes it at the first sign-in in the admin page | `56ba678` |
 | A02 · G-04 | The confirmation window could not tell a key change from a customer | **Fixed (GasTrace side)**: the page sends the values; extension 0.5.1 checks them and names each change | `92aef85` |
 | G-03 · A16 (part) | The relayer sent any text and PDF to ten addresses | **Fixed**: the phone signs the document's facts, the relayer writes the e-mail from a fixed template; no attachments, 8 recipients, a daily limit per registry | `f4f16a8` |
 | A07 | A relayer restart lost e-mails and states | **Fixed**: journal on disk, taken up at start | `56d7406` |
 | A09 · G-02 (part) | Plain caches on the phone; no idle lock; revoked phones kept their data | **Fixed**: caches sealed under a key derived from the data key; app locks after 10 minutes, page after 30; a revoked phone erases its keys and data | `f50a9b1` |
-| A05 · G-02 | A revoked phone, or an old password, can still read new data (the data key cannot be replaced) | **Version 2** (key epochs); until then documented, with company phones advised | `2ff8b8f`, `429e3d0` |
-| A01 · X-01 | Any key of the owner's account with SIGN can sign the register's owner operations | **Partly fixed**: from extension 0.6.0 (2026-11-16) the owner's requests are confirmed only on an administrator computer, and the admin page says so when an access computer is refused; **Version 2** for the register's own check (administrator keys only for transfers, key wraps, phones) | `2ff8b8f`, `429e3d0` |
-| A11 | Multipart documents have no manifest | **Version 2** | `429e3d0` |
-| G-07 | Signatures without maximum validity, not cancellable | **Version 2** in the contract; the extension 0.5.1 already refuses more than seven days | `429e3d0` |
+| A05 · G-02 | A revoked phone, or an old password, can still read new data (the data key cannot be replaced) | **Version 2** (key epochs: no contract change, the app and the page); until then documented, with company phones advised | `2ff8b8f`, `429e3d0` |
+| A01 · X-01 | Any key of the owner's account with SIGN can sign the register's owner operations | **Partly fixed**: from extension 0.6.0 (2026-11-16) the owner's requests are confirmed only on an administrator computer, and the admin page says so when an access computer is refused; **Version 2**: the register's own check, in the version 2 contract (administrator keys only for every owner operation, direct owner paths closed, ownership transfer after 3 days) | `2ff8b8f`, `429e3d0`, version 2 |
+| A11 | Multipart documents have no manifest | **Version 2**: in the version 2 contract (manifest, signer and parts fixed by the first part; `documentStatus`) | `429e3d0`, version 2 |
+| G-07 | Signatures without maximum validity, not cancellable | **Version 2**: in the version 2 contract (`validFrom`, seven days at most, `cancelNoncesSigned`); the extension 0.5.1 already refuses more than seven days | `429e3d0`, version 2 |
 | A21 | Removing or renaming a customer changed old documents | **Fixed**: archived, documents keep the name they were made with | `1cd101b` |
 | G-05 | Traffic analysis from public metadata | **Documented** ([DESIGN.md §4.5](../DESIGN.md)), mitigations listed, not implemented | `35b68f1` |
 | X-03 | Code served by ChainIntegrate handles the data key | **Documented** (DESIGN §5, "Who holds the data key") | `2ff8b8f` |
@@ -67,4 +67,6 @@ catalog, with the first sign-in and the 30-minute lock; the operator page). CI r
 pages at `f50a9b1` or later, app 0.2.4 announced and installed.
 
 A follow-up review should check the changed code and the deployed services against this table, and
-review version 2 of the contracts when it exists.
+review version 2 of the contracts (`contracts/GasCylinderRegistryV2.sol`, `GasCylinderRegistryFactoryV2.sol`,
+[DESIGN.md §10.1](../DESIGN.md)), deployed on its own on 2026-11 and used by the app, the page and the
+relayer once they move to it.

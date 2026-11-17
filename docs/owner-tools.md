@@ -37,6 +37,10 @@ npx hardhat run --network luksoMainnet scripts/verify-lukso.js     # source on L
 # Once, when the operator page is used: the factory to ChainIntegrate's Universal Profile
 node scripts/owner.js transfer-factory 0x<ChainIntegrate's profile>
 
+# Version 2 of the contracts (DESIGN.md §10.1): its own config file, then the same two steps
+node scripts/owner.js deploy-factory --version 2 --network lukso --config gcr-v2.json
+node scripts/owner.js transfer-factory 0x<ChainIntegrate's profile> --config gcr-v2.json
+
 # Per supplier, from the command line (or from the operator page, see admin.md):
 node scripts/owner.js create-registry --network lukso --name "Argonia Gas Tecnici" --symbol ARGCYL \
   --owner 0x<the account's address>

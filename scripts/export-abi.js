@@ -4,10 +4,10 @@
 const fs = require("fs");
 const path = require("path");
 
-for (const name of ["GasCylinderRegistry", "GasCylinderRegistryFactory"]) {
+for (const name of ["GasCylinderRegistry", "GasCylinderRegistryFactory", "GasCylinderRegistryV2", "GasCylinderRegistryFactoryV2"]) {
   const artifact = require(path.join(__dirname, "..", "artifacts", "contracts", `${name}.sol`, `${name}.json`));
   fs.writeFileSync(path.join(__dirname, "..", "shared", "abi", `${name}.json`), JSON.stringify(artifact.abi, null, 2) + "\n");
-  if (name === "GasCylinderRegistryFactory") {
+  if (name.startsWith("GasCylinderRegistryFactory")) {
     // The factory's bytecode, for the deployment command of the owner tools.
     fs.writeFileSync(path.join(__dirname, "..", "shared", "abi", `${name}.bytecode.json`), JSON.stringify({ bytecode: artifact.bytecode }) + "\n");
   }

@@ -10,7 +10,8 @@ supplier ever holds LYX.
 **Status: live on LUKSO mainnet for a demo** (Argonia Gas Tecnici, a fictional supplier). A first
 external review (2026-11-13) is closed for the demo: what was fixed, documented or planned is in
 [docs/security-review-2026-11.md](docs/security-review-2026-11.md). Before real customer data, version 2
-of the contracts and the owner's points listed there are needed.
+of the contracts (written and tested, [DESIGN.md §10.1](DESIGN.md)) must be adopted by the app, the
+pages and the relayer, and the owner's points listed there done.
 
 ## The parts
 
@@ -55,14 +56,15 @@ How it was published, step by step: [DEPLOY.md](DEPLOY.md).
 ## Repository
 
 ```
-contracts/   GasCylinderRegistry.sol, GasCylinderRegistryFactory.sol (and a test-only contract account)
+contracts/   GasCylinderRegistry.sol, GasCylinderRegistryFactory.sol (version 1, the demo); their V2 files (version 2,
+             DESIGN.md §10.1); test-only accounts (a mock, and LUKSO's LSP0 and LSP6 for version 2's tests)
 shared/      encryption, identifiers, formats, EIP-712, e-mail; used by the app, the page, the relayer, the tools
 app/         the drivers' app: logic, interface, native bridge, icon (built into app/www)
 android/     the Capacitor Android project: the phone key plugin (DeviceKeyPlugin), signing
 admin/       the admin and operator pages (src/), the users' guide (guida.html, guide.html), their build (www/, committed)
 relayer/     the relayer service, its systemd unit and configuration example
 scripts/     ChainIntegrate's tools, builds, the browser tests (ui-demo, admin-demo, operator-demo), source verification
-test/        contract, library, relayer, owner tools, app logic, admin export and phone vault tests (Hardhat)
+test/        contract (versions 1 and 2), library, relayer, owner tools, app logic, admin export and phone vault tests (Hardhat)
 tools/nginx/ the site's nginx configuration
 docs/        the guides of the app, the admin page and the tools; the external review's record
 ```

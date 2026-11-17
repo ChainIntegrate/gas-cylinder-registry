@@ -7,6 +7,7 @@ const { Contract, ContractFactory, getAddress, hexlify, randomBytes, id } = requ
 const S = require("../../shared");
 const REGISTRY_ABI = require("../../shared/abi/GasCylinderRegistry.json");
 const FACTORY_ABI = require("../../shared/abi/GasCylinderRegistryFactory.json");
+const FACTORY_V2_ABI = require("../../shared/abi/GasCylinderRegistryFactoryV2.json");
 
 const OWNER_DEADLINE_SECONDS = 3600;
 
@@ -108,10 +109,14 @@ async function scanLogs(ctx, filter, step = 50000) {
 // Factory and registry creation (ChainIntegrate)
 // ------------------------------------------------------------------------------------------------
 
-/** Deploys the factory (and with it the registry implementation), owned by `deployer`. */
-async function deployFactory(deployer) {
-  const { bytecode } = require("../../shared/abi/GasCylinderRegistryFactory.bytecode.json");
-  const factory = await new ContractFactory(FACTORY_ABI, bytecode, deployer).deploy(deployer.address);
+/**
+ * Deploys the factory (and with it the registry implementation), owned by `deployer`. `version` 2: the
+ * contracts of the external review (contracts/GasCylinderRegistryV2.sol, DESIGN.md §10.1).
+ */
+async function deployFactory(deployer, version = 1) {
+  const name = version === 2 ? "GasCylinderRegistryFactoryV2" : "GasCylinderRegistryFactory";
+  const { bytecode } = require(`../../shared/abi/${name}.bytecode.json`);
+  const factory = await new ContractFactory(version === 2 ? FACTORY_V2_ABI : FACTORY_ABI, bytecode, deployer).deploy(deployer.address);
   const receipt = await factory.deploymentTransaction().wait();
   return { address: await factory.getAddress(), block: receipt.blockNumber };
 }

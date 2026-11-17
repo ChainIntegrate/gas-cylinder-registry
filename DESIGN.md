@@ -180,7 +180,10 @@ counterparty slots rotated, phone keys renewed periodically.
 ## 6. Contracts
 
 `contracts/`, Solidity 0.8.28, on LUKSO's LSP8 (`@lukso/lsp8-contracts`) and OpenZeppelin. Not
-upgradeable. Source verified on LUKSO's explorer (`scripts/verify-lukso.js`).
+upgradeable. Source verified on LUKSO's explorer (`scripts/verify-lukso.js`). This section describes
+version 1, the contracts the app, the page and the relayer use today (the demo). Version 2
+(`GasCylinderRegistryV2.sol`, `GasCylinderRegistryFactoryV2.sol`), for the first real supplier, is in
+§10.1.
 
 ### 6.1 `GasCylinderRegistryFactory`
 
@@ -308,18 +311,62 @@ page against that catalog.
 
 ### 10.1 Before real use: version 2 of the contracts
 
-The current contracts serve the demo (Argonia Gas Tecnici, fictional data) and stay as they are. If a
-supplier adopts GasTrace, a new implementation and a new factory are deployed first, with the points of
-the external review (2026-11-13) that need a contract change. Registers are clones and cannot be
-upgraded: existing ones keep the current contract, and the supplier starts on a new register.
+Version 1 serves the demo (Argonia Gas Tecnici, fictional data) and stays as it is; its factory creates
+no new registers. Version 2 has the points of the external review (2026-11-13) that need a contract
+change: `contracts/GasCylinderRegistryV2.sol` and `contracts/GasCylinderRegistryFactoryV2.sol`, tested in
+`test/GasCylinderRegistryV2.test.js` (the owner as a key and as a real LUKSO account, LSP0 with an LSP6
+Key Manager, with an administrator and an access key as the extension makes them). Its factory is
+deployed on its own (DEPLOY.md, "Version 2"); the app, the admin page, the operator page, the relayer and
+the extension's catalog move to it before the first supplier's register (the list below). Registers are
+clones and cannot be upgraded: a supplier starts on a version 2 register.
+
+What version 2 does:
+
+- **Signatures**: every one carries `nonce`, `validFrom` and `deadline` (a `Validity` tuple), with
+  `deadline - validFrom` at most 7 days and `validFrom` at most an hour ahead of the chain's clock. EIP-712
+  domain `GasCylinderRegistry` version `2`: no version 1 signature is valid. `cancelNoncesSigned`: a phone
+  cancels its own unsent signatures by their nonces, the owner anyone's.
+- **The owner's signatures**: when the owner is a contract account, the key that signed (recovered from
+  the signature) must be an administrator of it: EDITPERMISSIONS in its LSP6 permissions, read from the
+  account (`isAdministrator`), or the account's direct owner. This holds for every owner operation:
+  phones, data (key wraps, customers, settings), documents the owner signs, nonce cancellation, ownership.
+  The direct `onlyOwner` paths of LSP8 and ERC725Y (`setData`, `setDataBatch`, `setDataForTokenId`,
+  `setDataBatchForTokenIds`, `transferOwnership`, the direct `setOperator`) are closed
+  (`UseSignedOperation`).
+- **Ownership**: `transferOwnershipSigned` starts a transfer; the new owner accepts it
+  (`acceptOwnershipSigned`, an administrator key of it) only after 3 days (`ownershipTransferReadyAt`);
+  in between the owner cancels it with `cancelOwnershipTransferSigned`. The relayer will e-mail the
+  owner when `OwnershipTransferStarted` is emitted.
+- **Phones and cylinder information**: an operator writes `GCRInfo` only while it is empty (registering a
+  cylinder); a registered cylinder's information is corrected by the owner, with a document (`corrects`
+  the earlier one) that stays in the history.
+- **Documents**: `DocumentPayload` gains `manifest` (not zero). The first recorded part fixes the
+  document's signer, number of parts and manifest; every other part must match (`DocumentMismatch`).
+  `documentStatus(docId)` gives signer, parts, parts recorded and manifest: fewer recorded than parts is
+  an interrupted document. The manifest the app computes: `keccak256(abi.encode(docId, parts,
+  partHashes))`, each part's hash being `hashPayload` of that part with `manifest` zero.
+- **The factory** creates registers with no data: `createRegistry(salt, owner, name, symbol)`.
+  `VERSION()` is 2 in both contracts.
+
+To do before the first supplier's register (the work after the deployment):
+
+- `shared/`: version 2's EIP-712 types (`validFrom`, the `Validity` tuple, the new operations) and the
+  manifest; A05's key epochs (below).
+- The app: `validFrom` in each signature, the manifest, the interrupted documents, cancelling a waiting
+  document, a phone receiving a new data key.
+- The admin page: the "Correct" button, the ownership transfer with its wait and cancellation, the new
+  data key (A05), cancelling a phone's waiting documents, interrupted documents.
+- The operator page and the owner tools: `createRegistry` with four arguments, the version 2 factory.
+- The relayer: version 2's ABI and factory, the e-mail when an ownership transfer starts.
+- The extension's catalog (up-onboarding): version 2's requests and factory.
 
 | Review | What version 2 changes |
 |---|---|
-| A01 / X-01 | Owner operations that matter (ownership transfer, key wraps, phones) accepted only from a key with administrator permissions on the owner's account, read from the account (LSP6), not from any SIGN key; possibly an ownership transfer that waits some days and can be cancelled, with an e-mail alert. The extension's side is done in up-onboarding 0.6.0: owner requests confirmed only on administrator computers, access keys limited to the catalog's calls. |
-| A05 / G-02 | A replaceable data key: key epochs, new values under the new key, the remaining phones given it again; identifiers (token IDs, document IDs) kept on a separate, stable key. A revoked phone, or an old password or recovery code, then no longer reads new data. |
+| A01 / X-01 | Every owner operation accepted only from a key with administrator permissions on the owner's account (EDITPERMISSIONS), read from the account (LSP6), not from any SIGN key; the direct owner paths closed; an ownership transfer that waits 3 days and can be cancelled, with an e-mail alert from the relayer. The extension's side is done in up-onboarding 0.6.0: owner requests confirmed only on administrator computers, access keys limited to the catalog's calls. |
+| A05 / G-02 | A replaceable data key: key epochs, new values under the new key, the remaining phones given it again; identifiers (token IDs, document IDs) kept on a separate, stable key. A revoked phone, or an old password or recovery code, then no longer reads new data. No contract change: each epoch's key wraps are owner data (`setDataSigned`, administrator keys only); the work is in `shared/`, the app and the admin page. |
 | A06 | What a phone may write: movements of existing cylinders and new cylinders, not the information of a cylinder already registered. Corrections stay possible, by the owner: a "Correct" button in the admin page (a cylinder's gas, litres, owner), signed in the extension and kept in the cylinder's history. Today no tool offers it (the app writes a cylinder's information only when it registers it). |
-| A11 | A document's parts bound to a manifest (document ID, number of parts, signer, payload hash) recorded with the first part; parts that do not match are refused, and an interrupted document is shown as such. |
-| G-07 | A maximum validity for signatures (seven days) checked by the contract, and a way for the owner and the phones to cancel an unsent signature (use a nonce). |
+| A11 | A document's parts bound to a manifest (document ID, number of parts, every part's hash), a signer and a number of parts, fixed by the first recorded part; parts that do not match are refused, and `documentStatus` shows an interrupted document. |
+| G-07 | A maximum validity for signatures (seven days from `validFrom`) checked by the contract, and `cancelNoncesSigned` for the owner and the phones to cancel an unsent signature. |
 
 The other points of the review are handled outside the contracts (relayer, app, admin page, extension):
 see the commits that name them (G-03 e-mails from a template, A07 the relayer's journal and A09 the
