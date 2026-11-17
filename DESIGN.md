@@ -354,6 +354,12 @@ To do before the first supplier's register (the work after the deployment):
   manifest; A05's key epochs (below).
 - The app: `validFrom` in each signature, the manifest, the interrupted documents, cancelling a waiting
   document, a phone receiving a new data key.
+- The cylinder's owner (`GCRInfo.owner`: the supplier or a customer). Today the app always writes
+  `supplier` and no tool lets anyone choose or change it. In the app, when a new cylinder is registered:
+  "ours" or "the customer's", proposing the document's customer (the delivery's customer, or where the
+  stock is counted). In the admin page, the "Correct" button also changes it. No contract change: the
+  register stores the information encrypted and never reads it; version 2 already lets a phone write it
+  only at registration and the owner correct it (A06). The guides and the tests follow.
 - The admin page: the "Correct" button, the ownership transfer with its wait and cancellation, the new
   data key (A05), cancelling a phone's waiting documents, interrupted documents.
 - The operator page and the owner tools: `createRegistry` with four arguments, the version 2 factory.
