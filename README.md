@@ -10,7 +10,7 @@ supplier ever holds LYX.
 **Status: live on LUKSO mainnet for a demo** (Argonia Gas Tecnici, a fictional supplier). A first
 external review (2026-11-13) is closed for the demo: what was fixed, documented or planned is in
 [docs/security-review-2026-11.md](docs/security-review-2026-11.md). Before real customer data, version 2
-of the contracts (written and tested, [DESIGN.md §10.1](DESIGN.md)) must be adopted by the app, the
+of the contracts (deployed on 2026-11-17, [DESIGN.md §10.1](DESIGN.md)) must be adopted by the app, the
 pages and the relayer, and the owner's points listed there done.
 
 ## The parts
@@ -48,6 +48,8 @@ How they fit together:
 | Operator page | https://gastrace.chainintegrate.it/operator.html (ChainIntegrate only) |
 | Users' guide | https://gastrace.chainintegrate.it/guida.html (Italian), [guide.html](https://gastrace.chainintegrate.it/guide.html) (English): the owner's page and the drivers' app in plain words |
 | Register implementation | [`0x3075ED17F09E0006cECC0D7e67Fe7E7A4Dc95b00`](https://explorer.execution.mainnet.lukso.network/address/0x3075ED17F09E0006cECC0D7e67Fe7E7A4Dc95b00) (source verified; registers are its clones) |
+| Factory, version 2 | [`0xd60146C03f288fCeEEdB90731f162fF57F7ebdd2`](https://explorer.execution.mainnet.lukso.network/address/0xd60146C03f288fCeEEdB90731f162fF57F7ebdd2) (block 8803983, source verified), owned by ChainIntegrate's Universal Profile `0x4a26…8c27`; no registers yet ([DESIGN.md §10.1](DESIGN.md)) |
+| Register implementation, version 2 | [`0xaC0D8EffB68C5FE9F291dd34570dD2f6c53026af`](https://explorer.execution.mainnet.lukso.network/address/0xaC0D8EffB68C5FE9F291dd34570dD2f6c53026af) (source verified) |
 | Demo register | [`0xEae1a8B84977694e5c9925028a23599bc345b801`](https://explorer.execution.mainnet.lukso.network/address/0xEae1a8B84977694e5c9925028a23599bc345b801), owned by Argonia Gas Tecnici's ChainIntegrate account `0xC335…D773` |
 | App | [Releases](https://github.com/ChainIntegrate/gas-cylinder-registry/releases) (`gastrace-v<version>.apk`) |
 

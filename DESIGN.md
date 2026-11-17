@@ -316,7 +316,8 @@ no new registers. Version 2 has the points of the external review (2026-11-13) t
 change: `contracts/GasCylinderRegistryV2.sol` and `contracts/GasCylinderRegistryFactoryV2.sol`, tested in
 `test/GasCylinderRegistryV2.test.js` (the owner as a key and as a real LUKSO account, LSP0 with an LSP6
 Key Manager, with an administrator and an access key as the extension makes them). Its factory is
-deployed on its own (DEPLOY.md, "Version 2"); the app, the admin page, the operator page, the relayer and
+deployed on its own (DEPLOY.md, "Version 2"): `0xd60146C03f288fCeEEdB90731f162fF57F7ebdd2` (block 8803983, 2026-11-17),
+implementation `0xaC0D8EffB68C5FE9F291dd34570dD2f6c53026af`, owned by ChainIntegrate's profile; the app, the admin page, the operator page, the relayer and
 the extension's catalog move to it before the first supplier's register (the list below). Registers are
 clones and cannot be upgraded: a supplier starts on a version 2 register.
 

@@ -68,5 +68,6 @@ pages at `f50a9b1` or later, app 0.2.4 announced and installed.
 
 A follow-up review should check the changed code and the deployed services against this table, and
 review version 2 of the contracts (`contracts/GasCylinderRegistryV2.sol`, `GasCylinderRegistryFactoryV2.sol`,
-[DESIGN.md §10.1](../DESIGN.md)), deployed on its own on 2026-11 and used by the app, the page and the
+[DESIGN.md §10.1](../DESIGN.md)), deployed on its own on 2026-11-17 (factory `0xd60146C03f288fCeEEdB90731f162fF57F7ebdd2`, implementation
+`0xaC0D8EffB68C5FE9F291dd34570dD2f6c53026af`) and used by the app, the page and the
 relayer once they move to it.

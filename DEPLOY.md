@@ -193,6 +193,11 @@ node scripts/owner.js transfer-factory 0x4a2605796e0d91A9667d6E30365aEEC384C48c2
 Tried on 2026-11-17 against a local chain with the same commands (deploy, a second deploy refused,
 transfer to a Universal Profile).
 
+Done on LUKSO mainnet on 2026-11-17: factory [`0xd60146C03f288fCeEEdB90731f162fF57F7ebdd2`](https://explorer.execution.mainnet.lukso.network/address/0xd60146C03f288fCeEEdB90731f162fF57F7ebdd2) (block 8803983), register implementation
+[`0xaC0D8EffB68C5FE9F291dd34570dD2f6c53026af`](https://explorer.execution.mainnet.lukso.network/address/0xaC0D8EffB68C5FE9F291dd34570dD2f6c53026af), both sources verified; owned by ChainIntegrate's profile
+`0x4a2605796e0d91A9667d6E30365aEEC384C48c27` (checked on the explorer: `owner`, `VERSION` 2,
+`registryCount` 0).
+
 ## Every update
 
 ```bash
