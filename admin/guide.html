@@ -28,6 +28,7 @@
       <h2>In this guide</h2>
       <ol>
         <li><a href="#how-it-works">How it works</a></li>
+        <li><a href="#activate">Activating GasTrace</a></li>
         <li><a href="#owner">For the owner</a>
           <ol>
             <li><a href="#first-sign-in">First sign-in</a></li>
@@ -36,16 +37,21 @@
             <li><a href="#customers">Customers and refill plants</a></li>
             <li><a href="#phones">Drivers' phones</a></li>
             <li><a href="#browsing">Cylinders and documents</a></li>
+            <li><a href="#periodic-test">Periodic test</a></li>
+            <li><a href="#correct">Correcting a cylinder</a></li>
             <li><a href="#download">Downloading the data</a></li>
+            <li><a href="#transfer">Handing the register to another account</a></li>
+            <li><a href="#new-key">Rare cases: changing the data key</a></li>
           </ol>
         </li>
         <li><a href="#driver">For the driver</a>
           <ol>
             <li><a href="#install">Installing the app</a></li>
             <li><a href="#setup">Setting up the phone</a></li>
+            <li><a href="#new-cylinder">A new cylinder</a></li>
             <li><a href="#delivery">Delivery and collection</a></li>
             <li><a href="#stock-count">Stock count</a></li>
-            <li><a href="#refill">Refill</a></li>
+            <li><a href="#refill">Refill and periodic test</a></li>
             <li><a href="#check">Checking a cylinder</a></li>
             <li><a href="#offline">No network: "To send"</a></li>
             <li><a href="#email">The document's e-mail</a></li>
@@ -59,40 +65,63 @@
 
     <section class="panel" id="how-it-works">
       <h2>How it works</h2>
-      <p>Each cylinder has its own record: gas, where it is, whether it is full, empty or defective, and all its movements. The records update themselves with each of the driver's documents.</p>
+      <p>Each cylinder has its own record: gas, who owns it, where it is, whether it is full, empty or defective, when its periodic test expires, and all its movements. The records update themselves with each of the driver's documents.</p>
       <ul>
         <li><strong>The owner</strong> uses the page <a href="./">gastrace.chainintegrate.it</a> on a computer: sees cylinders and documents, manages customers, phones and settings.</li>
-        <li><strong>The driver</strong> uses the GasTrace app on an Android phone: scans the cylinders' barcodes at delivery and collection.</li>
+        <li><strong>The driver</strong> uses the GasTrace app on an Android phone: scans the cylinders' barcodes at delivery, collection and refill.</li>
         <li>After each document an <strong>e-mail</strong> goes to the customer and to the company.</li>
         <li>The data is <strong>encrypted</strong>: only the owner's data password opens it. The company pays nothing per operation: ChainIntegrate takes care of it.</li>
       </ul>
+    </section>
+
+    <section class="panel" id="activate">
+      <h2>Activating GasTrace</h2>
+      <p>Done once, before anything else. You need:</p>
+      <ul>
+        <li>the company's <strong>ChainIntegrate account</strong>, already created;</li>
+        <li>the account's <strong>administrator computer</strong>: the one where you created the account, with the <strong>ChainIntegrate Account</strong> extension in the browser.</li>
+      </ul>
+      <ol>
+        <li>On the administrator computer open <a href="./">gastrace.chainintegrate.it</a> and press <strong>Sign in with ChainIntegrate Account</strong>.</li>
+        <li>The extension's window opens: check that the site is <code>gastrace.chainintegrate.it</code> and confirm.</li>
+        <li>The page says <strong>"GasTrace is not active yet for this account"</strong>.</li>
+        <li>Press <strong>Request activation</strong>: your e-mail program opens with a ready-made e-mail to <a href="mailto:info@chainintegrate.it">info@chainintegrate.it</a>, holding your account's details. Add the company name where shown and <strong>send</strong> it.</li>
+        <li>ChainIntegrate activates GasTrace and answers by e-mail: <strong>"GasTrace is active"</strong>.</li>
+        <li>Open <a href="./">gastrace.chainintegrate.it</a> again on the same computer and go on with the <a href="#first-sign-in">first sign-in</a>.</li>
+      </ol>
+      <p class="note">If no e-mail program opens when you press <strong>Request activation</strong>, press <strong>Copy the request</strong>, paste it in a new e-mail and send it to info@chainintegrate.it.</p>
+      <p class="warn">The request holds only your account's public details, which are not secret. Never send anyone, ChainIntegrate included, the account's recovery words, the data password or GasTrace's recovery code.</p>
+      <div class="shots">
+        <figure class="screen"><a href="guide-img/page-not-active.webp" target="_blank" rel="noopener"><img src="guide-img/page-not-active.webp" alt="GasTrace not active yet: Request activation" loading="lazy"></a><figcaption>GasTrace not active yet: Request activation</figcaption></figure>
+      </div>
     </section>
 
     <h2 class="part" id="owner">For the owner</h2>
 
     <section class="panel" id="first-sign-in">
       <h3>First sign-in</h3>
-      <p>Use the <strong>computer</strong> where the <strong>ChainIntegrate Account</strong> extension is installed in the browser, with the company's account.</p>
+      <p>After the e-mail "GasTrace is active", from the <strong>administrator computer</strong>:</p>
       <ol>
-        <li>Open <a href="./">gastrace.chainintegrate.it</a> and press <strong>Sign in with ChainIntegrate Account</strong>.</li>
-        <li>The extension's window opens: check that the site is <code>gastrace.chainintegrate.it</code> and confirm.</li>
-        <li>The page finds the company's cylinder register by itself. If there is more than one, choose the right one.</li>
-        <li><strong>The first time</strong> the page shows <strong>Prepare the register's data</strong>:
+        <li>Open <a href="./">gastrace.chainintegrate.it</a> and press <strong>Sign in with ChainIntegrate Account</strong>; confirm in the extension's window.</li>
+        <li>The page finds the company's cylinder register by itself and shows <strong>Prepare the register's data</strong>:
           <ul>
             <li>choose the <strong>data password</strong> (twice) and the language of the recovery code, then <strong>Continue</strong>;</li>
-            <li>the page makes the key that encrypts the data and shows the 24-word <strong>recovery code</strong>: write it down or print it at once;</li>
-            <li>type the two words it asks for and press <strong>Save and open the data</strong>, then confirm in the extension's window.</li>
+            <li>the page shows the 24-word <strong>recovery code</strong>: write it down by hand or print it at once;</li>
+            <li>type the two words it asks for;</li>
+            <li>tick the two confirmations: <strong>"I have kept the data password"</strong> and <strong>"I have written down or printed the 24 words and keep them away from the computer"</strong>;</li>
+            <li>press <strong>Save and open the data</strong> and confirm in the extension's window.</li>
           </ul>
           The password and the 24 words are made on your computer and only you see them: ChainIntegrate neither receives nor knows them.</li>
-        <li><strong>The following times</strong> type the data password and press <strong>Open</strong>. It takes a few seconds.</li>
+        <li>Go on with the <a href="#settings">settings</a>.</li>
       </ol>
+      <p><strong>The following times</strong> open the page, sign in, type the data password and press <strong>Open</strong>. It takes a few seconds.</p>
+      <p>Each change (a customer, a phone, the settings, a correction) is confirmed in the extension's window, from the administrator computer. Pressing Cancel there changes nothing. From a computer authorized only for "access" you can see the data but not change it.</p>
       <p class="note">If the page cannot find the extension, install it from <a href="https://account.chainintegrate.it/" target="_blank" rel="noopener">account.chainintegrate.it</a>, or open the page in the browser where it is installed.</p>
-      <p>Each change (a customer, a phone, the settings) is confirmed in the extension's window. Pressing Cancel there changes nothing.</p>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-connect.webp" target="_blank" rel="noopener"><img src="guide-img/page-connect.webp" alt="Signing in with the extension" loading="lazy"></a><figcaption>Signing in with the extension</figcaption></figure>
-        <figure class="screen"><a href="guide-img/page-keys.webp" target="_blank" rel="noopener"><img src="guide-img/page-keys.webp" alt="First sign-in: the data password" loading="lazy"></a><figcaption>First sign-in: choose the data password</figcaption></figure>
-        <figure class="screen"><a href="guide-img/page-recovery-code.webp" target="_blank" rel="noopener"><img src="guide-img/page-recovery-code.webp" alt="First sign-in: the recovery code" loading="lazy"></a><figcaption>First sign-in: the recovery code (blurred here), to write down at once</figcaption></figure>
-        <figure class="screen"><a href="guide-img/page-unlock.webp" target="_blank" rel="noopener"><img src="guide-img/page-unlock.webp" alt="The data password" loading="lazy"></a><figcaption>The following times: the data password</figcaption></figure>
+        <figure class="screen"><a href="guide-img/page-keys.webp" target="_blank" rel="noopener"><img src="guide-img/page-keys.webp" alt="First sign-in: choose the data password" loading="lazy"></a><figcaption>First sign-in: choose the data password</figcaption></figure>
+        <figure class="screen"><a href="guide-img/page-recovery-code.webp" target="_blank" rel="noopener"><img src="guide-img/page-recovery-code.webp" alt="First sign-in: the recovery code (blurred here), to write down at once" loading="lazy"></a><figcaption>First sign-in: the recovery code (blurred here), to write down at once</figcaption></figure>
+        <figure class="screen"><a href="guide-img/page-unlock.webp" target="_blank" rel="noopener"><img src="guide-img/page-unlock.webp" alt="The following times: the data password" loading="lazy"></a><figcaption>The following times: the data password</figcaption></figure>
       </div>
     </section>
 
@@ -100,7 +129,7 @@
       <h3>Data password and recovery code</h3>
       <ul>
         <li>The <strong>data password</strong> opens the cylinders' data. It stays in the page, is never sent anywhere, and is forgotten when the page closes. After <strong>30 minutes</strong> unused the page locks itself and asks for it again.</li>
-        <li>The <strong>recovery code</strong> is 24 words, shown once, at the first sign-in. Keep it printed in a safe place, away from the computer. Do not photograph it, e-mail it or give it to anyone: ChainIntegrate will never ask for it.</li>
+        <li>The <strong>recovery code</strong> is 24 words, shown only once. Keep it printed in a safe place, away from the computer. Do not photograph it, e-mail it or give it to anyone: ChainIntegrate will never ask for it.</li>
         <li>Lost the password: on the password screen press <strong>I lost the password</strong>, type the 24 words and choose a new password.</li>
         <li>To change it: <strong>Settings → Change password</strong>. Phones already set up keep working.</li>
       </ul>
@@ -112,7 +141,8 @@
       <h3>Settings (do these first)</h3>
       <ul>
         <li><strong>Company name</strong>: shown in the app and in the e-mails' subject. Until it is set, the app warns the driver.</li>
-        <li><strong>Your company's e-mails</strong>: the company's mailboxes (office, warehouse…) that receive a copy of every document, for all customers. Separate them with commas.</li>
+        <li><strong>Your company's e-mails</strong>: the company's mailboxes (office, warehouse…) that receive a copy of every document, for all customers, and the important notices about the register. Separate them with commas.</li>
+        <li><strong>Periodic test</strong>: every how many years it is due, for each gas (proposed: 10 years). Used to work out the expiry from the last test, or the last test from the expiry; for a single cylinder it can be changed with <a href="#correct">Correct</a>.</li>
       </ul>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-settings.webp" target="_blank" rel="noopener"><img src="guide-img/page-settings.webp" alt="Settings: the company's name and e-mails" loading="lazy"></a><figcaption>Settings: the company's name and e-mails</figcaption></figure>
@@ -123,9 +153,10 @@
       <h3>Customers and refill plants</h3>
       <ul>
         <li><strong>Customers → Add customer</strong>: name and e-mails. The customer's e-mails receive each document about them.</li>
-        <li><strong>Add refill plant</strong>: where the cylinders go to be refilled.</li>
+        <li><strong>Add refill plant</strong>: where the cylinders go to be refilled (and tested).</li>
         <li><strong>Edit</strong> changes the name or e-mails; <strong>Remove</strong> archives it: the app no longer offers it, and its documents keep its name.</li>
       </ul>
+      <p>Customers and refill plants can have <strong>their own cylinders</strong>: when the driver records a new cylinder, they choose who owns it (see <a href="#new-cylinder">A new cylinder</a>).</p>
       <p>The driver sees the updated list the next time the app is opened.</p>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-customers.webp" target="_blank" rel="noopener"><img src="guide-img/page-customers.webp" alt="Customers and refill plants" loading="lazy"></a><figcaption>Customers and refill plants</figcaption></figure>
@@ -141,7 +172,7 @@
         <li>You type that code in <strong>Authorize a phone</strong>, press <strong>Authorize</strong> and confirm in the extension.</li>
         <li>The app notices by itself and asks for the <strong>data password</strong>: you type it on the phone, once. The phone does not keep it.</li>
       </ol>
-      <p><strong>Revoke</strong> a phone that is lost, stolen, or belongs to a driver who no longer works with you: from then on it cannot record anything. At its first unlock after the revocation, with network, the app <strong>erases by itself</strong> the key and the data kept on the phone. A lost or stolen phone, though, may never be unlocked again: that is why company phones are better, wiped when they are returned.</p>
+      <p><strong>Revoke</strong> a phone that is lost, stolen, or belongs to a driver who no longer works with you: from then on it cannot record anything. At its first unlock after the revocation, with network, the app <strong>erases by itself</strong> the key and the data kept on the phone. That is enough: changing the data key is only for <a href="#new-key">rare cases</a>.</p>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-phones.webp" target="_blank" rel="noopener"><img src="guide-img/page-phones.webp" alt="Phones: the authorized phones, the code to type and the QR to scan (blurred here)" loading="lazy"></a><figcaption>Phones: the authorized phones, the code to type and the QR to scan (blurred here)</figcaption></figure>
       </div>
@@ -150,10 +181,11 @@
     <section class="panel" id="browsing">
       <h3>Cylinders and documents</h3>
       <ul>
-        <li><strong>Overview</strong>: how many cylinders at the depot, at customers, being refilled, defective; by gas; the latest documents.</li>
-        <li><strong>Cylinders</strong>: search by code, gas or customer. Click a cylinder to see its whole history, movement by movement.</li>
+        <li><strong>Overview</strong>: how many cylinders at the depot, at customers, being refilled, defective; by gas; how many with the periodic test expired or about to expire; the latest documents.</li>
+        <li><strong>Cylinders</strong>: search by code, gas, customer or owner. Click a cylinder to see its whole history, movement by movement, corrections included.</li>
         <li><strong>Documents</strong>: delivery notes, stock counts and refill notes, with their cylinders and the warnings the driver confirmed.</li>
       </ul>
+      <p>A large document leaves in several parts. If a part has not arrived yet, the document shows as <strong>Incomplete (2 of 3)</strong>: usually the phone finishes sending by itself as soon as it has network. If it stays incomplete, ask the driver to open the app with network; the cylinders of the parts already arrived are recorded anyway.</p>
       <p><strong>Refresh</strong> reloads the data after a new document.</p>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-overview.webp" target="_blank" rel="noopener"><img src="guide-img/page-overview.webp" alt="Overview" loading="lazy"></a><figcaption>Overview</figcaption></figure>
@@ -162,12 +194,33 @@
       </div>
     </section>
 
+    <section class="panel" id="periodic-test">
+      <h3>Periodic test</h3>
+      <p>Each cylinder has the <strong>date of its last test</strong> and its <strong>expiry</strong> (month and year). Writing one is enough, the one stamped on the cylinder: GasTrace works out the other with the years chosen in the <a href="#settings">settings</a> for that gas.</p>
+      <ul>
+        <li>The date is written when the driver records the cylinder, and updated when the cylinder <a href="#refill">comes back tested</a> from the refill plant.</li>
+        <li>In <strong>Cylinders</strong> you find the filters <strong>Test expired</strong>, <strong>Expiring within 3 months</strong> and <strong>Test to complete</strong> (cylinders recorded with an unreadable stamp).</li>
+        <li>If the driver delivers a cylinder whose test has expired, the app warns; the driver confirms and the warning goes into the document and the e-mail.</li>
+      </ul>
+    </section>
+
+    <section class="panel" id="correct">
+      <h3>Correcting a cylinder</h3>
+      <p>Once recorded, only the owner can change a cylinder's data. Open the cylinder and press <strong>Correct</strong>:</p>
+      <ul>
+        <li>gas and litres;</li>
+        <li>who owns it: the company, a customer or a refill plant;</li>
+        <li>last test or expiry, and every how many years it is due.</li>
+      </ul>
+      <p>Write the reason (for example "wrong gas when recorded"), press <strong>Save</strong> and confirm in the extension. The correction shows in the cylinder's history, with its date and reason: the earlier value does not disappear.</p>
+    </section>
+
     <section class="panel" id="download">
       <h3>Downloading the data</h3>
       <p>In <strong>Download data</strong> you can save the register's data on the computer, as files to open with Excel or LibreOffice (double-click the file):</p>
       <ul>
-        <li><strong>Cylinders</strong>: each cylinder with its gas, litres, owner, where it is, condition and last movement;</li>
-        <li><strong>Movements</strong>: one row for each cylinder of each document, oldest first;</li>
+        <li><strong>Cylinders</strong>: each cylinder with its gas, litres, owner, where it is, condition, last test, expiry and last movement;</li>
+        <li><strong>Movements</strong>: one row for each cylinder of each document, oldest first, corrections included;</li>
         <li><strong>Documents</strong>: one row per document, with how many cylinders were delivered, collected, counted or refilled;</li>
         <li><strong>Customers and refill plants</strong>: names and e-mails.</li>
       </ul>
@@ -178,6 +231,27 @@
       </div>
     </section>
 
+    <section class="panel" id="transfer">
+      <h3>Handing the register to another account</h3>
+      <p>Only needed if the company changes ChainIntegrate account. In <strong>Settings</strong> press <strong>Hand over the register</strong>, type the new account's address and confirm in the extension.</p>
+      <ul>
+        <li>For safety the handover completes only after <strong>3 days</strong>: the new account accepts it from its administrator computer.</li>
+        <li>The company's e-mails receive a notice at once. If you did not ask for it, press <strong>Cancel the handover</strong> and write to ChainIntegrate.</li>
+      </ul>
+    </section>
+
+    <section class="panel" id="new-key">
+      <h3>Rare cases: changing the data key</h3>
+      <p>For a phone that is lost, stolen or belongs to a driver who leaves, <strong>revoking it is enough</strong> in <strong>Phones</strong>: it cannot record anything any more, and opening the app still takes that phone's fingerprint or PIN.</p>
+      <p>Change the data key only if you think someone could still <strong>read</strong> the data without permission: someone knows the data password, has seen the 24 words, or has a revoked phone together with its PIN (for example a former driver who kept the phone).</p>
+      <ol>
+        <li>In <strong>Settings</strong> press <strong>Change the data key</strong>.</li>
+        <li>Choose a <strong>new data password</strong>: the page shows a <strong>new recovery code</strong> of 24 words. Write it down as the first time, tick the confirmations and confirm in the extension.</li>
+        <li>On each phone still authorized, the app asks for the new data password: you type it, once.</li>
+      </ol>
+      <p>From then on the new data can be read only with the new key; the old data stays readable with the new password. The old 24 words are no longer needed: destroy them.</p>
+    </section>
+
     <h2 class="part" id="driver">For the driver</h2>
 
     <section class="panel" id="install">
@@ -186,7 +260,7 @@
       <ol>
         <li>On the phone open <a href="https://github.com/ChainIntegrate/gas-cylinder-registry/releases/latest" target="_blank" rel="noopener">the latest version of GasTrace</a> and tap the <code>gastrace-v….apk</code> file to download it.</li>
         <li>Open the downloaded file. <strong>The first time</strong> Android says it cannot install apps from this source: tap <strong>Settings</strong>, turn on <strong>Allow from this source</strong>, go back and the installation goes on.</li>
-        <li><strong>Play Protect</strong> may offer to scan the app because it does not come from the Play Store: accept the scan, or tap <strong>More details → Install anyway</strong>. It is Google\'s check of apps that do not go through its store. Install only the file downloaded from this guide\'s link; for any other warning, or a file that came from elsewhere (e-mail, chat), stop and ask ChainIntegrate.</li>
+        <li><strong>Play Protect</strong> may offer to scan the app because it does not come from the Play Store: accept the scan, or tap <strong>More details → Install anyway</strong>. It is Google's check of apps that do not go through its store. Install only the file downloaded from this guide's link; for any other warning, or a file that came from elsewhere (e-mail, chat), stop and ask ChainIntegrate.</li>
       </ol>
       <p>The phone needs a <strong>screen lock</strong> (fingerprint, PIN or pattern): without it the app cannot protect its key.</p>
       <p class="warn">Never uninstall the app or clear its data: the phone's key would be lost and the phone would have to be set up again with the owner.</p>
@@ -201,12 +275,24 @@
         <li>Once the owner has authorized it, the app asks for the <strong>data password</strong>: the owner types it.</li>
       </ol>
       <p>From then on open the app with <strong>Unlock with fingerprint or PIN</strong>. After <strong>10 minutes</strong> unused, or in the background, the app locks itself: it opens again with fingerprint or PIN, and a document left half-made comes back. What the phone keeps (customers, documents to send) is encrypted: without fingerprint or PIN it cannot be read.</p>
+      <p>If the owner changes the data key, the app asks for the password again when opened: the owner types it.</p>
       <div class="shots phones">
         <figure class="phone"><a href="guide-img/app-setup.webp" target="_blank" rel="noopener"><img src="guide-img/app-setup.webp" alt="1. Scan the code" loading="lazy"></a><figcaption>1. Scan the code</figcaption></figure>
         <figure class="phone"><a href="guide-img/app-phone-code.webp" target="_blank" rel="noopener"><img src="guide-img/app-phone-code.webp" alt="2–3. The phone's code" loading="lazy"></a><figcaption>2–3. The phone's code</figcaption></figure>
         <figure class="phone"><a href="guide-img/app-password.webp" target="_blank" rel="noopener"><img src="guide-img/app-password.webp" alt="4. The data password" loading="lazy"></a><figcaption>4. The data password</figcaption></figure>
         <figure class="phone"><a href="guide-img/app-home.webp" target="_blank" rel="noopener"><img src="guide-img/app-home.webp" alt="Ready: the home screen" loading="lazy"></a><figcaption>Ready: the home screen</figcaption></figure>
       </div>
+    </section>
+
+    <section class="panel" id="new-cylinder">
+      <h3>A new cylinder</h3>
+      <p>When you scan a cylinder never recorded before (in a delivery, a stock count or a refill), the app asks:</p>
+      <ul>
+        <li><strong>Gas</strong>, and the <strong>litres</strong> if you like;</li>
+        <li><strong>Who owns it</strong>: <strong>Ours</strong> (proposed), <strong>The customer's</strong> (the document's customer) or <strong>A refill plant's</strong> (choose which);</li>
+        <li><strong>Periodic test</strong>: choose <strong>Last test</strong> or <strong>Expiry</strong>, depending on what is stamped on the cylinder, and type month and year; the app works out the other date. If the stamp cannot be read tap <strong>Unreadable</strong>: the owner finds it under "Test to complete".</li>
+      </ul>
+      <p>These details are written only once. If you made a mistake, tell the owner: they correct it from their page.</p>
     </section>
 
     <section class="panel" id="delivery">
@@ -220,8 +306,8 @@
             <li>a cylinder that was already at this customer is a <strong>collection</strong> (empty; full or defective can be chosen).</li>
           </ul>
         </li>
-        <li>For a <strong>new cylinder</strong> choose the gas (and the litres if you like).</li>
-        <li>If a <strong>warning</strong> appears (for example "Recorded at another customer"), check it and tap <strong>I confirm the warnings</strong>: they are listed in the e-mail too.</li>
+        <li>For a new cylinder answer the questions of <a href="#new-cylinder">A new cylinder</a>.</li>
+        <li>If a <strong>warning</strong> appears (for example "Recorded at another customer", "Owned by another customer", "Test expired"), check it and tap <strong>I confirm the warnings</strong>: they are listed in the e-mail too.</li>
         <li>Type the <strong>delivery note number</strong>, check the summary and who gets the e-mail (you can add an address), then <strong>Send</strong> and confirm with fingerprint or PIN.</li>
       </ol>
       <p>"Recorded" means the document is saved; then the app says whether the e-mail left.</p>
@@ -237,7 +323,7 @@
       <p>Used at the start, to record the cylinders already at customers or refill plants, and whenever a count is needed.</p>
       <ol>
         <li>Tap <strong>Stock count</strong> and choose the customer or plant.</li>
-        <li>Scan all the cylinders there; for new ones choose the gas.</li>
+        <li>Scan all the cylinders there; for new ones answer the questions of <a href="#new-cylinder">A new cylinder</a>.</li>
         <li><strong>Send</strong>. No document number is needed and no e-mail leaves, unless you add an address.</li>
       </ol>
       <div class="shots phones">
@@ -246,13 +332,15 @@
     </section>
 
     <section class="panel" id="refill">
-      <h3>Refill</h3>
-      <p>Tap <strong>Refill</strong> and choose the refill plant. Scan the cylinders: those at the depot are <strong>sent to refill</strong>, those that were at that plant are <strong>back from refill</strong>. Type the document number and send.</p>
+      <h3>Refill and periodic test</h3>
+      <p>Tap <strong>Refill</strong> and choose the refill plant. Scan the cylinders: those at the depot are <strong>sent to refill</strong>, those that were at that plant are <strong>back from refill</strong>.</p>
+      <p>For a cylinder that comes back <strong>tested</strong>, tap <strong>Tested</strong> on its line: the app proposes the current month as the last test. If the stamp says otherwise, correct it, or choose <strong>Expiry</strong> and type the stamped one.</p>
+      <p>Type the document number and send.</p>
     </section>
 
     <section class="panel" id="check">
       <h3>Checking a cylinder</h3>
-      <p><strong>Check a cylinder</strong>: scan the code and see the gas, where it is, its condition and last movement. It records nothing.</p>
+      <p><strong>Check a cylinder</strong>: scan the code and see the gas, who owns it, where it is, its condition, the test expiry and the last movement. It records nothing.</p>
       <div class="shots phones">
         <figure class="phone"><a href="guide-img/app-check.webp" target="_blank" rel="noopener"><img src="guide-img/app-check.webp" alt="Check a cylinder" loading="lazy"></a><figcaption>Check a cylinder</figcaption></figure>
       </div>
@@ -260,14 +348,14 @@
 
     <section class="panel" id="offline">
       <h3>No network: "To send"</h3>
-      <p>Without signal, or when the service is busy, the document is saved on the phone and leaves by itself as soon as it can. The home screen shows <strong>To send (n)</strong>: there you can see them, send them with <strong>Send now</strong> or discard them. Recorded documents whose e-mail did not leave stay there too, with <strong>Send from the phone</strong>; once you sent it, tap <strong>E-mail handled: remove</strong>.</p>
+      <p>Without signal, or when the service is busy, the document is saved on the phone and leaves by itself as soon as it can. The home screen shows <strong>To send (n)</strong>: there you can see them, send them with <strong>Send now</strong> or <strong>cancel</strong> them. A cancelled document can no longer be recorded. Recorded documents whose e-mail did not leave stay there too, with <strong>Send from the phone</strong>; once you sent it, tap <strong>E-mail handled: remove</strong>.</p>
       <p>A waiting document can be refused when it leaves: if meanwhile someone else recorded one of the same cylinders ("A cylinder changed in the meantime"), if more than seven days went by ("Document expired"), or if the phone was revoked. When no part was recorded, <strong>Make the document again</strong> appears: the app reopens it with the same customer, number and cylinders, read again with their current state. Check the lines and send.</p>
-      <p>A document too large (roughly more than 80 cylinders) does not leave: the app says so before signing. Split it into two documents.</p>
+      <p>A large document leaves in several parts; if it stops, the app sends the missing parts by itself as soon as it has network. A document too large (roughly more than 80 cylinders) does not leave: the app says so before signing. Split it into two documents.</p>
     </section>
 
     <section class="panel" id="email">
       <h3>The document's e-mail</h3>
-      <p>After each delivery note or refill note an e-mail goes to the customer's e-mails, the company's e-mails and any address added in the document. If the app says the e-mail did not leave, or it does not know whether it left, tap <strong>Send from the phone</strong>: your e-mail app opens with the text ready.</p>
+      <p>After each delivery note or refill note an e-mail goes to the customer's e-mails, the company's e-mails and any address added in the document, with the cylinders and the confirmed warnings. If the app says the e-mail did not leave, or it does not know whether it left, tap <strong>Send from the phone</strong>: your e-mail app opens with the text ready.</p>
     </section>
 
     <section class="panel" id="update">
@@ -281,10 +369,16 @@
     <h2 class="part" id="problems">Common problems</h2>
 
     <section class="panel faq">
+      <h3>"GasTrace is not active yet for this account"</h3>
+      <p>The register has not been created yet: follow <a href="#activate">Activating GasTrace</a>. If you already sent the request, wait for the e-mail "GasTrace is active". If you already received it, check that you opened the page from the computer and with the company account you sent the request from.</p>
       <h3>"A cylinder changed in the meantime"</h3>
       <p>Someone recorded the same cylinder after you scanned it. Make the document again: the app proposes the updated movements.</p>
       <h3>"This document is already recorded"</h3>
       <p>The same document number was already sent. Look in "To send", or ask the owner to look in Documents.</p>
+      <h3>"Owned by another customer"</h3>
+      <p>The cylinder is recorded as owned by a customer other than the one of the delivery. Check that you took the right cylinder; if you deliver it anyway, confirm the warning. If the owner is wrong, the owner of the register corrects it.</p>
+      <h3>"Test expired"</h3>
+      <p>The periodic test's expiry has passed. Decide with the owner whether to deliver it; if you do, confirm the warning: it shows in the document and in the e-mail.</p>
       <h3>"This phone is no longer authorized"</h3>
       <p>The owner revoked it: the app erased the phone's key and data. If that was a mistake, set it up again with the owner.</p>
       <h3>Phone lost, stolen or replaced</h3>
@@ -296,7 +390,9 @@
       <h3>The app asks for fingerprint or PIN again</h3>
       <p>After 10 minutes unused, or in the background, the app locks to protect the data: unlock it with fingerprint or PIN. A document left half-made comes back.</p>
       <h3>"This operation is confirmed from an administrator computer of your account"</h3>
-      <p>Changes to the register (customers, phones, settings, password) are confirmed only from an <strong>administrator</strong> computer of the company's account. From a computer authorized only for "access" you can see the data but not change it: use the administrator computer.</p>
+      <p>Changes to the register (customers, phones, settings, password, corrections) are confirmed only from an <strong>administrator</strong> computer of the company's account. From a computer authorized only for "access" you can see the data but not change it: use the administrator computer.</p>
+      <h3>"Another computer changed this"</h3>
+      <p>While you were editing a customer or the settings, someone changed it from another computer. The page shows the updated value: check it and make your change again if needed.</p>
       <h3>"Wrong password"</h3>
       <p>Check upper case and the keyboard. If it is lost, use <strong>I lost the password</strong> with the recovery code.</p>
       <h3>Anything else</h3>

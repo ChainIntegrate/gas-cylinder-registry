@@ -152,3 +152,5 @@ select { width: 100%; font: inherit; color: var(--text); background: var(--field
 .guide figcaption { color: var(--dim); font-size: 13px; margin-top: 6px; }
 @media print { .guide .top-actions, .guide .toc { display: none; } .guide .panel { box-shadow: none; break-inside: avoid; } }
 footer a { color: var(--accent); }
+label.confirm { color: var(--text); font-size: 14px; display: flex; gap: 8px; align-items: flex-start; }
+label.confirm input { width: auto; margin-top: 2px; }

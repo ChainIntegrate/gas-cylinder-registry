@@ -249,7 +249,7 @@ async function prepareSetup(p1, p2, language) {
   render();
   try {
     const prepared = await O.prepareKeys(st.reg.address, p1, language);
-    st.setup = { prepared, checks: [1 + Math.floor(Math.random() * 12), 13 + Math.floor(Math.random() * 12)], answers: ["", ""] };
+    st.setup = { prepared, checks: [1 + Math.floor(Math.random() * 12), 13 + Math.floor(Math.random() * 12)], answers: ["", ""], confirmed: [false, false] };
   } catch (e) {
     st.msg = { text: failText(e), cls: "err" };
   }
@@ -261,6 +261,7 @@ async function finishSetup() {
   const p = st.setup;
   const words = p.prepared.recoveryCode.split(" ");
   if (p.answers.some((w, i) => w.trim().toLowerCase() !== words[p.checks[i] - 1])) return say(t().checkFail, "err");
+  if (!p.confirmed.every(Boolean)) return say(t().confirmMissing, "err");
   st.msg = null;
   st.busy = t().confirmInExtension;
   render();
@@ -416,8 +417,35 @@ function viewChoose() {
   return h("section", { class: "panel" }, h("h2", {}, tx.chooseRegistry), st.registries.map((r) => btn(r.name, () => chooseRegistry(r), "big")));
 }
 
+/**
+ * An account without a register: GasTrace is not active yet. The owner sends ChainIntegrate a ready-made
+ * request with the account's address (not a secret), by e-mail or copied into one. The address is in the
+ * request only, not on screen (no technical words in the page).
+ */
+const SUPPORT_EMAIL = "info@chainintegrate.it";
+
 function viewNoRegistry() {
-  return h("section", { class: "panel" }, h("p", {}, t().noRegistry));
+  const tx = t();
+  const body = tx.requestBody(st.account);
+  const mailto = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(tx.requestSubject)}&body=${encodeURIComponent(body)}`;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(`${SUPPORT_EMAIL}\n${tx.requestSubject}\n\n${body}`);
+      say(tx.requestCopied);
+    } catch {
+      say(tx.copyFailed, "err");
+    }
+  };
+  return h(
+    "section",
+    { class: "panel narrow" },
+    h("h2", {}, tx.notActiveTitle),
+    h("p", {}, tx.notActiveIntro),
+    h("div", { class: "row" },
+      h("a", { class: "button primary", href: mailto }, tx.requestActivation),
+      btn(tx.copyRequest, copy, "ghost")),
+    h("p", { class: "warn" }, tx.neverSend)
+  );
 }
 
 function viewSetupKeys() {
@@ -451,6 +479,10 @@ function viewSetupKeys() {
     btn(tx.print, () => window.print(), "ghost"),
     h("label", {}, tx.check(p.checks[0]), check(0)),
     h("label", {}, tx.check(p.checks[1]), check(1)),
+    [tx.confirmPassword, tx.confirmWords].map((text, i) =>
+      h("label", { class: "confirm" },
+        h("input", { type: "checkbox", checked: p.confirmed[i], onchange: (e) => (p.confirmed[i] = e.target.checked) }),
+        " ", text)),
     h("div", { class: "row" },
       btn(tx.back, () => { p.prepared.dek.fill(0); st.setup = null; st.msg = null; render(); }, "ghost"),
       btn(tx.keysSave, finishSetup, "primary"))

@@ -28,6 +28,7 @@
       <h2>In questa guida</h2>
       <ol>
         <li><a href="#come-funziona">Come funziona</a></li>
+        <li><a href="#attivare">Attivare GasTrace</a></li>
         <li><a href="#titolare">Per il titolare</a>
           <ol>
             <li><a href="#primo-accesso">Primo accesso</a></li>
@@ -36,16 +37,21 @@
             <li><a href="#clienti">Clienti e centri di ricarica</a></li>
             <li><a href="#telefoni">Telefoni degli autisti</a></li>
             <li><a href="#consultare">Bombole e documenti</a></li>
+            <li><a href="#collaudo">Collaudo</a></li>
+            <li><a href="#correggere">Correggere una bombola</a></li>
             <li><a href="#scaricare">Scaricare i dati</a></li>
+            <li><a href="#cedere">Cedere il registro a un altro account</a></li>
+            <li><a href="#nuova-chiave">Casi rari: cambiare la chiave dei dati</a></li>
           </ol>
         </li>
         <li><a href="#autista">Per l'autista</a>
           <ol>
             <li><a href="#installare">Installare l'app</a></li>
             <li><a href="#configurare">Configurare il telefono</a></li>
+            <li><a href="#nuova-bombola">Una bombola nuova</a></li>
             <li><a href="#consegna">Consegna e ritiro</a></li>
             <li><a href="#giacenze">Giacenze</a></li>
-            <li><a href="#ricarica">Ricarica</a></li>
+            <li><a href="#ricarica">Ricarica e collaudo</a></li>
             <li><a href="#controlla">Controllare una bombola</a></li>
             <li><a href="#senza-rete">Senza rete: "Da inviare"</a></li>
             <li><a href="#mail">La mail del documento</a></li>
@@ -59,35 +65,58 @@
 
     <section class="panel" id="come-funziona">
       <h2>Come funziona</h2>
-      <p>Ogni bombola ha la sua scheda: gas, dove si trova, se è piena, vuota o difettosa, e tutti i suoi movimenti. Le schede si aggiornano da sole a ogni documento dell'autista.</p>
+      <p>Ogni bombola ha la sua scheda: gas, di chi è, dove si trova, se è piena, vuota o difettosa, quando scade il collaudo, e tutti i suoi movimenti. Le schede si aggiornano da sole a ogni documento dell'autista.</p>
       <ul>
         <li><strong>Il titolare</strong> usa la pagina <a href="./">gastrace.chainintegrate.it</a> dal computer: vede le bombole e i documenti, gestisce clienti, telefoni e impostazioni.</li>
-        <li><strong>L'autista</strong> usa l'app GasTrace sul telefono Android: inquadra il codice a barre delle bombole alla consegna e al ritiro.</li>
+        <li><strong>L'autista</strong> usa l'app GasTrace sul telefono Android: inquadra il codice a barre delle bombole alla consegna, al ritiro e alla ricarica.</li>
         <li>Dopo ogni documento parte una <strong>mail</strong> al cliente e all'azienda.</li>
         <li>I dati sono <strong>cifrati</strong>: si leggono solo con la password dei dati del titolare. Nessun costo per operazione a carico dell'azienda: lo gestisce ChainIntegrate.</li>
       </ul>
+    </section>
+
+    <section class="panel" id="attivare">
+      <h2>Attivare GasTrace</h2>
+      <p>Si fa una volta sola, prima di tutto il resto. Ti servono:</p>
+      <ul>
+        <li>l'<strong>account ChainIntegrate</strong> dell'azienda, già creato;</li>
+        <li>il <strong>computer amministratore</strong> dell'account: quello su cui hai creato l'account, con l'estensione <strong>ChainIntegrate Account</strong> nel browser.</li>
+      </ul>
+      <ol>
+        <li>Sul computer amministratore apri <a href="./">gastrace.chainintegrate.it</a> e premi <strong>Accedi con ChainIntegrate Account</strong>.</li>
+        <li>Si apre la finestra dell'estensione: controlla che il sito sia <code>gastrace.chainintegrate.it</code> e conferma.</li>
+        <li>La pagina dice <strong>"GasTrace non è ancora attivo per questo account"</strong>.</li>
+        <li>Premi <strong>Richiedi l'attivazione</strong>: si apre il tuo programma di posta con una mail già scritta per <a href="mailto:info@chainintegrate.it">info@chainintegrate.it</a>, con dentro i dati del tuo account. Aggiungi il nome dell'azienda dove indicato e <strong>invia</strong>.</li>
+        <li>ChainIntegrate attiva GasTrace e ti risponde per mail: <strong>"GasTrace è attivo"</strong>.</li>
+        <li>Riapri <a href="./">gastrace.chainintegrate.it</a> sullo stesso computer e prosegui con il <a href="#primo-accesso">primo accesso</a>.</li>
+      </ol>
+      <p class="note">Se premendo <strong>Richiedi l'attivazione</strong> non si apre nessun programma di posta, premi <strong>Copia la richiesta</strong>, incollala in una mail nuova e mandala a info@chainintegrate.it.</p>
+      <p class="warn">Nella richiesta ci sono solo i dati pubblici del tuo account, che non sono segreti. Non mandare mai a nessuno, nemmeno a ChainIntegrate, le parole di recupero dell'account, la password dei dati o il codice di recupero di GasTrace.</p>
+      <div class="shots">
+        <figure class="screen"><a href="guide-img/page-not-active.webp" target="_blank" rel="noopener"><img src="guide-img/page-not-active.webp" alt="GasTrace non ancora attivo: Richiedi l'attivazione" loading="lazy"></a><figcaption>GasTrace non ancora attivo: Richiedi l'attivazione</figcaption></figure>
+      </div>
     </section>
 
     <h2 class="part" id="titolare">Per il titolare</h2>
 
     <section class="panel" id="primo-accesso">
       <h3>Primo accesso</h3>
-      <p>Serve il <strong>computer</strong> su cui hai installato l'estensione <strong>ChainIntegrate Account</strong> nel browser, con l'account dell'azienda.</p>
+      <p>Dopo la mail "GasTrace è attivo", dal <strong>computer amministratore</strong>:</p>
       <ol>
-        <li>Apri <a href="./">gastrace.chainintegrate.it</a> e premi <strong>Accedi con ChainIntegrate Account</strong>.</li>
-        <li>Si apre la finestra dell'estensione: controlla che il sito sia <code>gastrace.chainintegrate.it</code> e conferma.</li>
-        <li>La pagina trova da sola il registro delle bombole dell'azienda. Se ne hai più di uno, scegli quello giusto.</li>
-        <li><strong>La prima volta</strong> la pagina mostra <strong>Prepara i dati del registro</strong>:
+        <li>Apri <a href="./">gastrace.chainintegrate.it</a> e premi <strong>Accedi con ChainIntegrate Account</strong>; conferma nella finestra dell'estensione.</li>
+        <li>La pagina trova da sola il registro delle bombole dell'azienda e mostra <strong>Prepara i dati del registro</strong>:
           <ul>
             <li>scegli la <strong>password dei dati</strong> (due volte) e la lingua del codice di recupero, poi <strong>Continua</strong>;</li>
-            <li>la pagina crea la chiave che cifra i dati e mostra il <strong>codice di recupero</strong> di 24 parole: scrivilo o stampalo subito;</li>
-            <li>riscrivi le due parole che ti chiede e premi <strong>Salva e apri i dati</strong>, poi conferma nella finestra dell'estensione.</li>
+            <li>la pagina mostra il <strong>codice di recupero</strong> di 24 parole: scrivilo a mano o stampalo subito;</li>
+            <li>riscrivi le due parole che ti chiede;</li>
+            <li>spunta le due conferme: <strong>"Ho conservato la password dei dati"</strong> e <strong>"Ho scritto o stampato le 24 parole e le tengo lontano dal computer"</strong>;</li>
+            <li>premi <strong>Salva e apri i dati</strong> e conferma nella finestra dell'estensione.</li>
           </ul>
           Password e 24 parole nascono nel tuo computer e le vedi solo tu: ChainIntegrate non le riceve e non le conosce.</li>
-        <li><strong>Le volte successive</strong> scrivi la password dei dati e premi <strong>Apri</strong>. Ci vuole qualche secondo.</li>
+        <li>Prosegui con le <a href="#impostazioni">impostazioni</a>.</li>
       </ol>
+      <p><strong>Le volte successive</strong> apri la pagina, accedi, scrivi la password dei dati e premi <strong>Apri</strong>. Ci vuole qualche secondo.</p>
+      <p>Ogni modifica (un cliente, un telefono, le impostazioni, una correzione) si conferma nella finestra dell'estensione, dal computer amministratore. Se premi Annulla lì, non cambia niente. Da un computer autorizzato solo come "accesso" puoi vedere i dati ma non modificarli.</p>
       <p class="note">Se la pagina dice che non trova l'estensione, installala da <a href="https://account.chainintegrate.it/" target="_blank" rel="noopener">account.chainintegrate.it</a> o apri la pagina con il browser in cui è già installata.</p>
-      <p>Ogni modifica (un cliente, un telefono, le impostazioni) si conferma nella finestra dell'estensione. Se premi Annulla lì, non cambia niente.</p>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-connect.webp" target="_blank" rel="noopener"><img src="guide-img/page-connect.webp" alt="L'accesso con l'estensione" loading="lazy"></a><figcaption>L'accesso con l'estensione</figcaption></figure>
         <figure class="screen"><a href="guide-img/page-keys.webp" target="_blank" rel="noopener"><img src="guide-img/page-keys.webp" alt="Primo accesso: la password dei dati" loading="lazy"></a><figcaption>Primo accesso: scegli la password dei dati</figcaption></figure>
@@ -100,7 +129,7 @@
       <h3>Password dei dati e codice di recupero</h3>
       <ul>
         <li>La <strong>password dei dati</strong> apre i dati delle bombole. Resta nella pagina, non viene inviata a nessuno, e chiudendo la pagina viene dimenticata. Dopo <strong>30 minuti</strong> senza uso la pagina si blocca da sola e la richiede.</li>
-        <li>Il <strong>codice di recupero</strong> è di 24 parole e compare una volta sola, al primo accesso. Tienilo stampato in un posto sicuro, lontano dal computer. Non fotografarlo, non mandarlo per mail e non darlo a nessuno: ChainIntegrate non te lo chiederà mai.</li>
+        <li>Il <strong>codice di recupero</strong> è di 24 parole e compare una volta sola. Tienilo stampato in un posto sicuro, lontano dal computer. Non fotografarlo, non mandarlo per mail e non darlo a nessuno: ChainIntegrate non te lo chiederà mai.</li>
         <li>Se perdi la password: nella schermata della password premi <strong>Ho perso la password</strong>, scrivi le 24 parole e scegli una nuova password.</li>
         <li>Per cambiarla: <strong>Impostazioni → Cambia password</strong>. I telefoni già configurati continuano a funzionare.</li>
       </ul>
@@ -112,7 +141,8 @@
       <h3>Impostazioni (da fare per prime)</h3>
       <ul>
         <li><strong>Nome dell'azienda</strong>: compare nell'app e nell'oggetto delle mail. Finché manca, l'app avvisa l'autista.</li>
-        <li><strong>Email dell'azienda</strong>: le caselle dell'azienda (ufficio, magazzino…) che ricevono una copia di ogni documento, di tutti i clienti. Separale con una virgola.</li>
+        <li><strong>Email dell'azienda</strong>: le caselle dell'azienda (ufficio, magazzino…) che ricevono una copia di ogni documento, di tutti i clienti, e gli avvisi importanti sul registro. Separale con una virgola.</li>
+        <li><strong>Collaudo</strong>: ogni quanti anni va rifatto, per ogni gas (proposto: 10 anni). Serve a calcolare la scadenza dall'ultimo collaudo, o l'ultimo collaudo dalla scadenza; per una singola bombola si può cambiare con <a href="#correggere">Correggi</a>.</li>
       </ul>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-settings.webp" target="_blank" rel="noopener"><img src="guide-img/page-settings.webp" alt="Impostazioni: nome e mail dell'azienda" loading="lazy"></a><figcaption>Impostazioni: nome e mail dell'azienda</figcaption></figure>
@@ -123,9 +153,10 @@
       <h3>Clienti e centri di ricarica</h3>
       <ul>
         <li><strong>Clienti → Aggiungi cliente</strong>: nome e mail. Le mail del cliente ricevono ogni documento che lo riguarda.</li>
-        <li><strong>Aggiungi centro di ricarica</strong>: il centro dove mandate le bombole a ricaricare.</li>
+        <li><strong>Aggiungi centro di ricarica</strong>: il centro dove mandate le bombole a ricaricare (e a collaudare).</li>
         <li><strong>Modifica</strong> cambia nome o mail; <strong>Togli</strong> lo archivia: l'app non lo propone più, e i suoi documenti restano con il suo nome.</li>
       </ul>
+      <p>Clienti e centri di ricarica possono avere <strong>bombole proprie</strong>: quando l'autista registra una bombola nuova sceglie di chi è (vedi <a href="#nuova-bombola">Una bombola nuova</a>).</p>
       <p>L'autista vede l'elenco aggiornato alla prossima apertura dell'app.</p>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-customers.webp" target="_blank" rel="noopener"><img src="guide-img/page-customers.webp" alt="Clienti e centri di ricarica" loading="lazy"></a><figcaption>Clienti e centri di ricarica</figcaption></figure>
@@ -141,7 +172,7 @@
         <li>Tu scrivi quel codice in <strong>Autorizza un telefono</strong>, premi <strong>Autorizza</strong> e confermi nell'estensione.</li>
         <li>L'app se ne accorge da sola e chiede la <strong>password dei dati</strong>: la scrivi tu sul telefono, una volta sola. Il telefono non la conserva.</li>
       </ol>
-      <p><strong>Revoca</strong> un telefono perso, rubato o di un autista che non lavora più con voi: da quel momento non può più registrare niente. Al primo sblocco dopo la revoca, se c\'è rete, l\'app <strong>cancella da sola</strong> la chiave e i dati salvati sul telefono. Un telefono perso o rubato, però, potrebbe non sbloccarsi mai più: per questo è meglio usare telefoni aziendali e farli azzerare quando vengono restituiti.</p>
+      <p><strong>Revoca</strong> un telefono perso, rubato o di un autista che non lavora più con voi: da quel momento non può più registrare niente. Al primo sblocco dopo la revoca, se c'è rete, l'app <strong>cancella da sola</strong> la chiave e i dati salvati sul telefono. Basta questo: cambiare la chiave dei dati serve solo nei <a href="#nuova-chiave">casi rari</a>.</p>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-phones.webp" target="_blank" rel="noopener"><img src="guide-img/page-phones.webp" alt="Telefoni: i telefoni autorizzati, il codice da scrivere e il QR da far inquadrare (qui sfocato)" loading="lazy"></a><figcaption>Telefoni: i telefoni autorizzati, il codice da scrivere e il QR da far inquadrare (qui sfocato)</figcaption></figure>
       </div>
@@ -150,10 +181,11 @@
     <section class="panel" id="consultare">
       <h3>Bombole e documenti</h3>
       <ul>
-        <li><strong>Panoramica</strong>: quante bombole in deposito, dai clienti, in ricarica, difettose; per gas; gli ultimi documenti.</li>
-        <li><strong>Bombole</strong>: cerca per codice, gas o cliente. Clicca una bombola per vedere tutta la sua storia, movimento per movimento.</li>
+        <li><strong>Panoramica</strong>: quante bombole in deposito, dai clienti, in ricarica, difettose; per gas; quante con il collaudo scaduto o in scadenza; gli ultimi documenti.</li>
+        <li><strong>Bombole</strong>: cerca per codice, gas, cliente o proprietario. Clicca una bombola per vedere tutta la sua storia, movimento per movimento, correzioni comprese.</li>
         <li><strong>Documenti</strong>: DDT, giacenze e documenti di ricarica, con le bombole e le segnalazioni confermate dall'autista.</li>
       </ul>
+      <p>Un documento grande parte in più pezzi. Se un pezzo non è ancora arrivato, il documento compare come <strong>Incompleto (2 di 3)</strong>: di solito il telefono finisce l'invio da solo appena ha rete. Se resta incompleto, chiedi all'autista di aprire l'app con la rete; le bombole dei pezzi già arrivati sono comunque registrate.</p>
       <p><strong>Aggiorna</strong> ricarica i dati dopo un nuovo documento.</p>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-overview.webp" target="_blank" rel="noopener"><img src="guide-img/page-overview.webp" alt="Panoramica" loading="lazy"></a><figcaption>Panoramica</figcaption></figure>
@@ -162,12 +194,33 @@
       </div>
     </section>
 
+    <section class="panel" id="collaudo">
+      <h3>Collaudo</h3>
+      <p>Ogni bombola ha la <strong>data dell'ultimo collaudo</strong> e la <strong>scadenza</strong> (mese e anno). Basta scriverne una, quella punzonata sulla bombola: l'altra la calcola GasTrace con gli anni scelti nelle <a href="#impostazioni">impostazioni</a> per quel gas.</p>
+      <ul>
+        <li>La data si scrive quando l'autista registra la bombola, e si aggiorna quando la bombola <a href="#ricarica">rientra collaudata</a> dal centro di ricarica.</li>
+        <li>In <strong>Bombole</strong> trovi i filtri <strong>Collaudo scaduto</strong>, <strong>In scadenza entro 3 mesi</strong> e <strong>Collaudo da completare</strong> (bombole registrate con la punzonatura non leggibile).</li>
+        <li>Se l'autista consegna una bombola con il collaudo scaduto, l'app lo segnala; l'autista conferma e la segnalazione finisce nel documento e nella mail.</li>
+      </ul>
+    </section>
+
+    <section class="panel" id="correggere">
+      <h3>Correggere una bombola</h3>
+      <p>Una volta registrata, solo il titolare può cambiare i dati di una bombola. Apri la bombola e premi <strong>Correggi</strong>:</p>
+      <ul>
+        <li>gas e litri;</li>
+        <li>di chi è: dell'azienda, di un cliente o di un centro di ricarica;</li>
+        <li>ultimo collaudo o scadenza, e ogni quanti anni va rifatto.</li>
+      </ul>
+      <p>Scrivi il motivo (per esempio "gas sbagliato alla registrazione"), premi <strong>Salva</strong> e conferma nell'estensione. La correzione compare nella storia della bombola, con la data e il motivo: il dato precedente non sparisce.</p>
+    </section>
+
     <section class="panel" id="scaricare">
       <h3>Scaricare i dati</h3>
       <p>In <strong>Scarica dati</strong> puoi salvare sul computer i dati del registro, in file da aprire con Excel o LibreOffice (doppio clic sul file):</p>
       <ul>
-        <li><strong>Bombole</strong>: ogni bombola con gas, litri, proprietà, dove si trova, condizione e ultimo movimento;</li>
-        <li><strong>Movimenti</strong>: una riga per ogni bombola di ogni documento, dalla più vecchia alla più recente;</li>
+        <li><strong>Bombole</strong>: ogni bombola con gas, litri, proprietario, dove si trova, condizione, ultimo collaudo, scadenza e ultimo movimento;</li>
+        <li><strong>Movimenti</strong>: una riga per ogni bombola di ogni documento, dalla più vecchia alla più recente, correzioni comprese;</li>
         <li><strong>Documenti</strong>: una riga per documento, con quante bombole consegnate, ritirate, contate o in ricarica;</li>
         <li><strong>Clienti e centri di ricarica</strong>: nomi e mail.</li>
       </ul>
@@ -176,6 +229,28 @@
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-export.webp" target="_blank" rel="noopener"><img src="guide-img/page-export.webp" alt="Scarica dati" loading="lazy"></a><figcaption>Scarica dati</figcaption></figure>
       </div>
+    </section>
+
+
+    <section class="panel" id="cedere">
+      <h3>Cedere il registro a un altro account</h3>
+      <p>Serve solo se l'azienda cambia account ChainIntegrate. In <strong>Impostazioni</strong> premi <strong>Cedi il registro</strong>, scrivi l'indirizzo del nuovo account e conferma nell'estensione.</p>
+      <ul>
+        <li>Per sicurezza la cessione si completa solo dopo <strong>3 giorni</strong>: il nuovo account la accetta dal suo computer amministratore.</li>
+        <li>Le mail dell'azienda ricevono subito un avviso. Se non l'hai chiesta tu, premi <strong>Annulla la cessione</strong> e scrivi a ChainIntegrate.</li>
+      </ul>
+    </section>
+
+    <section class="panel" id="nuova-chiave">
+      <h3>Casi rari: cambiare la chiave dei dati</h3>
+      <p>Per un telefono perso, rubato o di un autista che se ne va <strong>basta revocarlo</strong> da <strong>Telefoni</strong>: non può più registrare niente, e per aprire l'app serve comunque l'impronta o il PIN di quel telefono.</p>
+      <p>Cambia la chiave dei dati solo se pensi che qualcuno possa ancora <strong>leggere</strong> i dati senza permesso: qualcuno conosce la password dei dati, ha visto le 24 parole, o ha un telefono revocato insieme al suo PIN (per esempio un ex autista che si è tenuto il telefono).</p>
+      <ol>
+        <li>In <strong>Impostazioni</strong> premi <strong>Cambia la chiave dei dati</strong>.</li>
+        <li>Scegli una <strong>nuova password dei dati</strong>: la pagina mostra un <strong>nuovo codice di recupero</strong> di 24 parole. Scrivilo come la prima volta, spunta le conferme e conferma nell'estensione.</li>
+        <li>Su ogni telefono ancora autorizzato, l'app chiede la nuova password dei dati: la scrivi tu, una volta.</li>
+      </ol>
+      <p>Da quel momento i dati nuovi si leggono solo con la nuova chiave; quelli vecchi restano leggibili con la nuova password. Le vecchie 24 parole non servono più: distruggile.</p>
     </section>
 
     <h2 class="part" id="autista">Per l'autista</h2>
@@ -200,13 +275,25 @@
         <li>L'app mostra il <strong>codice di questo telefono</strong>: dallo al titolare (puoi usare <strong>Copia</strong>).</li>
         <li>Quando il titolare l'ha autorizzato, l'app chiede la <strong>password dei dati</strong>: la scrive il titolare.</li>
       </ol>
-      <p>Da quel momento apri l'app con <strong>Sblocca con impronta o PIN</strong>. Dopo <strong>10 minuti</strong> senza uso, o in secondo piano, l\'app si blocca da sola: si riapre con impronta o PIN, e un documento lasciato a metà viene ripreso. I dati salvati sul telefono (clienti, documenti da inviare) sono cifrati: senza impronta o PIN non si leggono.</p>
+      <p>Da quel momento apri l'app con <strong>Sblocca con impronta o PIN</strong>. Dopo <strong>10 minuti</strong> senza uso, o in secondo piano, l'app si blocca da sola: si riapre con impronta o PIN, e un documento lasciato a metà viene ripreso. I dati salvati sul telefono (clienti, documenti da inviare) sono cifrati: senza impronta o PIN non si leggono.</p>
+      <p>Se il titolare cambia la chiave dei dati, all'apertura l'app chiede di nuovo la password: la scrive il titolare.</p>
       <div class="shots phones">
         <figure class="phone"><a href="guide-img/app-setup.webp" target="_blank" rel="noopener"><img src="guide-img/app-setup.webp" alt="1. Inquadra il codice" loading="lazy"></a><figcaption>1. Inquadra il codice</figcaption></figure>
         <figure class="phone"><a href="guide-img/app-phone-code.webp" target="_blank" rel="noopener"><img src="guide-img/app-phone-code.webp" alt="2–3. Il codice del telefono" loading="lazy"></a><figcaption>2–3. Il codice del telefono</figcaption></figure>
         <figure class="phone"><a href="guide-img/app-password.webp" target="_blank" rel="noopener"><img src="guide-img/app-password.webp" alt="4. La password dei dati" loading="lazy"></a><figcaption>4. La password dei dati</figcaption></figure>
         <figure class="phone"><a href="guide-img/app-home.webp" target="_blank" rel="noopener"><img src="guide-img/app-home.webp" alt="Pronto: la schermata iniziale" loading="lazy"></a><figcaption>Pronto: la schermata iniziale</figcaption></figure>
       </div>
+    </section>
+
+    <section class="panel" id="nuova-bombola">
+      <h3>Una bombola nuova</h3>
+      <p>Quando inquadri una bombola mai registrata (in una consegna, in una giacenza o in una ricarica), l'app chiede:</p>
+      <ul>
+        <li><strong>Gas</strong>, e se vuoi i <strong>litri</strong>;</li>
+        <li><strong>Di chi è</strong>: <strong>Nostra</strong> (proposto), <strong>Del cliente</strong> (il cliente del documento) oppure <strong>Di un centro di ricarica</strong> (scegli quale);</li>
+        <li><strong>Collaudo</strong>: scegli <strong>Ultimo collaudo</strong> o <strong>Scadenza</strong>, secondo cosa è punzonato sulla bombola, e scrivi mese e anno; l'altra data la calcola l'app. Se la punzonatura non si legge tocca <strong>Non leggibile</strong>: il titolare la ritrova in "Collaudo da completare".</li>
+      </ul>
+      <p>Questi dati si scrivono una volta sola. Se hai sbagliato, dillo al titolare: li corregge lui dalla sua pagina.</p>
     </section>
 
     <section class="panel" id="consegna">
@@ -220,8 +307,8 @@
             <li>una bombola che era già da questo cliente è un <strong>ritiro</strong> (vuota; puoi scegliere piena o difettosa).</li>
           </ul>
         </li>
-        <li>Per una <strong>bombola nuova</strong> scegli il gas (e se vuoi i litri).</li>
-        <li>Se compare una <strong>segnalazione</strong> (per esempio "Risulta presso un altro cliente"), controlla e tocca <strong>Confermo le segnalazioni</strong>: finiscono anche nella mail.</li>
+        <li>Per una bombola nuova rispondi alle domande di <a href="#nuova-bombola">Una bombola nuova</a>.</li>
+        <li>Se compare una <strong>segnalazione</strong> (per esempio "Risulta presso un altro cliente", "È di un altro cliente", "Collaudo scaduto"), controlla e tocca <strong>Confermo le segnalazioni</strong>: finiscono anche nella mail.</li>
         <li>Scrivi il <strong>numero del DDT</strong>, controlla il riepilogo e a chi va la mail (puoi aggiungere un indirizzo), poi <strong>Invia</strong> e conferma con l'impronta o il PIN.</li>
       </ol>
       <p>"Registrato" vuol dire che il documento è salvato; poi l'app dice se la mail è partita.</p>
@@ -237,7 +324,7 @@
       <p>Si usa all'inizio, per registrare le bombole che si trovano già dai clienti o nei centri di ricarica, e ogni volta che serve un conteggio.</p>
       <ol>
         <li>Tocca <strong>Giacenze</strong> e scegli il cliente o il centro.</li>
-        <li>Inquadra tutte le bombole presenti e per quelle nuove scegli il gas.</li>
+        <li>Inquadra tutte le bombole presenti; per quelle nuove rispondi alle domande di <a href="#nuova-bombola">Una bombola nuova</a>.</li>
         <li><strong>Invia</strong>. Non serve il numero di documento e non parte nessuna mail, a meno che tu non aggiunga un indirizzo.</li>
       </ol>
       <div class="shots phones">
@@ -246,13 +333,15 @@
     </section>
 
     <section class="panel" id="ricarica">
-      <h3>Ricarica</h3>
-      <p>Tocca <strong>Ricarica</strong> e scegli il centro di ricarica. Inquadra le bombole: quelle in deposito risultano <strong>inviate a ricarica</strong>, quelle che erano in quel centro risultano <strong>rientrate da ricarica</strong>. Scrivi il numero del documento e invia.</p>
+      <h3>Ricarica e collaudo</h3>
+      <p>Tocca <strong>Ricarica</strong> e scegli il centro di ricarica. Inquadra le bombole: quelle in deposito risultano <strong>inviate a ricarica</strong>, quelle che erano in quel centro risultano <strong>rientrate da ricarica</strong>.</p>
+      <p>Per una bombola che rientra <strong>collaudata</strong>, tocca <strong>Collaudata</strong> sulla sua riga: l'app propone come ultimo collaudo il mese corrente. Se la punzonatura dice altro, correggilo, oppure scegli <strong>Scadenza</strong> e scrivi quella punzonata.</p>
+      <p>Scrivi il numero del documento e invia.</p>
     </section>
 
     <section class="panel" id="controlla">
       <h3>Controllare una bombola</h3>
-      <p><strong>Controlla una bombola</strong>: inquadra il codice e vedi gas, dove si trova, condizione e ultimo movimento. Non registra niente.</p>
+      <p><strong>Controlla una bombola</strong>: inquadra il codice e vedi gas, di chi è, dove si trova, condizione, scadenza del collaudo e ultimo movimento. Non registra niente.</p>
       <div class="shots phones">
         <figure class="phone"><a href="guide-img/app-check.webp" target="_blank" rel="noopener"><img src="guide-img/app-check.webp" alt="Controlla una bombola" loading="lazy"></a><figcaption>Controlla una bombola</figcaption></figure>
       </div>
@@ -260,14 +349,14 @@
 
     <section class="panel" id="senza-rete">
       <h3>Senza rete: "Da inviare"</h3>
-      <p>Se non c'è segnale, o il servizio è occupato, il documento viene salvato sul telefono e parte da solo appena possibile. Nella schermata iniziale compare <strong>Da inviare (n)</strong>: lì puoi vederli, mandarli con <strong>Invia ora</strong> o scartarli. Restano lì anche i documenti registrati la cui mail non è partita, con <strong>Manda dal telefono</strong>; quando l'hai mandata tocca <strong>Mail a posto: togli</strong>.</p>
+      <p>Se non c'è segnale, o il servizio è occupato, il documento viene salvato sul telefono e parte da solo appena possibile. Nella schermata iniziale compare <strong>Da inviare (n)</strong>: lì puoi vederli, mandarli con <strong>Invia ora</strong> o <strong>annullarli</strong>. Un documento annullato non potrà più essere registrato. Restano lì anche i documenti registrati la cui mail non è partita, con <strong>Manda dal telefono</strong>; quando l'hai mandata tocca <strong>Mail a posto: togli</strong>.</p>
       <p>Un documento in attesa può essere rifiutato quando parte: se intanto un'altra persona ha registrato una delle stesse bombole ("Una bombola è cambiata nel frattempo"), se sono passati più di sette giorni ("Documento scaduto") o se il telefono è stato revocato. Se nessuna parte è stata registrata compare <strong>Rifai il documento</strong>: l'app lo riapre con lo stesso cliente, numero e bombole, rilette con il loro stato attuale. Controlla le righe e invia.</p>
-      <p>Un documento troppo grande (circa più di 80 bombole) non parte: l'app lo dice prima di firmare. Dividilo in due documenti.</p>
+      <p>Un documento grande parte in più pezzi; se si interrompe, l'app manda da sola i pezzi mancanti appena ha rete. Un documento troppo grande (circa più di 80 bombole) non parte: l'app lo dice prima di firmare. Dividilo in due documenti.</p>
     </section>
 
     <section class="panel" id="mail">
       <h3>La mail del documento</h3>
-      <p>Dopo ogni DDT o documento di ricarica parte una mail alle mail del cliente, a quelle dell'azienda e agli indirizzi aggiunti nel documento. Se l'app dice che la mail non è partita, o che non sa se è partita, tocca <strong>Manda dal telefono</strong>: si apre la tua app di posta con il testo già pronto.</p>
+      <p>Dopo ogni DDT o documento di ricarica parte una mail alle mail del cliente, a quelle dell'azienda e agli indirizzi aggiunti nel documento, con le bombole e le segnalazioni confermate. Se l'app dice che la mail non è partita, o che non sa se è partita, tocca <strong>Manda dal telefono</strong>: si apre la tua app di posta con il testo già pronto.</p>
     </section>
 
     <section class="panel" id="aggiornare">
@@ -281,10 +370,16 @@
     <h2 class="part" id="problemi">Problemi frequenti</h2>
 
     <section class="panel faq">
+      <h3>"GasTrace non è ancora attivo per questo account"</h3>
+      <p>Il registro non è ancora stato creato: segui <a href="#attivare">Attivare GasTrace</a>. Se hai già mandato la richiesta, aspetta la mail "GasTrace è attivo". Se l'hai già ricevuta, controlla di aver aperto la pagina dal computer e con l'account dell'azienda da cui hai mandato la richiesta.</p>
       <h3>"Una bombola è cambiata nel frattempo"</h3>
       <p>Qualcuno ha registrato la stessa bombola dopo che l'hai inquadrata. Rifai il documento: l'app ripropone i movimenti aggiornati.</p>
       <h3>"Questo documento risulta già registrato"</h3>
       <p>Lo stesso numero di documento è già stato inviato. Controlla in "Da inviare" o chiedi al titolare di guardare in Documenti.</p>
+      <h3>"È di un altro cliente"</h3>
+      <p>La bombola risulta di proprietà di un cliente diverso da quello della consegna. Controlla di aver preso la bombola giusta; se consegni comunque, conferma la segnalazione. Se la proprietà è sbagliata, la corregge il titolare.</p>
+      <h3>"Collaudo scaduto"</h3>
+      <p>La scadenza del collaudo è passata. Valuta con il titolare se consegnarla; se consegni, conferma la segnalazione: compare nel documento e nella mail.</p>
       <h3>"Questo telefono non è più autorizzato"</h3>
       <p>Il titolare l'ha revocato: l'app ha cancellato la chiave e i dati del telefono. Se è un errore, va configurato di nuovo con il titolare.</p>
       <h3>Telefono perso, rubato o cambiato</h3>
@@ -296,7 +391,9 @@
       <h3>L'app chiede di nuovo impronta o PIN</h3>
       <p>Dopo 10 minuti senza uso, o in secondo piano, l'app si blocca per proteggere i dati: sbloccala con impronta o PIN. Un documento lasciato a metà viene ripreso.</p>
       <h3>"Questa operazione si conferma da un computer amministratore del tuo account"</h3>
-      <p>Le modifiche al registro (clienti, telefoni, impostazioni, password) si confermano solo da un computer <strong>amministratore</strong> dell'account aziendale. Da un computer autorizzato solo come "accesso" puoi vedere i dati ma non modificarli: usa il computer amministratore.</p>
+      <p>Le modifiche al registro (clienti, telefoni, impostazioni, password, correzioni) si confermano solo da un computer <strong>amministratore</strong> dell'account aziendale. Da un computer autorizzato solo come "accesso" puoi vedere i dati ma non modificarli: usa il computer amministratore.</p>
+      <h3>"Un'altra postazione ha modificato questo dato"</h3>
+      <p>Mentre modificavi un cliente o le impostazioni, qualcuno l'ha cambiato da un altro computer. La pagina mostra il dato aggiornato: controlla e rifai la modifica se serve.</p>
       <h3>"Password non corretta"</h3>
       <p>Controlla maiuscole e tastiera. Se l'hai persa, usa <strong>Ho perso la password</strong> con il codice di recupero.</p>
       <h3>Altro</h3>

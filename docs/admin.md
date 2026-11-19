@@ -70,8 +70,14 @@ lost the password" opens the data with the 24-word recovery code and sets a new 
 
 ## The users' guide
 
+The guide describes version 2 (DESIGN.md 10.1): the parts not built yet (owner, periodic test,
+corrections, handover, data key change) arrive with it; the activation request and the first sign-in's
+confirmations are already in the page. An account without a register sees "GasTrace is not active yet"
+and sends ChainIntegrate a ready-made e-mail (or copies it) with the account's address, which is never
+shown on screen.
+
 `guida.html` (Italian) and `guide.html` (English), linked from the page's footer: the owner's page and the
-drivers' app in plain words, for Argonia's office and drivers (sign-in, password and recovery code,
+drivers' app in plain words, for a supplier's office and drivers (activation request, sign-in, password and recovery code,
 settings, customers, phones; installing the app, setup, delivery and collection, stock count, refill,
 "To send", the e-mail, updates; common problems). Static pages with no script, in `admin/`, copied to
 `admin/www` by the build, with their pictures in `admin/guide-img/`: screenshots of the browser tests

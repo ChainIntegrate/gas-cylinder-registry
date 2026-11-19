@@ -102,8 +102,9 @@ async function main() {
   let tampered = null; // the catalog's answer to a SetData whose values do not match its hash
   let fromAccessComputer = false; // the next request comes from an "access" computer: refused (extension 0.6.0)
   const signers = new Set(); // the catalog's signer for GasTrace's requests ("admin" from extension 0.6.0)
+  let activeAccount = ethers.Wallet.createRandom().address; // first an account without a register: GasTrace not active yet
   await page.exposeFunction("__ext", async (method, params) => {
-    if (method === "eth_requestAccounts" || method === "eth_accounts") return [owner];
+    if (method === "eth_requestAccounts" || method === "eth_accounts") return [activeAccount];
     if (method === "eth_chainId") return "0x" + Number(chainId).toString(16);
     if (method === "eth_signTypedData_v4") {
       const typed = JSON.parse(params[1]);
@@ -175,6 +176,14 @@ async function main() {
   await page.goto(pageUrl);
   await see("Accedi con ChainIntegrate Account");
   await shot("connect");
+  // An account without a register: the page offers the activation request, with the account's address.
+  await click("Accedi con ChainIntegrate Account");
+  await see("GasTrace non è ancora attivo per questo account");
+  await shot("not-active");
+  const request = decodeURIComponent((await page.getByRole("link", { name: "Richiedi l'attivazione" }).getAttribute("href")) || "");
+  const activationRequest = request.startsWith("mailto:info@chainintegrate.it?") && request.includes(activeAccount);
+  await click("Esci");
+  activeAccount = owner;
   await click("Accedi con ChainIntegrate Account");
   // First sign-in: the owner prepares the data key, the password and the 24 words in the page.
   await see("Prepara i dati del registro");
@@ -191,6 +200,10 @@ async function main() {
   await click("Salva e apri i dati");
   await see("Le parole di controllo non coincidono");
   await page.getByLabel(`Controllo: parola numero ${nums[1]}`, { exact: true }).fill(words[nums[1] - 1]);
+  await click("Salva e apri i dati");
+  await see("Spunta le due conferme");
+  await page.getByLabel("Ho conservato la password dei dati").check();
+  await page.getByLabel("Ho scritto o stampato le 24 parole").check();
   await click("Salva e apri i dati");
   await see("Dati preparati");
   const setupCtx = await O.context({ provider, registry: r.address });
@@ -331,6 +344,7 @@ async function main() {
 
   const settings = await O.readSettings(ctxCheck, (await O.unlockWithPassword(ctxCheck, "una nuova frase per il registro")).keys);
   const checks = [
+    ["an account without a register: the activation request carries its address", activationRequest],
     ["first sign-in: the page made the data key; the password and the 24 words open it", Buffer.from(byWords.dek).equals(Buffer.from(byPassword.dek))],
     ["locked after 30 minutes unused (A09)", /Open the data/i.test(lockedPage) && !/Overview/.test(lockedPage)],
     ["settings written", settings && settings.company === "Argonia Gas Tecnici" && settings.emails.length === 2],
