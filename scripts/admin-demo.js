@@ -55,7 +55,7 @@ async function main() {
   const owner = await account.getAddress();
 
   // ChainIntegrate: factory and the registry, created for the account.
-  const f = await O.deployFactory(chainIntegrate);
+  const f = await O.deployFactory(chainIntegrate, 2);
   const factory = new ethers.Contract(f.address, O.FACTORY_ABI, chainIntegrate);
   const prepared = await O.prepareRegistry({ factory }); // no data key: the owner prepares it in the page (review X-02)
   const r = await O.createRegistry({ factory, prepared, owner, name: "Argonia Gas Tecnici", symbol: "ARGCYL" });
@@ -67,8 +67,14 @@ async function main() {
     globalThis.ethers = ethers; // the catalog takes ethers from the global scope when it has no node_modules of its own
     catalog = require(catalogFile);
     const p = catalog.projectById("gas-cylinders");
-    p.typed.madeBy = { factory: f.address, check: "isRegistry(address)" };
-    p.typed.chainIds = [Number(chainId)];
+    if (!p || !p.typed || !p.typed.domain || p.typed.domain.version !== "2") {
+      // The extension's catalog still describes version 1: its check waits for the catalog's update.
+      console.log("note: the extension's catalog is for version 1 of the contracts: catalog check skipped");
+      catalog = null;
+    } else {
+      p.typed.madeBy = { factory: f.address, check: "isRegistry(address)" };
+      p.typed.chainIds = [Number(chainId)];
+    }
   }
 
   const mails = [];
@@ -279,7 +285,10 @@ async function main() {
     if (!out.done) throw new Error("document not recorded: " + JSON.stringify(out.failed));
   }
   await doc("stock_count", "", ["AR-100", "CO2-200", "AR-101"], () => ({ condition: "empty" }));
-  await doc("delivery_note", "DDT 2026/118", ["AR-300", "AR-301", "N2-400", "AR-100", "CO2-200"]);
+  // AR-300's stamp says it was last tested in January 2016: its test has expired.
+  await doc("delivery_note", "DDT 2026/118", ["AR-300", "AR-301", "N2-400", "AR-100", "CO2-200"], (code) =>
+    code === "AR-300" ? { test: S.completeTest({ last: "2016-01" }, 10) } : code === "AR-301" ? { test: S.completeTest({ due: "2035-06" }, 10) } : {}
+  );
 
   // Overview, cylinders, a cylinder's history, documents.
   await click("Panoramica");
@@ -295,6 +304,27 @@ async function main() {
   await see("Storia della bombola AR-100");
   await shot("history");
   const historyText = await page.locator("#app").innerText();
+
+  // The owner corrects AR-100 (review A06): owned by the customer, tested in May 2024, with a reason.
+  await click("Correggi");
+  await page.locator(".form select").nth(1).selectOption({ label: "Officina Demo" });
+  await page.locator(".form select").nth(2).selectOption("last");
+  await page.locator('.form input[type="month"]').fill("2024-05");
+  await page.getByLabel("Motivo").fill("bombola del cliente, collaudo letto male");
+  await shot("correct");
+  await click("Salva");
+  await page.locator(".busy").waitFor({ state: "detached", timeout: 60000 });
+  await see("Correzione registrata");
+  await see("bombola del cliente, collaudo letto male");
+  const corrected = await reg.readCylinder("AR-100");
+  const correctedOk = corrected.info.owner === demo.id && corrected.state.test.last === "2024-05" && corrected.state.test.due === "2034-05";
+  await shot("history-corrected");
+
+  // The periodic test filter: only AR-300 has an expired test.
+  await click("Bombole");
+  await page.locator("select.filter").selectOption("expired");
+  const expiredRows = await page.locator("tbody tr").allInnerTexts();
+  await page.locator("select.filter").selectOption("all");
   await click("Documenti");
   await page.locator("details.doc summary").first().click();
   await shot("documents");
@@ -324,6 +354,61 @@ async function main() {
     oldRefused = true;
   }
 
+  // Several admin computers: a customer changed from another computer while this page edits it.
+  page.on("dialog", (d) => d.accept());
+  await click("Clienti");
+  await page.getByRole("button", { name: "Modifica", exact: true }).first().click();
+  {
+    const other = await O.context({ provider, registry: r.address, owner: { address: owner, signTypedData: (dm, ty, v) => controller.signTypedData(dm, ty, v) }, submit: O.relayerSubmitter(relayerUrl, provider), fromBlock: r.block });
+    const k = (await O.unlockWithPassword(other, "una nuova frase per il registro")).keys;
+    const first = (await O.listCounterparties(other, k)).find((c) => !c.archived && c.type === "customer");
+    await O.updateCounterparty(other, k, first.id, { name: first.name + " (altro computer)" });
+  }
+  await page.getByLabel("Nome", { exact: true }).fill("Nome da questo computer");
+  await click("Salva");
+  await page.locator(".busy").waitFor({ state: "detached", timeout: 60000 });
+  await see("Un'altra postazione ha modificato questo dato");
+  const conflictText = await page.locator("#app").innerText();
+
+  // Handing the register over: started, then cancelled.
+  await click("Impostazioni");
+  await page.locator("summary", { hasText: "Cedere il registro" }).click();
+  await page.getByLabel("Indirizzo del nuovo account").fill(ethers.Wallet.createRandom().address);
+  await click("Cedi il registro");
+  await page.locator(".busy").waitFor({ state: "detached", timeout: 60000 });
+  await see("Cessione in corso");
+  await shot("handover");
+  const pendingSeen = (await O.status(ctxCheck)).pendingOwner !== null;
+  await click("Annulla la cessione");
+  await page.locator(".busy").waitFor({ state: "detached", timeout: 60000 });
+  await see("Cessione annullata");
+  const handoverOk = pendingSeen && (await O.status(ctxCheck)).pendingOwner === null;
+
+  // Rare cases: a new data key, a new password and new 24 words; the old password no longer opens it.
+  await page.locator("summary", { hasText: "cambiare la chiave dei dati" }).click();
+  await page.getByLabel("Password della chiave nuova", { exact: true }).fill("frase della chiave nuova dopo il telefono");
+  await page.getByLabel("Ripeti la password della chiave nuova").fill("frase della chiave nuova dopo il telefono");
+  await click("Continua");
+  await page.locator(".words li").first().waitFor();
+  const newWords = await page.locator(".words li").allInnerTexts();
+  const nums2 = (await page.locator("label").allInnerTexts()).map((l) => /parola numero (\d+)/.exec(l)).filter(Boolean).map((m) => Number(m[1]));
+  for (const k of nums2) await page.getByLabel(`Controllo: parola numero ${k}`, { exact: true }).fill(newWords[k - 1]);
+  await page.getByLabel("Ho conservato la password dei dati").check();
+  await page.getByLabel("Ho scritto o stampato le 24 parole").check();
+  await click("Salva la nuova chiave");
+  await page.locator(".busy").waitFor({ state: "detached", timeout: 60000 });
+  await see("Chiave dei dati cambiata");
+  let oldKeyRefused = false;
+  try {
+    await O.unlockWithPassword(ctxCheck, "una nuova frase per il registro");
+  } catch {
+    oldKeyRefused = true;
+  }
+  const rekeyed = await O.unlockWithRecoveryCode(ctxCheck, newWords.join(" "));
+  const rekeyOk = oldKeyRefused && rekeyed.keys.epoch === 1 && (await O.listCounterparties(ctxCheck, rekeyed.keys)).length >= 3;
+  await click("Bombole");
+  await see("AR-300"); // the page reads everything with the new key
+
   // Phone width.
   const phonePage = await ctxB.newPage();
   await phonePage.setViewportSize({ width: 390, height: 844 });
@@ -342,7 +427,7 @@ async function main() {
   await see("30 minutes unused");
   const lockedPage = await page.locator("#app").innerText();
 
-  const settings = await O.readSettings(ctxCheck, (await O.unlockWithPassword(ctxCheck, "una nuova frase per il registro")).keys);
+  const settings = await O.readSettings(ctxCheck, (await O.unlockWithPassword(ctxCheck, "frase della chiave nuova dopo il telefono")).keys);
   const checks = [
     ["an account without a register: the activation request carries its address", activationRequest],
     ["first sign-in: the page made the data key; the password and the 24 words open it", Buffer.from(byWords.dek).equals(Buffer.from(byPassword.dek))],
@@ -354,6 +439,11 @@ async function main() {
     ["data download: 6 cylinders in the file", /^gastrace-bombole-\d{4}-\d\d-\d\d\.csv$/.test(downloaded.cylinders.name) && csvRows("cylinders").length === 7 && csvRows("cylinders")[0].startsWith("Codice;Gas;")],
     ["data download: every movement of the documents", csvRows("movements").length > 6 && csvRows("movements").some((r) => r.includes("DDT;2026/118"))],
     ["history shows stock count then collection", /Giacenza[\s\S]*Ritiro/.test(historyText)],
+    ["the owner corrects a cylinder: owner and test, the reason in its history (A06)", correctedOk],
+    ["the periodic test filter shows the expired cylinder only", expiredRows.length === 1 && /AR-300/.test(expiredRows[0])],
+    ["a change made meanwhile from another computer is noticed, not overwritten", /altro computer/.test(conflictText) && !/Nome da questo computer/.test(conflictText)],
+    ["a handover started and cancelled from the page", handoverOk],
+    ["the data key replaced from the page: new password and 24 words, old password refused (A05)", rekeyOk],
     ["password changed, old one refused", oldRefused],
     ["no technical words on screen", texts.every((x) => !FORBIDDEN.test(x))],
     ["no horizontal scroll at phone width", !overflow],

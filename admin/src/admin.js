@@ -54,6 +54,10 @@ const st = {
   history: null, // { serial, entries }
   recovery: false,
   setup: null, // first sign-in: { prepared (data key, 24 words, wraps), checks, answers }
+  pending: [], // registers being handed over to this account: [{ address, name, block, pending: { readyAt } }]
+  filter: "all", // cylinders: all | expired | soon | unknown (periodic test)
+  correcting: null, // the cylinder being corrected
+  rekey: null, // replacing the data key: { prepared, checks, answers, confirmed }
 };
 const t = () => T[st.lang] || T.it;
 
@@ -77,7 +81,17 @@ function h(tag, attrs, ...children) {
 const btn = (label, onclick, cls = "") => h("button", { type: "button", class: cls, onclick }, label);
 const fmtDate = (sec) => new Date(sec * 1000).toLocaleString(st.lang === "en" ? "en-GB" : "it-IT", { dateStyle: "short", timeStyle: "short" });
 // Who a document was for: the name it was made with (review A21), else the counterparty's current one.
-const docWho = (doc) => doc.counterpartyName || names()[doc.counterparty] || "—";
+const docWho = (doc) => (doc.kind === "correction" ? doc.reason : doc.counterpartyName || names()[doc.counterparty] || "—");
+const ownerText = (owner) => (owner === "supplier" ? t().supplier : names()[owner] || "?");
+const nowSec = () => Math.floor(Date.now() / 1000);
+/** "2034-03" -> "03/2034". */
+const monthText = (ym) => (ym ? `${ym.slice(5, 7)}/${ym.slice(0, 4)}` : "—");
+function testText(test) {
+  const tx = t();
+  if (!test) return "—";
+  if (test.unreadable) return tx.testUnreadable;
+  return monthText(test.due);
+}
 const names = () => Object.fromEntries((st.data ? st.data.cps : []).map((c) => [c.id, c.name]));
 const emailList = (s) => String(s || "").split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean);
 const phoneCodeText = (a) => a.slice(2).match(/.{1,4}/g).join(" ");
@@ -181,9 +195,13 @@ async function connect() {
     if (Number(await st.provider.send("eth_chainId", [])) !== Number(CONFIG.chainId)) throw new Error(`the node is not on chain ${CONFIG.chainId}`);
     st.wallet = wallet;
     st.account = getAddress(account);
-    st.registries = await D.registriesOf(st.provider, CONFIG.factory, st.account, CONFIG.factoryBlock || 0);
+    const all = await D.registriesOf(st.provider, CONFIG.factory, st.account, CONFIG.factoryBlock || 0);
+    st.registries = all.filter((r) => !r.pending);
+    st.pending = all.filter((r) => r.pending);
     st.busy = null;
-    if (!st.registries.length) {
+    if (st.pending.length) {
+      st.view = "choose"; // a register being handed over to this account: accepted from here
+    } else if (!st.registries.length) {
       st.view = "noRegistry";
     } else if (st.registries.length === 1) {
       chooseRegistry(st.registries[0]);
@@ -309,15 +327,20 @@ async function loadAll() {
   const reg = new Contract(st.reg.address, D.REGISTRY_ABI, st.provider);
   // A value that cannot be read is reported, never allowed to stop the page (review G-08).
   const problems = [];
-  const [settings, cps, phones, cyls, docs] = await Promise.all([
-    O.readSettings(st.ctx, st.keys).catch(() => (problems.push({ what: "settings" }), null)),
+  const [settingsRaw, cps, phones, cyls, docs, status] = await Promise.all([
+    reg.getData(S.SETTINGS_DATA_KEY),
     O.listCounterparties(st.ctx, st.keys, problems),
     O.listOperators(st.ctx),
     D.cylinders(reg, st.keys, st.reg.block, st.provider, problems),
     D.documents(reg, st.keys, st.reg.block, st.provider),
+    O.status(st.ctx),
   ]);
+  // `settingsRaw` and each counterparty's `raw`: what this page showed, so that a change made meanwhile
+  // from another computer is noticed when saving (several admin computers).
+  let settings = null;
+  if (settingsRaw !== "0x") settings = await S.decryptValue(st.keys, S.SETTINGS_DATA_KEY, "settings", settingsRaw).then(S.validateSettings).catch(() => (problems.push({ what: "settings" }), null));
   for (const d of docs) if (d.unreadable) problems.push({ what: "document", id: d.docId });
-  st.data = { settings, cps, phones, cyls, docs, ov: D.overview(cyls), problems };
+  st.data = { settings, settingsRaw, cps, phones, cyls, docs, ov: D.overview(cyls), problems, status };
 }
 
 /**
@@ -333,9 +356,19 @@ async function change(fn) {
     st.busy = t().loading;
     render();
     await loadAll();
+    if (st.history) {
+      // The cylinder open in its history (a correction): read again.
+      const fresh = st.data.cyls.find((x) => x.tokenId === st.history.cyl.tokenId);
+      if (fresh) st.history = { cyl: fresh, entries: await D.history(new Contract(st.reg.address, D.REGISTRY_ABI, st.provider), st.keys, fresh.tokenId, st.reg.block, st.provider, st.data.docs) };
+    }
     st.msg = { text: typeof said === "string" ? said : t().done, cls: "ok" };
   } catch (e) {
     st.msg = { text: e.plain ? e.message : failText(e), cls: "err" };
+    if (e && e.code === "CHANGED") {
+      // Another admin computer changed it first: show what is there now.
+      st.msg = { text: t().changedElsewhere, cls: "err" };
+      await loadAll().catch(() => {});
+    }
   }
   st.busy = null;
   st.editing = null;
@@ -414,7 +447,37 @@ function viewNoExtension() {
 
 function viewChoose() {
   const tx = t();
-  return h("section", { class: "panel" }, h("h2", {}, tx.chooseRegistry), st.registries.map((r) => btn(r.name, () => chooseRegistry(r), "big")));
+  return [
+    st.pending.map((r) => {
+      const ready = nowSec() >= r.pending.readyAt;
+      return h(
+        "section",
+        { class: "panel narrow" },
+        h("h2", {}, tx.handoverToYou(r.name)),
+        h("p", {}, ready ? tx.handoverReady : tx.handoverWait(fmtDate(r.pending.readyAt))),
+        ready ? btn(tx.acceptHandover, () => acceptHandover(r), "primary big") : null
+      );
+    }),
+    st.registries.length ? h("section", { class: "panel" }, h("h2", {}, tx.chooseRegistry), st.registries.map((r) => btn(r.name, () => chooseRegistry(r), "big"))) : null,
+  ];
+}
+
+/** This account accepts a register handed over to it, once the 3 days are over. */
+async function acceptHandover(r) {
+  st.msg = null;
+  try {
+    const ctx = await O.context({ provider: st.provider, registry: r.address, owner: extensionOwner(st.wallet, st.account), submit: O.relayerSubmitter(CONFIG.relayer, st.provider), fromBlock: r.block });
+    st.busy = t().confirmInExtension;
+    render();
+    await O.acceptOwnership(ctx);
+    st.busy = null;
+    st.msg = { text: t().handoverAccepted, cls: "ok" };
+    await connect();
+  } catch (e) {
+    st.busy = null;
+    st.msg = { text: failText(e), cls: "err" };
+    render();
+  }
 }
 
 /**
@@ -535,7 +598,7 @@ function stat(label, n, cls = "") {
 function docRow(d) {
   const tx = t();
   const doc = d.document;
-  if (!doc) return h("tr", {}, h("td", { colspan: "4", class: "dim" }, d.unreadable ? tx.unreadable : "…"));
+  if (!doc) return h("tr", {}, h("td", { colspan: "4", class: "dim" }, d.unreadable ? tx.unreadable : d.recorded < d.parts ? tx.incompleteNoContent(d.recorded, d.parts) : "…"));
   const counts = {};
   for (const l of doc.lines) counts[l.movement] = (counts[l.movement] || 0) + 1;
   return h(
@@ -559,7 +622,9 @@ function viewOverview() {
       stat(tx.atDepot, ov.depot),
       stat(tx.atCustomers, ov.customer),
       stat(tx.atRefill, ov.refill),
-      stat(tx.defective, ov.defective, ov.defective ? "warn" : "")
+      stat(tx.defective, ov.defective, ov.defective ? "warn" : ""),
+      stat(tx.testExpiredN, ov.testExpired, ov.testExpired ? "warn" : ""),
+      stat(tx.testSoonN, ov.testSoon, ov.testSoon ? "warn" : "")
     ),
     h(
       "section",
@@ -589,13 +654,19 @@ function viewCylinders() {
     return h(
       "section",
       { class: "panel" },
-      h("div", { class: "row between" }, h("h2", {}, tx.historyTitle(c.info.serial)), btn("←", () => { st.history = null; render(); }, "ghost small")),
-      h("p", {}, `${tx.gas}: ${tx.gases[c.info.gas]}${c.info.capacityL ? ` · ${tx.capacity} ${c.info.capacityL} l` : ""} · ${tx.registeredOn} ${fmtDate(c.info.registeredAt)} · ${tx.ownedBy} ${c.info.owner === "supplier" ? tx.supplier : names()[c.info.owner] || "?"}`),
+      h("div", { class: "row between" }, h("h2", {}, tx.historyTitle(c.info.serial)), h("div", { class: "row" },
+        st.correcting ? null : btn(tx.correct, () => { st.correcting = { mode: "due", month: c.state && c.state.test && c.state.test.due ? c.state.test.due : "" }; render(); }, "ghost small"),
+        btn("←", () => { st.history = null; st.correcting = null; render(); }, "ghost small"))),
+      h("p", {}, `${tx.gas}: ${tx.gases[c.info.gas]}${c.info.capacityL ? ` · ${tx.capacity} ${c.info.capacityL} l` : ""} · ${tx.registeredOn} ${fmtDate(c.info.registeredAt)} · ${tx.ownedBy} ${ownerText(c.info.owner)}`),
+      h("p", {}, `${tx.testLabel}: ${c.state && c.state.test && c.state.test.last ? `${tx.testLast} ${monthText(c.state.test.last)} · ` : ""}${tx.testDue} ${testText(c.state && c.state.test)} (${tx.everyYears(S.testYearsFor(c.info, st.data.settings))})`),
+      st.correcting ? correctForm(c) : null,
       h(
         "ol",
         { class: "timeline" },
         st.history.entries.map((e) =>
-          e.unreadable
+          e.correction
+            ? h("li", {}, h("div", { class: "when" }, fmtDate(e.correction.date)), h("div", {}, h("b", {}, tx.correction), ` · ${e.correction.reason}`), e.correction.line ? h("div", { class: "dim small" }, correctionText(e.correction.line)) : null)
+            : e.unreadable
             ? h("li", {}, h("div", { class: "warn" }, tx.unreadableMovement), e.document ? h("div", { class: "dim small" }, docLabel(e.document)) : null)
             : h(
             "li",
@@ -609,7 +680,11 @@ function viewCylinders() {
     );
   }
   const q = st.search.trim().toLowerCase();
-  const list = st.data.cyls.filter((c) => !q || [c.info.serial, tx.gases[c.info.gas], locationText(c.state)].join(" ").toLowerCase().includes(q));
+  const now = nowSec();
+  const byFilter = (c) => st.filter === "all" || (c.state && c.state.lifecycle !== "retired" && S.testStatus(c.state.test, now) === st.filter);
+  const list = st.data.cyls.filter((c) => byFilter(c) && (!q || [c.info.serial, tx.gases[c.info.gas], locationText(c.state), ownerText(c.info.owner)].join(" ").toLowerCase().includes(q)));
+  const filter = h("select", { class: "filter", onchange: (e) => { st.filter = e.target.value; render(); } },
+    [["all", tx.filterAll], ["expired", tx.filterExpired], ["soon", tx.filterSoon], ["unknown", tx.filterUnknown]].map(([v, n]) => h("option", { value: v, selected: v === st.filter }, n)));
   const search = h("input", { type: "search", placeholder: tx.search, value: st.search, oninput: (e) => {
     st.search = e.target.value;
     render();
@@ -620,12 +695,12 @@ function viewCylinders() {
   return h(
     "section",
     { class: "panel" },
-    search,
+    h("div", { class: "row" }, search, filter),
     st.data.cyls.length
       ? h(
           "table",
           { class: "click" },
-          h("thead", {}, h("tr", {}, h("th", {}, tx.serial), h("th", {}, tx.gas), h("th", {}, tx.where), h("th", {}, tx.condition), h("th", {}, tx.lastMovement))),
+          h("thead", {}, h("tr", {}, h("th", {}, tx.serial), h("th", {}, tx.gas), h("th", {}, tx.ownedBy), h("th", {}, tx.where), h("th", {}, tx.condition), h("th", {}, tx.testDue), h("th", {}, tx.lastMovement))),
           h(
             "tbody",
             {},
@@ -635,14 +710,67 @@ function viewCylinders() {
                 { onclick: () => showHistory(c) },
                 h("td", { class: "mono" }, c.info.serial),
                 h("td", {}, tx.gases[c.info.gas]),
+                h("td", {}, ownerText(c.info.owner)),
                 h("td", {}, locationText(c.state)),
                 h("td", {}, c.state ? h("span", { class: "chip " + c.state.condition }, tx.conditions[c.state.condition]) : "—"),
+                h("td", { class: c.state && S.testStatus(c.state.test, now) === "expired" ? "warn" : "" }, testText(c.state && c.state.test)),
                 h("td", { class: "dim" }, c.state ? `${tx.movements[c.state.movement]} · ${fmtDate(c.state.at)}` : "—")
               )
             )
           )
         )
       : h("p", { class: "dim" }, tx.noCylinders)
+  );
+}
+
+/** What a correction wrote, in words. */
+function correctionText(l) {
+  const tx = t();
+  const parts = [`${tx.gas}: ${tx.gases[l.gas]}`];
+  if (l.capacityL) parts.push(`${l.capacityL} l`);
+  if (l.owner) parts.push(`${tx.ownedBy} ${ownerText(l.owner)}`);
+  if (l.test) parts.push(`${tx.testDue} ${testText(l.test)}`);
+  return parts.join(" · ");
+}
+
+/** The owner corrects a registered cylinder (review A06): a correction document with its reason. */
+function correctForm(c) {
+  const tx = t();
+  const k = st.correcting;
+  const gas = h("select", {}, S.GASES.map((g) => h("option", { value: g, selected: g === c.info.gas }, tx.gases[g])));
+  const litres = h("input", { type: "number", inputmode: "decimal", value: c.info.capacityL || "" });
+  const owners = [["supplier", tx.supplier], ...st.data.cps.filter((x) => !x.archived || x.id === c.info.owner).map((x) => [x.id, x.name])];
+  const owner = h("select", {}, owners.map(([v, n]) => h("option", { value: v, selected: v === c.info.owner }, n)));
+  const mode = h("select", { onchange: (e) => (k.mode = e.target.value) }, [["due", tx.testDue], ["last", tx.testLast]].map(([v, n]) => h("option", { value: v, selected: v === k.mode }, n)));
+  const month = h("input", { type: "month", value: k.month || "", oninput: (e) => (k.month = e.target.value) });
+  const years = h("input", { type: "number", min: "1", max: "30", value: c.info.testYears || "", placeholder: String(S.testYearsFor({ gas: c.info.gas }, st.data.settings)) });
+  const reason = h("input", { type: "text", maxlength: "200" });
+  const save = () => {
+    if (!reason.value.trim()) return say(tx.needReason, "err");
+    const changes = {};
+    if (gas.value !== c.info.gas) changes.gas = gas.value;
+    const l = litres.value ? Number(litres.value) : null;
+    if (l !== (c.info.capacityL || null)) changes.capacityL = l;
+    if (owner.value !== c.info.owner) changes.owner = owner.value;
+    const y = years.value ? Number(years.value) : undefined;
+    if (y !== c.info.testYears) changes.testYears = y;
+    const current = c.state && c.state.test ? c.state.test[k.mode] : undefined;
+    if (k.month && k.month !== current) changes.test = { [k.mode]: k.month };
+    change(async () => {
+      await O.correctCylinder(st.ctx, st.keys, c.tokenId, changes, reason.value.trim());
+      st.correcting = null;
+      return tx.corrected;
+    });
+  };
+  return h(
+    "div",
+    { class: "form" },
+    h("label", {}, tx.gas, gas),
+    h("label", {}, tx.capacityLitres, litres),
+    h("label", {}, tx.ownedBy, owner),
+    h("div", { class: "row" }, h("label", {}, tx.testLabel, mode), h("label", {}, tx.month, month), h("label", {}, tx.testYears, years)),
+    h("label", {}, tx.reason, reason, h("span", { class: "hint" }, tx.reasonHint)),
+    h("div", { class: "row" }, btn(tx.cancel, () => { st.correcting = null; render(); }, "ghost"), btn(tx.save, save, "primary"))
   );
 }
 
@@ -654,11 +782,12 @@ function viewDocuments() {
     st.data.docs.length
       ? st.data.docs.map((d) => {
           const doc = d.document;
-          if (!doc) return h("p", { class: "dim" }, tx.unreadable);
+          if (!doc) return h("p", { class: "dim" }, d.recorded < d.parts ? tx.incompleteNoContent(d.recorded, d.parts) : tx.unreadable);
           return h(
             "details",
             { class: "doc" },
-            h("summary", {}, h("span", { class: "dim" }, fmtDate(doc.date)), " ", h("b", {}, docLabel(doc)), " · ", docWho(doc), " ", h("span", { class: "chip" }, String(doc.lines.length))),
+            h("summary", {}, h("span", { class: "dim" }, fmtDate(doc.date)), " ", h("b", {}, docLabel(doc)), " · ", docWho(doc), " ", h("span", { class: "chip" }, String(doc.lines.length)),
+              d.recorded < d.parts ? h("span", { class: "chip defective" }, tx.incomplete(d.recorded, d.parts)) : null),
             h(
               "table",
               {},
@@ -677,7 +806,7 @@ function cpForm(type, cp) {
   const save = () =>
     change(async () => {
       const fields = { type, name: name.value, emails: emailList(emails.value) };
-      if (cp) await O.updateCounterparty(st.ctx, st.keys, cp.id, fields);
+      if (cp) await O.updateCounterparty(st.ctx, st.keys, cp.id, fields, cp.raw);
       else await O.addCounterparty(st.ctx, st.keys, fields);
     });
   return h(
@@ -705,7 +834,7 @@ function cpList(type, title, empty, addLabel) {
                 "div",
                 { class: "item" },
                 h("div", {}, h("b", {}, c.name), h("div", { class: "dim small" }, c.emails.join(", ") || "—")),
-                h("div", { class: "row" }, btn(tx.edit, () => { st.editing = { type, cp: c }; render(); }, "ghost small"), btn(tx.remove, () => confirm(tx.confirmRemove(c.name)) && change(() => O.removeCounterparty(st.ctx, st.keys, c.id)), "ghost small danger"))
+                h("div", { class: "row" }, btn(tx.edit, () => { st.editing = { type, cp: c }; render(); }, "ghost small"), btn(tx.remove, () => confirm(tx.confirmRemove(c.name)) && change(() => O.removeCounterparty(st.ctx, st.keys, c.id, c.raw)), "ghost small danger"))
               )
         )
       : h("p", { class: "dim" }, empty)
@@ -757,6 +886,13 @@ function viewSettings() {
   const s = st.data.settings || { company: "", emails: [] };
   const company = h("input", { type: "text", value: s.company });
   const emails = h("input", { type: "text", value: s.emails.join(", ") });
+  // Years between periodic tests, by gas (empty: the default).
+  const yearInputs = Object.fromEntries(S.GASES.map((g) => [g, h("input", { type: "number", min: "1", max: "30", placeholder: String(S.DEFAULT_TEST_YEARS), value: (s.testYears && s.testYears[g]) || "" })]));
+  const testYears = () => {
+    const out = {};
+    for (const [g, el] of Object.entries(yearInputs)) if (el.value) out[g] = Number(el.value);
+    return out;
+  };
   const p1 = h("input", { type: "password", autocomplete: "new-password" });
   const p2 = h("input", { type: "password", autocomplete: "new-password" });
   const changePw = () => {
@@ -775,7 +911,10 @@ function viewSettings() {
       h("h2", {}, tx.tabs.settings),
       h("label", {}, tx.company, company, h("span", { class: "hint" }, tx.companyHint)),
       h("label", {}, tx.supplierEmails, emails, h("span", { class: "hint" }, tx.supplierEmailsHint)),
-      btn(tx.save, () => change(() => O.writeSettings(st.ctx, st.keys, { company: company.value, emails: emailList(emails.value) })), "primary")
+      h("h3", {}, tx.testYearsTitle),
+      h("p", { class: "dim small" }, tx.testYearsHint),
+      h("div", { class: "years" }, S.GASES.map((g) => h("label", {}, tx.gases[g], yearInputs[g]))),
+      btn(tx.save, () => change(() => O.writeSettings(st.ctx, st.keys, { company: company.value, emails: emailList(emails.value), testYears: testYears() }, st.data.settingsRaw)), "primary")
     ),
     h(
       "section",
@@ -785,7 +924,106 @@ function viewSettings() {
       h("label", {}, tx.newPasswordAgain, p2),
       btn(tx.changePassword, changePw, "primary")
     ),
+    handoverPanel(),
+    rekeyPanel(),
   ];
+}
+
+/** Handing the register to another account: started here, accepted by it after 3 days, cancellable. */
+function handoverPanel() {
+  const tx = t();
+  const status = st.data.status || {};
+  if (status.pendingOwner) {
+    return h(
+      "section",
+      { class: "panel" },
+      h("h2", {}, tx.handoverTitle),
+      h("p", { class: "warn" }, tx.handoverPending(phoneCodeText(status.pendingOwner), fmtDate(status.handoverReadyAt))),
+      btn(tx.cancelHandover, () => confirm(tx.confirmCancelHandover) && change(async () => (await O.cancelOwnershipTransfer(st.ctx), tx.handoverCancelled)), "primary")
+    );
+  }
+  const to = h("input", { type: "text", placeholder: "0x…", autocomplete: "off", spellcheck: "false" });
+  const start = () => {
+    const a = to.value.trim();
+    if (!isAddress(a)) return say(tx.badAddress, "err");
+    if (!confirm(tx.confirmHandover)) return;
+    change(async () => (await O.transferOwnership(st.ctx, getAddress(a)), tx.handoverStarted));
+  };
+  return h(
+    "details",
+    { class: "panel" },
+    h("summary", {}, h("b", {}, tx.handoverTitle)),
+    h("p", { class: "dim" }, tx.handoverIntro),
+    h("label", {}, tx.newAccount, to),
+    btn(tx.startHandover, start, "ghost danger")
+  );
+}
+
+/**
+ * Rare cases (review A05): a new data key with a new password and a new recovery code; older data stays
+ * readable, a phone or a person with the old key or password reads nothing new.
+ */
+function rekeyPanel() {
+  const tx = t();
+  const r = st.rekey;
+  if (r) {
+    const words = r.prepared.recoveryCode.split(" ");
+    const check = (i) => h("input", { type: "text", autocomplete: "off", spellcheck: "false", value: r.answers[i], oninput: (e) => (r.answers[i] = e.target.value) });
+    const finish = () => {
+      if (r.answers.some((w, i) => w.trim().toLowerCase() !== words[r.checks[i] - 1])) return say(tx.checkFail, "err");
+      if (!r.confirmed.every(Boolean)) return say(tx.confirmMissing, "err");
+      change(async () => {
+        const opened = await O.applyDataKey(st.ctx, r.prepared);
+        if (st.dek) st.dek.fill(0);
+        st.dek = opened.dek;
+        st.keys = opened.keys;
+        st.ctx.keysEpoch = opened.keys.epoch;
+        st.rekey = null;
+        return tx.rekeyDone;
+      });
+    };
+    return h(
+      "section",
+      { class: "panel code" },
+      h("h2", {}, tx.codeTitle),
+      h("p", {}, tx.rekeyCodeIntro),
+      h("div", { class: "printable" },
+        h("p", { class: "print-only" }, `GasTrace · ${st.reg.name} · ${st.reg.address}`),
+        h("ol", { class: "words" }, words.map((w) => h("li", {}, w)))),
+      btn(tx.print, () => window.print(), "ghost"),
+      h("label", {}, tx.check(r.checks[0]), check(0)),
+      h("label", {}, tx.check(r.checks[1]), check(1)),
+      [tx.confirmPassword, tx.confirmWords].map((text, i) =>
+        h("label", { class: "confirm" }, h("input", { type: "checkbox", checked: r.confirmed[i], onchange: (e) => (r.confirmed[i] = e.target.checked) }), " ", text)),
+      h("div", { class: "row" }, btn(tx.cancel, () => { r.prepared.dek.fill(0); st.rekey = null; render(); }, "ghost"), btn(tx.rekeySave, finish, "primary"))
+    );
+  }
+  const p1 = h("input", { type: "password", autocomplete: "new-password" });
+  const p2 = h("input", { type: "password", autocomplete: "new-password" });
+  const lang = h("select", {}, h("option", { value: "it", selected: st.lang === "it" }, "Italiano"), h("option", { value: "en", selected: st.lang === "en" }, "English"));
+  const prepare = async () => {
+    if (p1.value !== p2.value) return say(tx.mismatch, "err");
+    const c = S.checkPassword(p1.value);
+    if (!c.ok) return say(tx.weak[c.reason], "err");
+    try {
+      const prepared = await S.replaceDataKey(st.keys, st.dek, p1.value, lang.value);
+      st.rekey = { prepared, checks: [1 + Math.floor(Math.random() * 12), 13 + Math.floor(Math.random() * 12)], answers: ["", ""], confirmed: [false, false] };
+      st.msg = null;
+      render();
+    } catch (e) {
+      say(failText(e), "err");
+    }
+  };
+  return h(
+    "details",
+    { class: "panel" },
+    h("summary", {}, h("b", {}, tx.rekeyTitle)),
+    h("p", { class: "dim" }, tx.rekeyIntro),
+    h("label", {}, tx.rekeyPassword, p1),
+    h("label", {}, tx.rekeyPasswordAgain, p2),
+    h("label", {}, tx.keysLanguage, lang),
+    btn(tx.rekeyContinue, prepare, "ghost danger")
+  );
 }
 
 /** Saves a file from the page (no server involved). */

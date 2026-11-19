@@ -3,7 +3,7 @@
 // tests call these functions. Every write is an owner-signed operation handed to `submit`, which sends
 // it through the relayer or, until the relayer exists, from a funded submitter key.
 
-const { Contract, ContractFactory, getAddress, hexlify, randomBytes, id, keccak256, ZeroHash } = require("ethers");
+const { Contract, ContractFactory, getAddress, hexlify, randomBytes, id, keccak256, ZeroHash, toUtf8String } = require("ethers");
 const S = require("../../shared");
 // Version 2 of the contracts (DESIGN.md 10.1). Version 1 (the demo) is only deployed, never used here.
 const REGISTRY_ABI = require("../../shared/abi/GasCylinderRegistryV2.json");
@@ -542,7 +542,7 @@ async function status(ctx) {
   return {
     registry: ctx.address,
     chainId: Number(ctx.chainId),
-    name: Buffer.from(name.slice(2), "hex").toString("utf8"),
+    name: name === "0x" ? "" : toUtf8String(name), // also in the browser (the admin page)
     owner,
     pendingOwner: pendingOwner === ZERO_ADDRESS ? null : pendingOwner,
     handoverReadyAt: pendingOwner === ZERO_ADDRESS ? null : Number(readyAt),

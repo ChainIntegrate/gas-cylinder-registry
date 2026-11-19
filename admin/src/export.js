@@ -46,6 +46,8 @@ function exportFiles(data, tx, lang, day) {
     if (s.location.type === "depot") return tx.locations.depot;
     return tx.locations[s.location.type](cpName(s.location.id));
   };
+  const month = (ym) => (ym ? `${ym.slice(5, 7)}/${ym.slice(0, 4)}` : "");
+  const testCells = (t) => (!t ? ["", ""] : t.unreadable ? [tx.testUnreadable, tx.testUnreadable] : [month(t.last), month(t.due)]);
   const docNumber = (d) => (d.number ? String(d.number).replace(/^DDT\s*/i, "") : ""); // as the page shows it
   const file = (key, header, rows) => ({ name: `gastrace-${e.files[key]}-${day}.csv`, text: toCsv(header, rows, sep) });
   const readable = data.docs.filter((d) => d.document);
@@ -53,7 +55,7 @@ function exportFiles(data, tx, lang, day) {
   return {
     cylinders: file(
       "cylinders",
-      [tx.serial, tx.gas, e.capacity, tx.ownedBy, tx.where, tx.condition, tx.lastMovement, e.lastMovementDate, tx.registeredOn],
+      [tx.serial, tx.gas, e.capacity, tx.ownedBy, tx.where, tx.condition, tx.testLast, tx.testDue, tx.lastMovement, e.lastMovementDate, tx.registeredOn],
       data.cyls.map((c) => [
         c.info.serial,
         tx.gases[c.info.gas],
@@ -61,6 +63,7 @@ function exportFiles(data, tx, lang, day) {
         c.info.owner === "supplier" ? tx.supplier : cpName(c.info.owner),
         where(c.state),
         c.state ? tx.conditions[c.state.condition] : "",
+        ...testCells(c.state && c.state.test),
         c.state ? tx.movements[c.state.movement] : "",
         c.state ? dateTime(c.state.at) : "",
         dateTime(c.info.registeredAt),
@@ -77,7 +80,7 @@ function exportFiles(data, tx, lang, day) {
             dateTime(d.document.date),
             tx.docKinds[d.document.kind],
             docNumber(d.document),
-            d.document.counterpartyName || cpName(d.document.counterparty),
+            d.document.kind === "correction" ? d.document.reason : d.document.counterpartyName || cpName(d.document.counterparty),
             l.serial,
             tx.gases[l.gas],
             tx.movements[l.movement],
@@ -99,7 +102,7 @@ function exportFiles(data, tx, lang, day) {
             dateTime(doc.date),
             tx.docKinds[doc.kind],
             docNumber(doc),
-            doc.counterpartyName || cpName(doc.counterparty),
+            doc.kind === "correction" ? doc.reason : doc.counterpartyName || cpName(doc.counterparty),
             doc.lines.length,
             ...e.movementColumns.map(n),
             doc.lines.filter((l) => l.anomaly).length || "",

@@ -154,3 +154,6 @@ select { width: 100%; font: inherit; color: var(--text); background: var(--field
 footer a { color: var(--accent); }
 label.confirm { color: var(--text); font-size: 14px; display: flex; gap: 8px; align-items: flex-start; }
 label.confirm input { width: auto; margin-top: 2px; }
+.years { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0 12px; }
+.years label { margin: 6px 0; }
+select.filter { width: auto; max-width: 100%; }

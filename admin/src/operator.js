@@ -205,7 +205,7 @@ async function create(form) {
     const prepared = await O.prepareRegistry({ factory: factoryRead(), salt: hexlify(randomBytes(32)) }); // no data key: see the top
     st.busy = tx.confirmWallet;
     render();
-    const data = new Interface(O.FACTORY_ABI).encodeFunctionData("createRegistry", [prepared.salt, owner, form.name.trim(), form.symbol, [], []]);
+    const data = new Interface(O.FACTORY_ABI).encodeFunctionData("createRegistry", [prepared.salt, owner, form.name.trim(), form.symbol]);
     const hash = await st.wallet.provider.request({ method: "eth_sendTransaction", params: [{ from: st.account, to: CONFIG.factory, data, value: "0x0" }] });
     st.busy = tx.waiting;
     render();

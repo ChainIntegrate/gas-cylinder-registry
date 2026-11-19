@@ -36,7 +36,7 @@ async function main() {
   const accounts = await provider.send("eth_accounts", []);
   const ci = await provider.getSigner(accounts[0]);
   const { chainId } = await provider.getNetwork();
-  const f = await O.deployFactory(ci);
+  const f = await O.deployFactory(ci, 2);
 
   // The supplier's account (answers as a Universal Profile).
   const { abi, bytecode } = require("../artifacts/contracts/test/MockContractAccount.sol/MockContractAccount.json");

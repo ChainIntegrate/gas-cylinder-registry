@@ -16,7 +16,7 @@ const data = {
     { id: PLANT, type: "refill", name: "=HYPERLINK(\"x\")", emails: [] },
   ],
   cyls: [
-    { info: { serial: "A-001", gas: "argon", capacityL: 50, owner: "supplier", registeredAt: at }, state: { location: { type: "customer", id: CUST }, condition: "full", lifecycle: "active", movement: "delivery", at } },
+    { info: { serial: "A-001", gas: "argon", capacityL: 50, owner: "supplier", registeredAt: at }, state: { location: { type: "customer", id: CUST }, condition: "full", lifecycle: "active", movement: "delivery", at, test: { last: "2024-03", due: "2034-03" } } },
     { info: { serial: "B-002", gas: "oxygen", owner: GONE, registeredAt: at }, state: null },
   ],
   docs: [
@@ -39,7 +39,7 @@ describe("admin page: data download", function () {
     expect(f.cylinders.text.startsWith("﻿Codice;Gas;Litri;")).to.equal(true);
     const c = rows(f.cylinders);
     expect(c).to.have.length(3);
-    expect(c[1]).to.match(/^A-001;Argon;50;del fornitore;"Presso Officina Demo; Nord";Piena;Consegna;2026-11-13 \d\d:30;/);
+    expect(c[1]).to.match(/^A-001;Argon;50;dell'azienda;"Presso Officina Demo; Nord";Piena;03\/2024;03\/2034;Consegna;2026-11-13 \d\d:30;/);
     expect(c[2]).to.match(/^B-002;Ossigeno;;\(tolto dall'elenco\);;;;;/);
   });
 

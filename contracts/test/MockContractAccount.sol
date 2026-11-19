@@ -12,6 +12,12 @@ contract MockContractAccount {
         controller = controller_;
     }
 
+    /// @dev Its controller as its direct owner: version 2 of the register accepts its signatures as an
+    /// administrator's (GasCylinderRegistryV2.isAdministrator).
+    function owner() external view returns (address) {
+        return controller;
+    }
+
     function isValidSignature(bytes32 hash, bytes memory signature) external view returns (bytes4) {
         (address recovered, ECDSA.RecoverError err) = ECDSA.tryRecover(hash, signature);
         return err == ECDSA.RecoverError.NoError && recovered == controller ? bytes4(0x1626ba7e) : bytes4(0xffffffff);
