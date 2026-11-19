@@ -45,8 +45,8 @@
             <li><a href="#collaudo">Collaudo</a></li>
             <li><a href="#correggere">Correggere una bombola</a></li>
             <li><a href="#scaricare">Scaricare i dati</a></li>
-            <li><a href="#nuova-chiave">Telefono perso: cambiare la chiave dei dati</a></li>
             <li><a href="#cedere">Cedere il registro a un altro account</a></li>
+            <li><a href="#nuova-chiave">Casi rari: cambiare la chiave dei dati</a></li>
           </ol>
         </li>
         <li><a href="#autista">Per l'autista</a>
@@ -144,7 +144,7 @@
       <ul>
         <li><strong>Nome dell'azienda</strong>: compare nell'app e nell'oggetto delle mail. Finché manca, l'app avvisa l'autista.</li>
         <li><strong>Email dell'azienda</strong>: le caselle dell'azienda (ufficio, magazzino…) che ricevono una copia di ogni documento, di tutti i clienti, e gli avvisi importanti sul registro. Separale con una virgola.</li>
-        <li><strong>Collaudo</strong>: ogni quanti anni va rifatto, per ogni gas (proposto: 10 anni). Serve a calcolare la scadenza dalla data dell'ultimo collaudo; per una singola bombola si può cambiare con <a href="#correggere">Correggi</a>.</li>
+        <li><strong>Collaudo</strong>: ogni quanti anni va rifatto, per ogni gas (proposto: 10 anni). Serve a calcolare la scadenza dall'ultimo collaudo, o l'ultimo collaudo dalla scadenza; per una singola bombola si può cambiare con <a href="#correggere">Correggi</a>.</li>
       </ul>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-settings.webp" target="_blank" rel="noopener"><img src="guide-img/page-settings.webp" alt="Impostazioni: nome e mail dell'azienda" loading="lazy"></a><figcaption>Impostazioni: nome e mail dell'azienda</figcaption></figure>
@@ -174,7 +174,7 @@
         <li>Tu scrivi quel codice in <strong>Autorizza un telefono</strong>, premi <strong>Autorizza</strong> e confermi nell'estensione.</li>
         <li>L'app se ne accorge da sola e chiede la <strong>password dei dati</strong>: la scrivi tu sul telefono, una volta sola. Il telefono non la conserva.</li>
       </ol>
-      <p><strong>Revoca</strong> un telefono perso, rubato o di un autista che non lavora più con voi: da quel momento non può più registrare niente. Al primo sblocco dopo la revoca, se c'è rete, l'app <strong>cancella da sola</strong> la chiave e i dati salvati sul telefono. Un telefono perso o rubato potrebbe non sbloccarsi mai più: in quel caso <a href="#nuova-chiave">cambia la chiave dei dati</a>.</p>
+      <p><strong>Revoca</strong> un telefono perso, rubato o di un autista che non lavora più con voi: da quel momento non può più registrare niente. Al primo sblocco dopo la revoca, se c'è rete, l'app <strong>cancella da sola</strong> la chiave e i dati salvati sul telefono. Basta questo: cambiare la chiave dei dati serve solo nei <a href="#nuova-chiave">casi rari</a>.</p>
       <div class="shots">
         <figure class="screen"><a href="guide-img/page-phones.webp" target="_blank" rel="noopener"><img src="guide-img/page-phones.webp" alt="Telefoni: i telefoni autorizzati, il codice da scrivere e il QR da far inquadrare (qui sfocato)" loading="lazy"></a><figcaption>Telefoni: i telefoni autorizzati, il codice da scrivere e il QR da far inquadrare (qui sfocato)</figcaption></figure>
       </div>
@@ -198,7 +198,7 @@
 
     <section class="panel" id="collaudo">
       <h3>Collaudo</h3>
-      <p>Ogni bombola ha la <strong>data dell'ultimo collaudo</strong> (mese e anno, come punzonata sulla bombola) e la <strong>scadenza</strong>, calcolata con gli anni scelti nelle <a href="#impostazioni">impostazioni</a>.</p>
+      <p>Ogni bombola ha la <strong>data dell'ultimo collaudo</strong> e la <strong>scadenza</strong> (mese e anno). Basta scriverne una, quella punzonata sulla bombola: l'altra la calcola GasTrace con gli anni scelti nelle <a href="#impostazioni">impostazioni</a> per quel gas.</p>
       <ul>
         <li>La data si scrive quando l'autista registra la bombola, e si aggiorna quando la bombola <a href="#ricarica">rientra collaudata</a> dal centro di ricarica.</li>
         <li>In <strong>Bombole</strong> trovi i filtri <strong>Collaudo scaduto</strong>, <strong>In scadenza entro 3 mesi</strong> e <strong>Collaudo da completare</strong> (bombole registrate con la punzonatura non leggibile).</li>
@@ -212,7 +212,7 @@
       <ul>
         <li>gas e litri;</li>
         <li>di chi è: dell'azienda, di un cliente o di un centro di ricarica;</li>
-        <li>data dell'ultimo collaudo e ogni quanti anni va rifatto.</li>
+        <li>ultimo collaudo o scadenza, e ogni quanti anni va rifatto.</li>
       </ul>
       <p>Scrivi il motivo (per esempio "gas sbagliato alla registrazione"), premi <strong>Salva</strong> e conferma nell'estensione. La correzione compare nella storia della bombola, con la data e il motivo: il dato precedente non sparisce.</p>
     </section>
@@ -233,18 +233,6 @@
       </div>
     </section>
 
-    <section class="panel" id="nuova-chiave">
-      <h3>Telefono perso: cambiare la chiave dei dati</h3>
-      <p>Un telefono perso o rubato, anche se revocato, potrebbe ancora leggere i dati che aveva. Per essere sicuri che non legga quelli nuovi:</p>
-      <ol>
-        <li>Revoca il telefono da <strong>Telefoni</strong>.</li>
-        <li>In <strong>Impostazioni</strong> premi <strong>Cambia la chiave dei dati</strong>.</li>
-        <li>Scegli una <strong>nuova password dei dati</strong>: la pagina mostra un <strong>nuovo codice di recupero</strong> di 24 parole. Scrivilo come la prima volta, spunta le conferme e conferma nell'estensione.</li>
-        <li>Su ogni telefono ancora autorizzato, l'app chiede la nuova password dei dati: la scrivi tu, una volta.</li>
-      </ol>
-      <p>I dati vecchi restano leggibili con la nuova password. Le vecchie 24 parole non servono più: distruggile.</p>
-      <p>Fallo anche quando pensi che qualcuno conosca la password dei dati.</p>
-    </section>
 
     <section class="panel" id="cedere">
       <h3>Cedere il registro a un altro account</h3>
@@ -253,6 +241,18 @@
         <li>Per sicurezza la cessione si completa solo dopo <strong>3 giorni</strong>: il nuovo account la accetta dal suo computer amministratore.</li>
         <li>Le mail dell'azienda ricevono subito un avviso. Se non l'hai chiesta tu, premi <strong>Annulla la cessione</strong> e scrivi a ChainIntegrate.</li>
       </ul>
+    </section>
+
+    <section class="panel" id="nuova-chiave">
+      <h3>Casi rari: cambiare la chiave dei dati</h3>
+      <p>Per un telefono perso, rubato o di un autista che se ne va <strong>basta revocarlo</strong> da <strong>Telefoni</strong>: non può più registrare niente, e per aprire l'app serve comunque l'impronta o il PIN di quel telefono.</p>
+      <p>Cambia la chiave dei dati solo se pensi che qualcuno possa ancora <strong>leggere</strong> i dati senza permesso: qualcuno conosce la password dei dati, ha visto le 24 parole, o ha un telefono revocato insieme al suo PIN (per esempio un ex autista che si è tenuto il telefono).</p>
+      <ol>
+        <li>In <strong>Impostazioni</strong> premi <strong>Cambia la chiave dei dati</strong>.</li>
+        <li>Scegli una <strong>nuova password dei dati</strong>: la pagina mostra un <strong>nuovo codice di recupero</strong> di 24 parole. Scrivilo come la prima volta, spunta le conferme e conferma nell'estensione.</li>
+        <li>Su ogni telefono ancora autorizzato, l'app chiede la nuova password dei dati: la scrivi tu, una volta.</li>
+      </ol>
+      <p>Da quel momento i dati nuovi si leggono solo con la nuova chiave; quelli vecchi restano leggibili con la nuova password. Le vecchie 24 parole non servono più: distruggile.</p>
     </section>
 
     <h2 class="part" id="autista">Per l'autista</h2>
@@ -293,7 +293,7 @@
       <ul>
         <li><strong>Gas</strong>, e se vuoi i <strong>litri</strong>;</li>
         <li><strong>Di chi è</strong>: <strong>Nostra</strong> (proposto), <strong>Del cliente</strong> (il cliente del documento) oppure <strong>Di un centro di ricarica</strong> (scegli quale);</li>
-        <li><strong>Ultimo collaudo</strong>: mese e anno punzonati sulla bombola. Se la punzonatura non si legge tocca <strong>Non leggibile</strong>: il titolare la ritrova in "Collaudo da completare".</li>
+        <li><strong>Collaudo</strong>: scegli <strong>Ultimo collaudo</strong> o <strong>Scadenza</strong>, secondo cosa è punzonato sulla bombola, e scrivi mese e anno; l'altra data la calcola l'app. Se la punzonatura non si legge tocca <strong>Non leggibile</strong>: il titolare la ritrova in "Collaudo da completare".</li>
       </ul>
       <p>Questi dati si scrivono una volta sola. Se hai sbagliato, dillo al titolare: li corregge lui dalla sua pagina.</p>
     </section>
@@ -337,7 +337,7 @@
     <section class="panel" id="ricarica">
       <h3>Ricarica e collaudo</h3>
       <p>Tocca <strong>Ricarica</strong> e scegli il centro di ricarica. Inquadra le bombole: quelle in deposito risultano <strong>inviate a ricarica</strong>, quelle che erano in quel centro risultano <strong>rientrate da ricarica</strong>.</p>
-      <p>Per una bombola che rientra <strong>collaudata</strong>, tocca <strong>Collaudata</strong> sulla sua riga e controlla mese e anno del nuovo collaudo (l'app propone il mese corrente: correggilo se la punzonatura dice altro).</p>
+      <p>Per una bombola che rientra <strong>collaudata</strong>, tocca <strong>Collaudata</strong> sulla sua riga: l'app propone come ultimo collaudo il mese corrente. Se la punzonatura dice altro, correggilo, oppure scegli <strong>Scadenza</strong> e scrivi quella punzonata.</p>
       <p>Scrivi il numero del documento e invia.</p>
     </section>
 
@@ -385,7 +385,7 @@
       <h3>"Questo telefono non è più autorizzato"</h3>
       <p>Il titolare l'ha revocato: l'app ha cancellato la chiave e i dati del telefono. Se è un errore, va configurato di nuovo con il titolare.</p>
       <h3>Telefono perso, rubato o cambiato</h3>
-      <p>Il titolare lo revoca subito da <strong>Telefoni</strong> e <a href="#nuova-chiave">cambia la chiave dei dati</a>. Il telefono nuovo si configura da capo, come la prima volta.</p>
+      <p>Il titolare lo revoca subito da <strong>Telefoni</strong>. Il telefono nuovo si configura da capo, come la prima volta.</p>
       <h3>L'impronta non va più, o è stato tolto il blocco schermo</h3>
       <p>Android cancella la chiave dell'app quando si toglie il blocco schermo. Rimetti il blocco schermo e configura di nuovo il telefono con il titolare; il titolare revoca il vecchio codice.</p>
       <h3>La pagina non trova l'estensione</h3>
