@@ -65,6 +65,14 @@ class Vault {
     }
     await this.flush();
   }
+  /** Seals every value again with `key` (the owner replaced the data key): nothing kept is lost. */
+  async rekey(key) {
+    if (!this.key) throw new Error("the app is locked");
+    await this.flush();
+    this.key = key;
+    for (const [name, text] of this.mem) this.setItem(name, text);
+    await this.flush();
+  }
   lock() {
     this.key = null;
     this.mem.clear();

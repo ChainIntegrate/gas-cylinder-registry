@@ -46,9 +46,9 @@ async function main() {
   const phone = ethers.Wallet.createRandom();
 
   // ChainIntegrate and the owner tools prepare the registry.
-  const f = await O.deployFactory(chainIntegrate);
+  const f = await O.deployFactory(chainIntegrate, 2);
   const factory = new ethers.Contract(f.address, O.FACTORY_ABI, chainIntegrate);
-  const prepared = await O.prepareRegistry({ factory, password, language: "it" });
+  const prepared = await O.prepareRegistry({ factory });
   const r = await O.createRegistry({ factory, prepared, owner: owner.address, name: "Argonia Gas Tecnici cylinders", symbol: "ARGCYL" });
 
   const mails = [];
@@ -66,10 +66,12 @@ async function main() {
   const relayerUrl = `http://127.0.0.1:${relayerServer.address().port}`;
 
   const ctx = await O.context({ provider, registry: r.address, owner, submit: O.relayerSubmitter(relayerUrl, provider), fromBlock: r.block });
+  await O.initializeKeys(ctx, await O.prepareKeys(r.address, password, "it"));
   const { keys } = await O.unlockWithPassword(ctx, password);
   await O.writeSettings(ctx, keys, { company: "Argonia Gas Tecnici", emails: ["ufficio@example.com"] });
   await O.addCounterparty(ctx, keys, { type: "customer", name: "Officina Demo", emails: ["demo@example.com"] });
   await O.addCounterparty(ctx, keys, { type: "customer", name: "Cliente Due", emails: [] });
+  await O.addCounterparty(ctx, keys, { type: "refill", name: "Centro Ricarica Nord", emails: [] });
   const code = S.setupCode(r.address, r.block);
 
   // The app, built for the local chain and relayer.
@@ -171,6 +173,7 @@ async function main() {
     await click("Aggiungi");
     await see(serial);
     await page.locator(".line").first().locator("select").first().selectOption(gas);
+    await page.locator(".line").first().locator('input[type="month"]').fill("2022-05"); // the stamped last test
     await page.locator(".line").first().locator("select").last().selectOption("empty");
   }
   await shot("stock-count");
@@ -187,13 +190,19 @@ async function main() {
     await click("Inquadra bombola");
     await page.waitForFunction((k) => document.querySelectorAll(".line").length === k, i + 1);
   }
-  // New cylinders: choose the gas; the one left out of the count is collected.
+  // New cylinders: the gas, who owns it and the periodic test; the one left out of the count is collected.
+  // A new line's selects: gas, owner, test (last or expiry), movement, condition.
   const lines = page.locator(".line");
-  await lines.nth(0).locator("select").nth(0).selectOption("nitrogen"); // N2-400
-  await lines.nth(0).locator("select").nth(1).selectOption("collection");
-  await page.locator(".line").nth(0).locator("select").nth(2).selectOption("empty");
+  await lines.nth(0).locator("select").nth(0).selectOption("nitrogen"); // N2-400, the customer's own
+  await lines.nth(0).locator("select").nth(1).selectOption({ label: "Del cliente (Officina Demo)" });
+  await lines.nth(0).locator("select").nth(2).selectOption("unreadable");
+  await lines.nth(0).locator("select").nth(3).selectOption("collection");
+  await page.locator(".line").nth(0).locator("select").nth(4).selectOption("empty");
   await lines.nth(3).locator("select").nth(0).selectOption("argon"); // AR-301
+  await lines.nth(3).locator("select").nth(2).selectOption("due");
+  await lines.nth(3).locator('input[type="month"]').fill("2033-09");
   await lines.nth(4).locator("select").nth(0).selectOption("argon"); // AR-300
+  await lines.nth(4).locator('input[type="month"]').fill("2024-01");
   await page.getByLabel("Numero DDT").fill("DDT 2026/118");
   await page.getByPlaceholder("Aggiungi un indirizzo (facoltativo)").first().fill("titolare@example.com");
   await shot("delivery-note");
@@ -239,6 +248,24 @@ async function main() {
   await see("Registrato.");
   await click("Chiudi");
 
+  // 3c. Refill: AR-100 (at the depot, empty) goes to the refill plant and comes back full and tested.
+  for (const [number, tested] of [["R-1", false], ["R-2", true]]) {
+    await click("Ricarica");
+    await click("Centro Ricarica Nord");
+    scans.push("AR-100");
+    await click("Inquadra bombola");
+    await page.waitForFunction(() => document.querySelectorAll(".line").length === 1);
+    if (tested) {
+      await page.getByLabel("Collaudata").check();
+      await page.locator(".line").first().locator('input[type="month"]').fill("2026-11");
+      await shot("refill-tested");
+    }
+    await page.getByLabel("Numero documento").fill(number);
+    await click("Invia");
+    await see("Registrato.");
+    await click("Chiudi");
+  }
+
   // 4. Check a cylinder.
   await click("Controlla una bombola");
   scans.push("AR-300");
@@ -270,6 +297,11 @@ async function main() {
   await click("Sblocca con impronta o PIN");
   await see("è stato revocato");
   await shot("revoked");
+  const readBack = new (require("../app/src/logic").Registry)({ provider, address: r.address, fromBlock: r.block, keys });
+  const testedState = (await readBack.readCylinder("AR-100")).state;
+  const n2 = await readBack.readCylinder("N2-400");
+  const [n2Info, n2State] = [n2.info, n2.state];
+  const ar301State = (await readBack.readCylinder("AR-301")).state;
   const afterWipe = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("gcr.") && k !== "gcr.lang"));
 
   // Results
@@ -279,7 +311,9 @@ async function main() {
     ["nothing readable stored on the phone (A09)", stored.length > 0 && !/Officina|example\.com|AR-300/.test(stored) && /gcrv1:/.test(stored)],
     ["locked after 10 minutes unused (A09)", /Sblocca/.test(lockedText) && !/Consegna \/ ritiro/.test(lockedText)],
     ["a revoked phone erases its key and data (A09)", removed && afterWipe.length === 0],
-    ["one e-mail per document (steps 3 and 3b)", mails.length === 2 && /2026\/119/.test(mails[1].subject)],
+    ["one e-mail per document (steps 3, 3b and the two refill notes)", mails.length === 4 && /2026\/119/.test(mails[1].subject) && /R-2/.test(mails[3].subject)],
+    ["a cylinder back tested: the new test in its state", testedState && testedState.test && testedState.test.last === "2026-11"],
+    ["a new cylinder's owner and test, as chosen", n2Info && n2Info.owner !== "supplier" && n2State && n2State.test && n2State.test.unreadable === true && ar301State && ar301State.test.due === "2033-09"],
     ["a refused document made again from the current state (A12)", /Consegna/.test(redoneText) && /AR-300/.test(redoneText)],
     ["recipients", mail && mail.to === "demo@example.com, ufficio@example.com, titolare@example.com"],
     ["summary in the e-mail", mail && mail.text.includes("Consegna: 2 Argon") && /Ritiro: (?=.*1 Azoto)(?=.*1 Argon)(?=.*1 CO₂)/.test(mail.text)],

@@ -56,6 +56,8 @@ app.outbox = new L.Outbox(app.vault);
 const t = () => T[app.lang];
 const LOCK_AFTER_MS = 10 * 60 * 1000; // locked after 10 minutes unused or in the background (review A09)
 const names = () => Object.fromEntries(app.cps.map((c) => [c.id, c.name]));
+const types = () => Object.fromEntries(app.cps.map((c) => [c.id, c.type]));
+const thisMonth = () => S.monthOf(Math.floor(Date.now() / 1000));
 
 // ------------------------------------------------------------------------------------------------
 // DOM helpers
@@ -214,9 +216,15 @@ async function enterPassword(password) {
     const wrap = await app.reg.passwordWrap();
     if (!wrap || wrap === "0x") return fail(new Error(t().noDataKeyYet)); // the owner has not prepared the data yet
     const dek = await S.unwrapWithPassword(wrap, password, app.reg.address);
+    if (app.view === "newKey" && app.vault.unlocked) {
+      // The owner replaced the data key (review A05): what the phone keeps (documents to send, lists) is
+      // sealed again with the new key before the old one is forgotten.
+      const keys = await app.reg.openKeys(dek);
+      await app.vault.rekey(keys.cacheKey);
+    }
     await app.native.deviceKey.storeDataKey(hexlify(dek), prompt(t().setupStep4));
     dek.fill(0);
-    app.msg = { text: t().setupDone, cls: "ok" };
+    app.msg = { text: app.view === "newKey" ? t().newKeyDone : t().setupDone, cls: "ok" };
     await unlock();
   } catch (e) {
     if (/wrong password/.test(String(e.message))) fail(new Error(t().passwordWrong));
@@ -293,7 +301,18 @@ async function unlock() {
   try {
     const hex = await app.native.deviceKey.loadDataKey(prompt(t().unlockTitle));
     const dek = getBytes(hex);
-    app.reg.keys = await S.deriveKeys(dek, app.reg.address);
+    try {
+      app.reg.keys = await openKeys(dek);
+    } catch (e) {
+      if (e.code !== "KEY_REPLACED") throw e;
+      // The owner replaced the data key: the old one still opens what the phone keeps, then the owner
+      // types the new password here.
+      const old = await S.deriveKeys(dek, app.reg.address);
+      dek.fill(0);
+      app.phone = (await app.native.deviceKey.status()).address;
+      await app.vault.unlock(old.cacheKey);
+      return setView("newKey");
+    }
     dek.fill(0);
     const st = await app.native.deviceKey.status();
     app.phone = st.address;
@@ -310,6 +329,29 @@ async function unlock() {
   } catch (e) {
     fail(e);
   }
+}
+
+/**
+ * The working keys from the phone's data key: the key epoch and ring read from the register, or, without
+ * network, the last ones read (they are not secret: the ring is encrypted).
+ */
+async function openKeys(dek) {
+  let epoch, ring;
+  try {
+    [epoch, ring] = await app.reg.contract.getDataBatch([S.KEY_EPOCH_DATA_KEY, S.KEY_RING_DATA_KEY]);
+    store.set("gcr.keyring", { epoch, ring });
+  } catch (e) {
+    if (!L.isNetworkError(e)) throw e;
+    const kept = store.get("gcr.keyring") || { epoch: "0x", ring: "0x" };
+    [epoch, ring] = [kept.epoch, kept.ring];
+  }
+  return S.openKeys(dek, app.reg.address, epoch, ring);
+}
+
+function viewNewKey() {
+  const tx = t();
+  const pw = h("input", { type: "password", autocomplete: "off", placeholder: tx.password });
+  return [h("h2", {}, tx.newKeyTitle), note(tx.newKeyIntro), pw, btn(tx.confirm, () => enterPassword(pw.value), "primary big")];
 }
 
 /** The owner's settings and lists; kept on the phone, encrypted, for when there is no network. */
@@ -383,6 +425,7 @@ async function wipeRevoked() {
   } finally {
     app.vault.wipe();
     store.del("gcr.setup");
+    store.del("gcr.keyring");
     Object.assign(app, { reg: null, phone: null, settings: null, cps: [], doc: null, check: null, result: null, authorized: false });
     setView("setup", { msg: { text: t().revokedWiped, cls: "error" } });
   }
@@ -445,8 +488,18 @@ async function addCylinder(code) {
     app.msg = { text: tx.duplicate, cls: "warn" };
     return render();
   }
-  const p = L.propose(cyl, d.cp, d.kind, names());
-  d.lines.unshift({ ...cyl, ...p, gas: cyl.info ? cyl.info.gas : "", capacityL: cyl.info && cyl.info.capacityL });
+  const p = L.propose(cyl, d.cp, d.kind, names(), types());
+  d.lines.unshift({
+    ...cyl,
+    ...p,
+    gas: cyl.info ? cyl.info.gas : "",
+    capacityL: cyl.info && cyl.info.capacityL,
+    // A new cylinder: who owns it (ours by default) and its periodic test, as stamped.
+    owner: "supplier",
+    testMode: "last",
+    testMonth: "",
+    tested: false,
+  });
   d.confirmed = false;
   app.msg = null;
   render();
@@ -475,6 +528,7 @@ async function redo(item) {
       l.capacityL = l.capacityL || old.capacityL;
     }
     if (l.movement === old.movement) l.condition = old.condition;
+    for (const k of ["owner", "testMode", "testMonth", "tested"]) if (old[k] !== undefined) l[k] = old[k];
   }
   app.msg = { text: tx.redone, cls: "warn" };
   render();
@@ -492,6 +546,7 @@ async function sendDocument() {
   const d = app.doc;
   if (!d.lines.length) return;
   if (d.lines.some((l) => !l.known && !l.gas)) return fail(new Error(tx.needGas));
+  if (d.lines.some((l) => (!l.known || l.tested) && l.testMode !== "unreadable" && !/^\d{4}-\d{2}$/.test(l.testMonth || ""))) return fail(new Error(tx.needTest));
   if (d.kind !== "stock_count" && !d.number.trim()) return fail(new Error(tx.needNumber));
   if (d.lines.some((l) => l.anomaly) && !d.confirmed) return fail(new Error(tx.anomaliesToConfirm));
   const to = recipients();
@@ -501,7 +556,7 @@ async function sendDocument() {
   render();
   try {
     const now = Math.floor(Date.now() / 1000);
-    const lines = d.lines.map((l) => ({ ...l, capacityL: l.capacityL ? Number(l.capacityL) : undefined })).reverse();
+    const lines = d.lines.map((l) => ({ ...l, capacityL: l.capacityL ? Number(l.capacityL) : undefined, ...lineTest(l) })).reverse();
     const built = await L.buildDocument({ registry: app.reg, operator: app.phone, counterparty: d.cp, kind: d.kind, number: d.number, lines, now });
     const mail = to.length
       ? L.buildMail({ lang: app.lang, company: (app.settings && app.settings.company) || "", counterparty: d.cp, kind: d.kind, number: built.number, lines, now, recipients: to })
@@ -518,7 +573,12 @@ async function sendDocument() {
         number: d.kind === "stock_count" ? "" : built.number,
         who: d.cp.name,
         // What the driver scanned and chose, to make the document again after a refusal (review A12).
-        draft: { cpId: d.cp.id, number: d.number, extra: d.extra, lines: d.lines.map((l) => ({ serial: l.serial, gas: l.gas, capacityL: l.capacityL, movement: l.movement, condition: l.condition })) },
+        draft: {
+          cpId: d.cp.id,
+          number: d.number,
+          extra: d.extra,
+          lines: d.lines.map((l) => ({ serial: l.serial, gas: l.gas, capacityL: l.capacityL, movement: l.movement, condition: l.condition, owner: l.owner, testMode: l.testMode, testMonth: l.testMonth, tested: l.tested })),
+        },
       },
     });
     app.outbox.add(item);
@@ -564,6 +624,38 @@ async function flushOutbox() {
   }
 }
 
+/**
+ * The periodic test a line writes: a new cylinder's, or one back tested (`testChanged`); nothing for the
+ * others (the last state's is kept). The other month is worked out with the gas's years.
+ */
+function lineTest(l) {
+  if (l.known && !l.tested) return {};
+  if (l.testMode === "unreadable") return { test: { unreadable: true }, testChanged: true };
+  const years = S.testYearsFor({ gas: l.gas, testYears: l.info && l.info.testYears }, app.settings);
+  return { test: S.completeTest({ [l.testMode]: l.testMonth }, years), testChanged: true };
+}
+
+/** Who may own a new cylinder in this document: us, the document's counterparty, a refill plant. */
+function ownerOptions(d) {
+  const tx = t();
+  const out = [["supplier", tx.ownerOurs]];
+  out.push([d.cp.id, d.cp.type === "refill" ? tx.ownerRefill(d.cp.name) : tx.ownerCustomer(d.cp.name)]);
+  for (const c of app.cps) if (c.type === "refill" && !c.archived && c.id !== d.cp.id) out.push([c.id, tx.ownerRefill(c.name)]);
+  return out;
+}
+
+/** The periodic test's fields: last test or expiry, the month, or unreadable. */
+function testFields(l) {
+  const tx = t();
+  return h("div", { class: "row" },
+    h("span", { class: "label" }, tx.testLabel),
+    select([["last", tx.testLast], ["due", tx.testDue], ["unreadable", tx.testUnreadable]], l.testMode, (v) => {
+      l.testMode = v;
+      render();
+    }),
+    l.testMode === "unreadable" ? null : h("input", { type: "month", value: l.testMonth || "", oninput: (e) => (l.testMonth = e.target.value) }));
+}
+
 function lineCard(l, i) {
   const tx = t();
   const d = app.doc;
@@ -583,6 +675,21 @@ function lineCard(l, i) {
             render();
           }),
           h("input", { type: "number", inputmode: "decimal", placeholder: tx.capacity, value: l.capacityL || "", oninput: (e) => (l.capacityL = e.target.value) })),
+    l.known ? null : h("div", { class: "row" }, h("span", { class: "label" }, tx.ownerLabel), select(ownerOptions(d), l.owner, (v) => {
+      l.owner = v;
+      render();
+    })),
+    l.known ? null : testFields(l),
+    l.known && l.state && l.state.test && l.state.test.due && !l.tested ? h("p", { class: "note" }, tx.testDueOn(L.monthText(l.state.test.due))) : null,
+    l.known && l.movement === "from_refill"
+      ? h("label", { class: "check" }, h("input", { type: "checkbox", checked: l.tested, onchange: (e) => {
+          l.tested = e.target.checked;
+          if (l.tested && !l.testMonth) l.testMonth = thisMonth();
+          l.testMode = l.testMode === "unreadable" ? "last" : l.testMode || "last";
+          render();
+        } }), " ", tx.tested)
+      : null,
+    l.known && l.tested ? testFields(l) : null,
     h(
       "div",
       { class: "row" },
@@ -683,6 +790,35 @@ function viewResult() {
   ];
 }
 
+/**
+ * Cancels a waiting document (review G-07): its parts not sent yet are cancelled on the register (one
+ * fingerprint), so that nobody can record them later; then it leaves the list. Needs the network. A
+ * document refused or already recorded only leaves the list.
+ */
+async function cancelDocument(it) {
+  const tx = t();
+  // A document partly recorded: its recorded part stays (review A12).
+  if (it.parts.some((p) => p.state === "confirmed" || p.state === "sent") && !window.confirm(tx.discardPartial)) return;
+  if (!it.failed && it.parts.some((p) => p.state === "new" && !p.hash)) {
+    if (!window.confirm(tx.cancelConfirm)) return;
+    app.msg = { text: tx.cancelling, cls: "note" };
+    render();
+    try {
+      await L.cancelItem(it, {
+        registry: app.reg,
+        operator: app.phone,
+        relayer: CONFIG.relayer,
+        signDigests: (digests) => app.native.deviceKey.signDigests(digests, prompt(tx.cancelTitle)),
+      });
+    } catch (e) {
+      return fail(L.isNetworkError(e) || /fetch/i.test(String(e.message)) ? new Error(tx.cancelNeedsNetwork) : e);
+    }
+    app.msg = { text: tx.cancelled, cls: "ok" };
+  }
+  app.outbox.remove(it.id);
+  render();
+}
+
 function viewOutbox() {
   const tx = t();
   const items = app.outbox.pending();
@@ -706,12 +842,7 @@ function viewOutbox() {
                     app.outbox.remove(it.id);
                     render();
                   }, "small")
-                : btn(tx.discard, () => {
-                    // A document partly recorded: its recorded part stays (review A12).
-                    if (it.parts.some((p) => p.state === "confirmed" || p.state === "sent") && !window.confirm(tx.discardPartial)) return;
-                    app.outbox.remove(it.id);
-                    render();
-                  }, "small"))
+                : btn(tx.discard, () => cancelDocument(it), "small"))
           );
         })
       : note(tx.outboxEmpty),
@@ -741,6 +872,14 @@ function locationText(st) {
   return tx.locations[st.location.type](n[st.location.id] || "?");
 }
 
+function testText(test) {
+  const tx = t();
+  if (!test) return `${tx.testLabel}: —`;
+  if (test.unreadable) return `${tx.testLabel}: ${tx.testUnreadable}`;
+  const status = S.testStatus(test, Math.floor(Date.now() / 1000));
+  return `${tx.testLabel}: ${tx.testDueOn(L.monthText(test.due))}${status === "expired" ? " ⚠ " + tx.testExpired : status === "soon" ? " · " + tx.testSoon : ""}`;
+}
+
 function viewCheck() {
   const tx = t();
   const c = app.check;
@@ -763,7 +902,9 @@ function viewCheck() {
           c.known
             ? [
                 h("p", {}, `${tx.gas}: ${tx.gases[c.info.gas]}${c.info.capacityL ? ` · ${c.info.capacityL} l` : ""}`),
+                h("p", {}, `${tx.ownerLabel}: ${c.info.owner === "supplier" ? tx.ownerOurs : names()[c.info.owner] || "?"}`),
                 c.state ? h("p", {}, `${locationText(c.state)} · ${tx.conditions[c.state.condition]}`) : null,
+                c.state ? h("p", {}, testText(c.state.test)) : null,
                 c.state
                   ? h("p", { class: "note" }, `${tx.lastMovement}: ${tx.movements[c.state.movement]} · ${new Date(c.state.at * 1000).toLocaleString(app.lang === "en" ? "en-GB" : "it-IT")}`)
                   : null,
@@ -796,6 +937,7 @@ function render() {
     result: viewResult,
     outbox: viewOutbox,
     check: viewCheck,
+    newKey: viewNewKey,
   };
   const parts = [
     h(
