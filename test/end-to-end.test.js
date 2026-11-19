@@ -13,7 +13,7 @@ describe("end to end: library and contracts", function () {
     const [chainIntegrate, owner, relayer] = await ethers.getSigners();
     const phone = ethers.Wallet.createRandom(); // the driver's key, never funded
     const { chainId } = await ethers.provider.getNetwork();
-    const factory = await ethers.deployContract("GasCylinderRegistryFactory", [chainIntegrate.address]);
+    const factory = await ethers.deployContract("GasCylinderRegistryFactoryV2", [chainIntegrate.address]);
 
     // Owner tools: the address first, then the keys bound to it, then the registry.
     const salt = ethers.id("argonia-demo");
@@ -21,32 +21,27 @@ describe("end to end: library and contracts", function () {
     const dek = S.generateDataKey();
     const password = "le bombole di argon tornano vuote";
     const recoveryCode = S.generateRecoveryCode("it");
-    await factory
-      .connect(chainIntegrate)
-      .createRegistry(
-        salt,
-        owner.address,
-        "Argonia Gas Tecnici cylinders",
-        "ARGCYL",
-        [S.KEY_WRAP_DATA_KEYS.password, S.KEY_WRAP_DATA_KEYS.recovery],
-        [await S.wrapWithPassword(dek, password, regAddress), await S.wrapWithRecoveryCode(dek, recoveryCode, regAddress)]
-      );
-    const reg = await ethers.getContractAt("GasCylinderRegistry", regAddress);
+    await factory.connect(chainIntegrate).createRegistry(salt, owner.address, "Argonia Gas Tecnici cylinders", "ARGCYL");
+    const reg = await ethers.getContractAt("GasCylinderRegistryV2", regAddress);
     const dom = S.domain(regAddress, chainId);
-    const deadline = async () => BigInt(await time.latest()) + 3600n;
+    const validity = async () => S.validity(await time.latest(), 3600);
+    // The owner writes the key wraps at the first sign-in (review X-02).
+    const wraps = [await S.wrapWithPassword(dek, password, regAddress), await S.wrapWithRecoveryCode(dek, recoveryCode, regAddress)];
+    const wk = [S.KEY_WRAP_DATA_KEYS.password, S.KEY_WRAP_DATA_KEYS.recovery];
+    let v = await validity();
+    await reg.connect(relayer).setDataSigned(wk, wraps, v, await owner.signTypedData(dom, { SetData: S.TYPES.SetData }, { dataKeys: wk, dataValuesHash: S.hashDataValues(wraps), ...v }));
 
     // Owner tools: a customer and the phone, both signed by the owner and sent by the relayer.
     const keys = await S.deriveKeys(dek, regAddress);
     const customer = await S.counterpartyId(keys, "customer-1");
     const cpKey = S.counterpartyDataKey(customer);
     const cpValue = await S.encryptValue(keys, customer, "counterparty", S.validateCounterparty({ v: 1, type: "customer", name: "Officina Demo", emails: ["demo@example.com"] }));
-    let n = S.randomNonce();
-    let dl = await deadline();
-    let sig = await owner.signTypedData(dom, { SetData: S.TYPES.SetData }, { dataKeys: [cpKey], dataValuesHash: S.hashDataValues([cpValue]), nonce: n, deadline: dl });
-    await reg.connect(relayer).setDataSigned([cpKey], [cpValue], n, dl, sig);
-    n = S.randomNonce();
-    sig = await owner.signTypedData(dom, { SetOperator: S.TYPES.SetOperator }, { operator: phone.address, enabled: true, nonce: n, deadline: dl });
-    await reg.connect(relayer).setOperatorSigned(phone.address, true, n, dl, sig);
+    v = await validity();
+    let sig = await owner.signTypedData(dom, { SetData: S.TYPES.SetData }, { dataKeys: [cpKey], dataValuesHash: S.hashDataValues([cpValue]), ...v });
+    await reg.connect(relayer).setDataSigned([cpKey], [cpValue], v, sig);
+    v = await validity();
+    sig = await owner.signTypedData(dom, { SetOperator: S.TYPES.SetOperator }, { operator: phone.address, enabled: true, ...v });
+    await reg.connect(relayer).setOperatorSigned(phone.address, true, v, sig);
 
     // The phone at enrollment: the owner types the password once, the phone gets the data key.
     const phoneDek = await S.unwrapWithPassword(await reg.getData(S.KEY_WRAP_DATA_KEYS.password), password, regAddress);
@@ -56,11 +51,11 @@ describe("end to end: library and contracts", function () {
 
     // Helper: one signed document from the phone.
     const now = await time.latest();
-    async function send(payload) {
-      const nonce = S.randomNonce();
-      const d = await deadline();
-      const s = await phone.signTypedData(dom, { RecordDocument: S.TYPES.RecordDocument }, { signer: phone.address, payloadHash: S.hashPayload(payload), nonce, deadline: d });
-      return reg.connect(relayer).recordDocument(payload, phone.address, nonce, d, s);
+    async function send(part) {
+      const [payload] = S.withManifest([part]);
+      const pv = await validity();
+      const s = await phone.signTypedData(dom, { RecordDocument: S.TYPES.RecordDocument }, { signer: phone.address, payloadHash: S.hashPayload(payload), ...pv });
+      return reg.connect(relayer).recordDocument(payload, phone.address, pv, s);
     }
     async function readState(tokenId) {
       const raw = await reg.getDataForTokenId(tokenId, S.STATE_KEY);

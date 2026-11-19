@@ -52,21 +52,25 @@ describe("relayer", function () {
       lines.push({ tokenId: t, serial, gas: "argon", movement: "delivery", condition: "full" });
     }
     const document = await S.encryptValue(keys, docId, "document", S.validateDocument({ v: 1, kind: "delivery_note", number, date: now, counterparty: customer, lines }));
-    const payload = { docId, part: 0, parts: 1, corrects: ethers.ZeroHash, mints, updates, document };
-    const nonce = S.randomNonce();
-    const deadline = BigInt(now + 3600);
-    const signature = await phone.signTypedData(ctx.domain, { RecordDocument: S.TYPES.RecordDocument }, { signer: phone.address, payloadHash: S.hashPayload(payload), nonce, deadline });
-    const digest = S.recordDocumentDigest(ctx.address, ctx.chainId, phone.address, payload, nonce, deadline);
-    return { registry: ctx.address, payload, signer: phone.address, nonce, deadline, signature, lines, digest };
+    const [payload] = S.withManifest([{ docId, part: 0, parts: 1, corrects: ethers.ZeroHash, mints, updates, document }]);
+    const v = S.validity(now, 3600);
+    const signature = await sign(phone, payload, v);
+    const digest = S.recordDocumentDigest(ctx.address, ctx.chainId, phone.address, payload, v);
+    return { registry: ctx.address, payload, signer: phone.address, validity: S.validityJson(v), v, signature, lines, digest };
+  }
+
+  /** A phone's RecordDocument signature (version 2: with the validity). */
+  function sign(wallet, payload, v, signer = wallet.address) {
+    return wallet.signTypedData(ctx.domain, { RecordDocument: S.TYPES.RecordDocument }, { signer, payloadHash: S.hashPayload(payload), ...v });
   }
 
   beforeEach(async function () {
     [chainIntegrate, relayerSigner] = await ethers.getSigners();
     owner = ethers.Wallet.createRandom().connect(ethers.provider);
     phone = ethers.Wallet.createRandom();
-    const f = await O.deployFactory(chainIntegrate);
+    const f = await O.deployFactory(chainIntegrate, 2);
     factory = new ethers.Contract(f.address, O.FACTORY_ABI, chainIntegrate);
-    const prepared = await O.prepareRegistry({ factory, password });
+    const prepared = await O.prepareRegistry({ factory });
     const r = await O.createRegistry({ factory, prepared, owner: owner.address, name: "Argonia Gas Tecnici cylinders", symbol: "ARGCYL" });
 
     mails = [];
@@ -83,6 +87,7 @@ describe("relayer", function () {
 
     // The owner tools go through the relayer too.
     ctx = await O.context({ provider: ethers.provider, registry: r.address, owner, submit: O.relayerSubmitter(base, ethers.provider), fromBlock: r.block });
+    await O.initializeKeys(ctx, await O.prepareKeys(r.address, password, "it"));
     keys = (await O.unlockWithPassword(ctx, password)).keys;
     await O.setOperator(ctx, phone.address, true);
     customer = await O.addCounterparty(ctx, keys, { type: "customer", name: "Officina Demo", emails: ["demo@example.com"] });
@@ -220,8 +225,8 @@ describe("relayer", function () {
     await waitFor((await post("/gcr/document", op)).body.hash);
     // Same document number again: the part is already recorded.
     const dup = await delivery(1);
-    dup.payload.docId = op.payload.docId;
-    dup.signature = await phone.signTypedData(ctx.domain, { RecordDocument: S.TYPES.RecordDocument }, { signer: phone.address, payloadHash: S.hashPayload(dup.payload), nonce: dup.nonce, deadline: dup.deadline });
+    [dup.payload] = S.withManifest([{ ...dup.payload, docId: op.payload.docId }]);
+    dup.signature = await sign(phone, dup.payload, dup.v);
     const r = await post("/gcr/document", dup);
     expect(r.status).to.equal(400);
     expect(r.body.detail.error).to.equal("DocumentPartAlreadyRecorded");
@@ -233,7 +238,7 @@ describe("relayer", function () {
     expect((await post("/gcr/document", { ...op, registry: await lookalike.getAddress() })).status).to.equal(403);
 
     const stranger = ethers.Wallet.createRandom();
-    const signature = await stranger.signTypedData(ctx.domain, { RecordDocument: S.TYPES.RecordDocument }, { signer: stranger.address, payloadHash: S.hashPayload(op.payload), nonce: op.nonce, deadline: op.deadline });
+    const signature = await sign(stranger, op.payload, op.v);
     expect((await post("/gcr/document", { ...op, signer: stranger.address, signature })).status).to.equal(403);
 
     const big = { ...op, payload: { ...op.payload, mints: Array.from({ length: 26 }, () => ethers.hexlify(ethers.randomBytes(32))) } };
@@ -338,5 +343,50 @@ describe("relayer", function () {
     for (let i = 0; i < 5; i++) codes.push((await post("/gcr/owner", { registry: foreign, method: "nothing", args: [] }, { "x-real-ip": "198.51.100.7" })).status);
     expect(codes).to.deep.equal([403, 403, 403, 429, 429]);
     expect((await post("/gcr/owner", { registry: foreign, method: "nothing", args: [] }, { "x-real-ip": "198.51.100.8" })).status).to.equal(403);
+  });
+
+  it("e-mails the register's alert addresses and ChainIntegrate when a handover starts, however it was sent", async function () {
+    await new Promise((res) => server.close(res));
+    const sent = [];
+    const relayer = createRelayer({
+      provider: ethers.provider,
+      wallet: relayerSigner,
+      config: { chainId: 31337, factory: await factory.getAddress(), handoverAlerts: { [ctx.address]: ["ufficio@example.com"] }, limits: { perIpPerMinute: 1000 } },
+      sendMail: async (m) => sent.push(m),
+      logger: () => {},
+    });
+    server = relayer.server;
+    await new Promise((res) => server.listen(0, "127.0.0.1", res));
+    await relayer.watchHandovers(); // the starting point: nothing before now
+    // Started with the owner's own LYX, not through the relayer: the relayer sees it on the chain anyway.
+    const direct = await O.context({ provider: ethers.provider, registry: ctx.address, owner, submit: O.directSubmitter(chainIntegrate) });
+    await O.transferOwnership(direct, ethers.Wallet.createRandom().address);
+    await relayer.watchHandovers();
+    expect(sent.map((m) => m.to || "operator")).to.deep.equal(["ufficio@example.com", "operator"]);
+    expect(sent[0].subject).to.match(/cessione del registro/);
+    expect(sent[0].text).to.include("Annulla la cessione");
+    await relayer.watchHandovers();
+    expect(sent).to.have.length(2); // once
+  });
+
+  it("sends the owner's corrections and a phone's cancellations, and nobody else's", async function () {
+    const op = await delivery(1);
+    await waitFor((await post("/gcr/document", op)).body.hash);
+    // A phone's document sent to /gcr/owner is refused: the owner's only there.
+    const other = await delivery(1);
+    const r = await post("/gcr/owner", { registry: ctx.address, method: "recordDocument", args: [other.payload, phone.address, other.validity, other.signature] });
+    expect(r.status).to.equal(403);
+    // A phone cancels its own unsent signature.
+    const nonce = 7n;
+    const now = (await ethers.provider.getBlock("latest")).timestamp;
+    const v = S.validity(now, 3600);
+    const sig = await phone.signTypedData(ctx.domain, { CancelNonces: S.TYPES.CancelNonces }, { signer: phone.address, nonces: [nonce], ...v });
+    const c = await post("/gcr/owner", { registry: ctx.address, method: "cancelNoncesSigned", args: [phone.address, ["7"], phone.address, S.validityJson(v), sig] });
+    expect(c.status).to.equal(200);
+    await waitFor(c.body.hash);
+    expect(await ctx.registry.isNonceUsed(phone.address, nonce)).to.equal(true);
+    const stranger = ethers.Wallet.createRandom();
+    const x = await post("/gcr/owner", { registry: ctx.address, method: "cancelNoncesSigned", args: [stranger.address, ["7"], stranger.address, S.validityJson(v), sig] });
+    expect(x.status).to.equal(403);
   });
 });

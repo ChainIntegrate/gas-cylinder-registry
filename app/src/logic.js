@@ -5,10 +5,10 @@
 
 const { Contract, getAddress, getBytes, hashMessage, keccak256, ZeroHash } = require("ethers");
 const S = require("../../shared");
-const ABI = require("../../shared/abi/GasCylinderRegistry.json");
+const ABI = require("../../shared/abi/GasCylinderRegistryV2.json");
 const { T } = require("./i18n");
 
-const DEADLINE_SECONDS = 7 * 24 * 3600; // long enough for a document waiting offline
+const VALIDITY_SECONDS = 7 * 24 * 3600; // long enough for a document waiting offline (the contract's maximum)
 // What one document may hold, checked before anything is signed (external review A04): the relayer's
 // limits (relayer/relay.js DEFAULT_LIMITS: new cylinders and updates per part, the encrypted document's
 // size) and the phone's (DeviceKeyPlugin MAX_DIGESTS: 16 signatures with one fingerprint, the e-mail's
@@ -61,6 +61,15 @@ class Registry {
     return this.contract.getData(S.KEY_WRAP_DATA_KEYS.password);
   }
 
+  /**
+   * The working keys from the data key the phone holds (review A05): throws an error with code
+   * "KEY_REPLACED" when the owner replaced the data key, so that the app asks for the new password.
+   */
+  async openKeys(dek) {
+    const [epoch, ring] = await this.contract.getDataBatch([S.KEY_EPOCH_DATA_KEY, S.KEY_RING_DATA_KEY]);
+    return S.openKeys(dek, this.address, epoch, ring);
+  }
+
   async settings() {
     const raw = await this.contract.getData(S.SETTINGS_DATA_KEY);
     return raw === "0x" ? null : S.validateSettings(await S.decryptValue(this.keys, S.SETTINGS_DATA_KEY, "settings", raw));
@@ -89,10 +98,15 @@ class Registry {
       }
       from = to + 1;
     }
+    // Read in batches of 100: hundreds of customers cost a few calls, not one each.
     const list = [];
-    for (const id of ids) {
-      const raw = await this.contract.getData(S.counterpartyDataKey(id));
-      if (raw !== "0x") list.push({ id, ...S.validateCounterparty(await S.decryptValue(this.keys, id, "counterparty", raw)) });
+    const all = [...ids];
+    for (let i = 0; i < all.length; i += 100) {
+      const chunk = all.slice(i, i + 100);
+      const raws = await this.contract.getDataBatch(chunk.map((id) => S.counterpartyDataKey(id)));
+      for (let j = 0; j < chunk.length; j++) {
+        if (raws[j] !== "0x") list.push({ id: chunk[j], ...S.validateCounterparty(await S.decryptValue(this.keys, chunk[j], "counterparty", raws[j])) });
+      }
     }
     return list.sort((a, b) => a.name.localeCompare(b.name));
   }
@@ -138,10 +152,11 @@ function isNetworkError(e) {
 /**
  * What to do with a scanned cylinder in a document of `kind` for `counterparty`: the proposed movement
  * and condition, and a warning (anomaly) when its last state does not fit. `names` maps counterparty
- * ids to names, for the warnings.
+ * ids to names, for the warnings; `types` maps them to "customer" or "refill" (a refill plant's own
+ * cylinders go to customers without a warning; another customer's do not). `now` (seconds) for the test.
  * Returns { movement, condition, anomaly: null | { code, name? } }.
  */
-function propose(cyl, counterparty, kind, names = {}) {
+function propose(cyl, counterparty, kind, names = {}, types = {}, now = Math.floor(Date.now() / 1000)) {
   const st = cyl.state;
   const here = (type) => st && st.location.type === type && st.location.id === counterparty.id.toLowerCase();
   const nameOf = (id) => names[id] || "?";
@@ -168,13 +183,22 @@ function propose(cyl, counterparty, kind, names = {}) {
     return { movement: "collection", condition: "empty", anomaly: anomaly || { code: "at_other", name: nameOf(st.location.id) } };
   }
   if (!anomaly && st && st.location.type === "refill") anomaly = { code: "at_refill", name: nameOf(st.location.id) };
-  if (!anomaly && cyl.info && cyl.info.owner !== "supplier" && cyl.info.owner !== counterparty.id.toLowerCase()) {
+  if (!anomaly && cyl.info && cyl.info.owner !== "supplier" && cyl.info.owner !== counterparty.id.toLowerCase() && types[cyl.info.owner] !== "refill") {
     anomaly = { code: "owned_by_other", name: nameOf(cyl.info.owner) };
   }
+  if (!anomaly && st && S.testStatus(st.test, now) === "expired") anomaly = { code: "test_expired", name: monthText(st.test.due) };
   return { movement: "delivery", condition: "full", anomaly };
 }
 
-/** The state a line leaves the cylinder in. */
+/** "2026-03" -> "03/2026". */
+function monthText(ym) {
+  return ym ? `${ym.slice(5, 7)}/${ym.slice(0, 4)}` : "?";
+}
+
+/**
+ * The state a line leaves the cylinder in. `line.test`: the periodic test to keep (the previous state's,
+ * a new cylinder's, or a cylinder back tested).
+ */
 function nextState(line, counterparty, at) {
   const cp = counterparty.id.toLowerCase();
   const location = {
@@ -185,7 +209,7 @@ function nextState(line, counterparty, at) {
     stock_count: { type: counterparty.type === "refill" ? "refill" : "customer", id: cp },
   }[line.movement];
   if (!location) throw new Error(`movement ${line.movement} not allowed here`);
-  return S.validateState({ v: 1, location, condition: line.condition, lifecycle: "active", movement: line.movement, at });
+  return S.validateState({ v: 1, location, condition: line.condition, lifecycle: "active", movement: line.movement, at, ...(line.test ? { test: line.test } : {}) });
 }
 
 /** Counts per movement and gas: { delivery: { argon: 2 }, collection: { ... } }. */
@@ -209,9 +233,12 @@ function summary(lines) {
  * @param o.counterparty { id, type, name, emails }
  * @param o.kind         "delivery_note" | "refill_note" | "stock_count"
  * @param o.number       the document number (a delivery or refill note); ignored for a stock count
- * @param o.lines        [{ serial, tokenId, known, rawState, gas, capacityL?, movement, condition, anomaly? }]
+ * @param o.lines        [{ serial, tokenId, known, rawState, gas, capacityL?, owner?, movement, condition,
+ *                         anomaly?, test?, testChanged? }]: `owner` ("supplier" or a counterparty id) and
+ *                         `test` for a new cylinder; `test` with `testChanged` for one back tested; for the
+ *                         others `test` is the previous state's, kept.
  * @param o.now          Unix time (seconds) of the document
- * Returns { docId, number, document, parts: [{ payload, nonce, deadline, digest }] }.
+ * Returns { docId, number, document, parts: [{ payload, validity, digest }] }.
  */
 async function buildDocument({ registry, operator, counterparty, kind, number, lines, now }) {
   if (!lines.length) throw new Error("no cylinders");
@@ -239,10 +266,11 @@ async function buildDocument({ registry, operator, counterparty, kind, number, l
     const g = { mints: [], updates: [] };
     if (!l.known) {
       g.mints.push(l.tokenId);
-      const info = S.validateInfo({ v: 1, serial: l.serial, gas: l.gas, capacityL: l.capacityL, owner: "supplier", registeredAt: now });
+      const info = S.validateInfo({ v: 1, serial: l.serial, gas: l.gas, capacityL: l.capacityL, owner: l.owner || "supplier", registeredAt: now });
       g.updates.push({ tokenId: l.tokenId, dataKey: S.INFO_KEY, expectedHash: S.EMPTY_HASH, newValue: await S.encryptValue(keys, l.tokenId, "info", info) });
     }
-    const state = nextState(l, counterparty, now);
+    // The periodic test goes from state to state: the line's (new, or back tested), else the last state's.
+    const state = nextState({ ...l, test: l.test || (l.state && l.state.test) }, counterparty, now);
     g.updates.push({
       tokenId: l.tokenId,
       dataKey: S.STATE_KEY,
@@ -266,6 +294,8 @@ async function buildDocument({ registry, operator, counterparty, kind, number, l
       movement: l.movement,
       condition: l.condition,
       anomaly: l.anomaly ? l.anomaly.code + (l.anomaly.name ? `: ${l.anomaly.name}` : "") : undefined,
+      ...(l.known ? {} : { owner: l.owner || "supplier", capacityL: l.capacityL }),
+      ...(l.test && (!l.known || l.testChanged) ? { test: l.test } : {}),
     })),
   });
 
@@ -291,19 +321,23 @@ async function buildDocument({ registry, operator, counterparty, kind, number, l
   }
   if ((encrypted.length - 2) / 2 > LIMITS.maxDocumentBytes) throw tooLarge(`${(encrypted.length - 2) / 2} bytes`);
   if (chunks.length > LIMITS.maxParts) throw tooLarge(`${chunks.length} parts`);
-  const deadline = BigInt(now + DEADLINE_SECONDS);
-  const parts = chunks.map((c, i) => {
-    const payload = {
+  // Every part carries the document's manifest (review A11): the parts cannot be mixed with another
+  // document's, and an interrupted document shows as such.
+  const payloads = S.withManifest(
+    chunks.map((c, i) => ({
       docId,
       part: i,
       parts: chunks.length,
+      manifest: ZeroHash,
       corrects: ZeroHash,
       mints: c.mints,
       updates: c.updates,
       document: i === chunks.length - 1 ? encrypted : "0x",
-    };
-    const nonce = S.randomNonce();
-    return { payload, nonce, deadline, digest: S.recordDocumentDigest(registry.address, chainId, operator, payload, nonce, deadline) };
+    }))
+  );
+  const parts = payloads.map((payload) => {
+    const validity = S.validity(now, VALIDITY_SECONDS);
+    return { payload, validity, digest: S.recordDocumentDigest(registry.address, chainId, operator, payload, validity) };
   });
   return { docId, number: docNumber, document, parts };
 }
@@ -363,8 +397,7 @@ async function signDocument({ registry, operator, built, mail, signDigests, meta
       registry: registry.address,
       payload: p.payload,
       signer: operator,
-      nonce: p.nonce.toString(),
-      deadline: p.deadline.toString(),
+      validity: S.validityJson(p.validity),
       signature: sigs[i],
       ...(mail && i === built.parts.length - 1 ? { mail, mailSignature: sigs[sigs.length - 1] } : {}),
     },
@@ -490,6 +523,39 @@ async function sendItem(item, { relayer, provider = null, fetchFn = fetch, pollM
   return item;
 }
 
+/**
+ * Cancels the parts of an outbox item not sent yet (review G-07): this phone signs a CancelNonces of
+ * their nonces (one fingerprint) and the relayer sends it; once recorded, those parts can never be
+ * recorded, whoever holds them. Parts already sent are not cancelled (they may be recorded meanwhile).
+ * Needs the network. Returns the number of parts cancelled.
+ */
+async function cancelItem(item, { registry, operator, signDigests, relayer, fetchFn = fetch, now = Math.floor(Date.now() / 1000) }) {
+  const open = item.parts.filter((p) => p.state === "new" && !p.hash);
+  if (!open.length) return 0;
+  const nonces = open.map((p) => BigInt(p.body.validity.nonce));
+  const v = S.validity(now, 3600);
+  const chainId = await registry.chainId();
+  const [sig] = await signDigests([S.cancelNoncesDigest(registry.address, chainId, operator, nonces, v)]);
+  const res = await fetchFn(`${relayer.replace(/\/+$/, "")}/gcr/owner`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ registry: registry.address, method: "cancelNoncesSigned", args: [operator, nonces.map(String), operator, S.validityJson(v), sig] }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `relayer ${res.status}`);
+  }
+  const { hash } = await res.json();
+  for (let i = 0; i < 60; i++) {
+    const r = await fetchFn(`${relayer.replace(/\/+$/, "")}/gcr/status?hash=${hash}`).catch(() => null);
+    const st = r && r.ok ? await r.json() : null;
+    if (st && st.state === "confirmed") return open.length;
+    if (st && st.state === "failed") throw new Error("cancellation failed");
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  throw new Error("cancellation not confirmed yet");
+}
+
 /** True when version `a` (x.y.z) is newer than `b`. */
 function isNewer(a, b) {
   const pa = String(a).split(".").map(Number);
@@ -529,6 +595,8 @@ module.exports = {
   buildMail,
   anomalyText,
   signDocument,
+  cancelItem,
+  monthText,
   Outbox,
   sendItem,
   errorText,

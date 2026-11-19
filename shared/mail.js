@@ -12,7 +12,7 @@ const { GASES, MOVEMENTS, CONDITIONS, DOCUMENT_KINDS } = require("./schema");
 
 const LIMITS = { maxRecipients: 8, maxLines: 1000, maxName: 120, maxNumber: 40, maxText: 20000 };
 const EMAIL = /^[^\s@<>,;"()\\]+@[^\s@<>,;"()\\]+\.[^\s@<>,;"()\\]+$/;
-const ANOMALIES = ["at_other", "at_customer", "at_refill", "retired", "owned_by_other", "not_here"];
+const ANOMALIES = ["at_other", "at_customer", "at_refill", "retired", "owned_by_other", "not_here", "test_expired"];
 const LANGS = ["it", "en"];
 
 // The template's words, Italian and English (the app's own texts for the driver are in app/src/i18n.js).
@@ -36,6 +36,7 @@ const T = {
       at_refill: (n) => `Risulta in ricarica presso ${n}`,
       retired: "Risulta dismessa",
       owned_by_other: (n) => `È di proprietà di ${n}`,
+      test_expired: (n) => `Collaudo scaduto (${n})`,
       not_here: "Non risulta presso questo cliente",
     },
     locale: "it-IT",
@@ -59,6 +60,7 @@ const T = {
       at_refill: (n) => `Recorded as being refilled at ${n}`,
       retired: "Recorded as retired",
       owned_by_other: (n) => `Owned by ${n}`,
+      test_expired: (n) => `Periodic test expired (${n})`,
       not_here: "Not recorded at this customer",
     },
     locale: "en-GB",

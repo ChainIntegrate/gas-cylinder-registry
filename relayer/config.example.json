@@ -20,5 +20,11 @@
     "maxUpdates": 60,
     "mailsPerRegistryPerDay": 100
   },
-  "appReleaseFile": "/etc/gcr-relayer/app-release.json"
+  "appReleaseFile": "/etc/gcr-relayer/app-release.json",
+  "handoverAlerts": {
+    "0x0000000000000000000000000000000000000000": [
+      "ufficio@example.com"
+    ]
+  },
+  "watchFromBlock": 0
 }

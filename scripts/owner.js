@@ -203,7 +203,7 @@ async function main() {
 
   if (command === "deploy-factory") {
     if (config.factory) throw new Error(`${configFile} already has a factory (${config.factory}); use --config <new file>`);
-    const version = Number(args.version || 1);
+    const version = Number(args.version || 2);
     if (version !== 1 && version !== 2) throw new Error("--version 1 or 2");
     const deployer = await openKeystore(ciKeystore, "ChainIntegrate", provider);
     console.log(`Deploying the factory (version ${version}) on ${network} from ${deployer.address}...`);
@@ -211,6 +211,11 @@ async function main() {
     saveConfig(configFile, { ...config, network, chainintegrateKeystore: ciKeystore, factory: f.address, factoryBlock: f.block, factoryVersion: version });
     console.log(`Factory: ${f.address} (block ${f.block}), saved to ${configFile}`);
     return;
+  }
+
+  // These tools work on version 2 (DESIGN.md 10.1); a version 1 config (the demo) only keeps its factory.
+  if (command !== "transfer-factory" && config.factory && config.factoryVersion !== 2) {
+    throw new Error(`${configFile} is for version 1 of the contracts (the demo): these tools work on version 2 only`);
   }
 
   if (command === "create-registry") {

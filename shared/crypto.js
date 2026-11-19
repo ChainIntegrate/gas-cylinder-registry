@@ -10,7 +10,15 @@
 //   encKey   HKDF-SHA256(DEK, salt = registry address, info = "GCR v1 enc")  -> AES-256-GCM
 //   idKey    HKDF-SHA256(DEK, salt = registry address, info = "GCR v1 id")   -> HMAC-SHA256
 //
-// Encrypted value  = 0x01 | IV (12) | AES-GCM ciphertext + tag (16)
+// Key epochs (review A05): the data key can be replaced. Epoch 0 is the first DEK; each replacement makes
+// a new DEK (epoch n) and keeps the older ones in the key ring, encrypted with the new one. idKey always
+// comes from the epoch 0 DEK, so that token IDs and document IDs stay the same; encKey is per epoch.
+//   GCRKeyEpoch  uint256: the current epoch (absent: 0)
+//   GCRKeyRing   encrypted value (field "keyring", current epoch): { v: 1, keys: [DEK 0, …, DEK n-1] }
+//
+// Encrypted value  = 0x01 | IV (12) | AES-GCM ciphertext + tag (16)                  (epoch 0)
+//                  = 0x02 | epoch uint16 | IV (12) | AES-GCM ciphertext + tag (16)   (epoch 1 and later;
+//                    associated data "GCR v2|" + registry + "|" + entry id + "|" + field + "|" + epoch)
 //   plaintext      = uint16 length (big endian) | UTF-8 JSON | zero padding to a size bucket
 //                    (info and state: always 192 bytes; counterparty: at least 512; others: 64, 128, 256,
 //                    512, 1024, then multiples of 1024)
@@ -34,10 +42,14 @@ const BUCKETS = [64, 128, 256, 512, 1024];
  * so that, for example, a cylinder at the depot (no counterparty id) cannot be told apart from one at
  * a customer by the length of its state.
  */
-const MIN_SIZE = { info: 192, state: 192, counterparty: 512, settings: 512 };
+const MIN_SIZE = { info: 192, state: 256, counterparty: 512, settings: 512, keyring: 512 };
 
 /** ERC725Y data key of the registry's encrypted settings (company name, the supplier's e-mails); also its entry id. */
 const SETTINGS_DATA_KEY = id("GCRSettings");
+
+/** ERC725Y data keys of the key epoch and of the key ring (review A05). */
+const KEY_EPOCH_DATA_KEY = id("GCRKeyEpoch");
+const KEY_RING_DATA_KEY = id("GCRKeyRing");
 
 const KEY_WRAP_PASSWORD = 0x01;
 const KEY_WRAP_RECOVERY = 0x02;
@@ -79,16 +91,75 @@ async function hkdf(ikm, salt, info, usage) {
  * The working keys of one registry: `encKey` (AES-256-GCM) and `idKey` (HMAC-SHA256), both
  * non-extractable. `registry` is the registry's address.
  */
-async function deriveKeys(dek, registry) {
+async function deriveKeys(dek, registry, older = []) {
   const ikm = getBytes(dek);
   if (ikm.length !== 32) throw new Error("the data key must be 32 bytes");
   const salt = getBytes(getAddress(registry));
+  const deks = [...older.map((k) => getBytes(k)), ikm];
+  if (deks.some((k) => k.length !== 32)) throw new Error("the data key must be 32 bytes");
+  const epoch = deks.length - 1;
+  const encKeys = [];
+  for (const k of deks) encKeys.push(await hkdf(k, salt, "GCR v1 enc", ["encrypt", "decrypt"]));
   return {
     registry: getAddress(registry),
-    encKey: await hkdf(ikm, salt, "GCR v1 enc", ["encrypt", "decrypt"]),
-    idKey: await hkdf(ikm, salt, "GCR v1 id", "hmac"),
-    // The app's own key for what it keeps on the phone (review A09): never used for on-chain values.
+    epoch,
+    encKey: encKeys[epoch],
+    encKeys,
+    idKey: await hkdf(deks[0], salt, "GCR v1 id", "hmac"),
     cacheKey: await hkdf(ikm, salt, "GCR v1 phone cache", ["encrypt", "decrypt"]),
+    // The older data keys, kept to make the key ring again when the key is replaced once more.
+    older: deks.slice(0, epoch).map((k) => new Uint8Array(k)),
+  };
+}
+
+/**
+ * The keys of a register from its current data key and what the register holds: `epochValue` (the
+ * GCRKeyEpoch value, "0x" when never written) and `ringValue` (GCRKeyRing). A data key that is not the
+ * current one (a phone or a page that opened the register before the key was replaced) throws an error
+ * with code "KEY_REPLACED": open it again with the current password.
+ */
+async function openKeys(dek, registry, epochValue, ringValue) {
+  const epoch = !epochValue || epochValue === "0x" ? 0 : Number(BigInt(epochValue));
+  if (epoch === 0) return deriveKeys(dek, registry);
+  if (!ringValue || ringValue === "0x") throw new Error("the key ring is missing");
+  const salt = getBytes(getAddress(registry));
+  const current = { registry: getAddress(registry), epoch, encKeys: [], encKey: null };
+  current.encKeys[epoch] = current.encKey = await hkdf(getBytes(dek), salt, "GCR v1 enc", ["encrypt", "decrypt"]);
+  let ring;
+  try {
+    ring = await decryptValue(current, KEY_RING_DATA_KEY, "keyring", ringValue);
+  } catch {
+    throw Object.assign(new Error("the data key was replaced: open the register again with the current password"), { code: "KEY_REPLACED" });
+  }
+  if (!ring || ring.v !== 1 || !Array.isArray(ring.keys) || ring.keys.length !== epoch) throw new Error("invalid key ring");
+  return deriveKeys(dek, registry, ring.keys);
+}
+
+/**
+ * Replaces the data key (review A05): a new DEK for epoch n + 1, wrapped with a new password and a new
+ * recovery code; the key ring keeps every older DEK, encrypted with the new one. Nothing is written:
+ * returns { dek, keys, recoveryCode, dataKeys, dataValues } for one owner-signed SetData.
+ */
+async function replaceDataKey(keys, currentDek, password, language = "it") {
+  const check = checkPassword(password);
+  if (!check.ok) throw new Error(`password refused: ${check.reason}`);
+  const registry = keys.registry;
+  const older = [...keys.older, getBytes(currentDek)];
+  if (older.length > 0xffff) throw new Error("too many key epochs");
+  const dek = generateDataKey();
+  const next = await deriveKeys(dek, registry, older);
+  const recoveryCode = generateRecoveryCode(language);
+  return {
+    dek,
+    keys: next,
+    recoveryCode,
+    dataKeys: [KEY_WRAP_DATA_KEYS.password, KEY_WRAP_DATA_KEYS.recovery, KEY_EPOCH_DATA_KEY, KEY_RING_DATA_KEY],
+    dataValues: [
+      await wrapWithPassword(dek, password, registry),
+      await wrapWithRecoveryCode(dek, recoveryCode, registry),
+      "0x" + BigInt(next.epoch).toString(16).padStart(64, "0"),
+      await encryptValue(next, KEY_RING_DATA_KEY, "keyring", { v: 1, keys: older.map((k) => hexlify(k)) }),
+    ],
   };
 }
 
@@ -177,24 +248,45 @@ function aad(registry, entryId, field) {
  * document id) and `field` (for example "info", "state", "counterparty", "document"). A value
  * decrypts only in the place it was written for.
  */
+function aadV2(registry, entryId, field, epoch) {
+  return utf8(`GCR v2|${lower(registry)}|${hexlify(getBytes(entryId)).toLowerCase()}|${field}|${epoch}`);
+}
+
 async function encryptValue(keys, entryId, field, obj, iv = randomBytes(12)) {
+  const epoch = keys.epoch || 0;
+  if (epoch === 0) {
+    const ct = await subtle().encrypt(
+      { name: "AES-GCM", iv, additionalData: aad(keys.registry, entryId, field) },
+      keys.encKey,
+      pad(JSON.stringify(obj), field)
+    );
+    return hexlify(concat([new Uint8Array([VERSION]), iv, new Uint8Array(ct)]));
+  }
   const ct = await subtle().encrypt(
-    { name: "AES-GCM", iv, additionalData: aad(keys.registry, entryId, field) },
+    { name: "AES-GCM", iv, additionalData: aadV2(keys.registry, entryId, field, epoch) },
     keys.encKey,
     pad(JSON.stringify(obj), field)
   );
-  return hexlify(concat([new Uint8Array([VERSION]), iv, new Uint8Array(ct)]));
+  return hexlify(concat([new Uint8Array([2, epoch >> 8, epoch & 0xff]), iv, new Uint8Array(ct)]));
 }
 
-/** Decrypts a value written by `encryptValue` for the same place. Throws if it was altered or moved. */
 async function decryptValue(keys, entryId, field, value) {
   const b = getBytes(value);
-  if (b.length < 1 + 12 + 16 || b[0] !== VERSION) throw new Error("unknown value format");
-  const pt = await subtle().decrypt(
-    { name: "AES-GCM", iv: b.slice(1, 13), additionalData: aad(keys.registry, entryId, field) },
-    keys.encKey,
-    b.slice(13)
-  );
+  let epoch, iv, ct, ad;
+  if (b.length >= 1 + 12 + 16 && b[0] === VERSION) {
+    epoch = 0;
+    iv = b.slice(1, 13);
+    ct = b.slice(13);
+    ad = aad(keys.registry, entryId, field);
+  } else if (b.length >= 3 + 12 + 16 && b[0] === 2) {
+    epoch = (b[1] << 8) | b[2];
+    iv = b.slice(3, 15);
+    ct = b.slice(15);
+    ad = aadV2(keys.registry, entryId, field, epoch);
+  } else throw new Error("unknown value format");
+  const key = (keys.encKeys && keys.encKeys[epoch]) || (epoch === (keys.epoch || 0) ? keys.encKey : null);
+  if (!key) throw new Error(`no data key for epoch ${epoch}`);
+  const pt = await subtle().decrypt({ name: "AES-GCM", iv, additionalData: ad }, key, ct);
   return JSON.parse(unpad(new Uint8Array(pt)));
 }
 
@@ -331,11 +423,15 @@ module.exports = {
   PBKDF2_ITERATIONS,
   MIN_SIZE,
   KEY_WRAP_DATA_KEYS,
+  KEY_EPOCH_DATA_KEY,
+  KEY_RING_DATA_KEY,
   SETTINGS_DATA_KEY,
   COUNTERPARTY_KEY_PREFIX,
   DEFAULT_SERIAL_RULES,
   generateDataKey,
   deriveKeys,
+  openKeys,
+  replaceDataKey,
   normalizeSerial,
   cylinderTokenId,
   counterpartyId,

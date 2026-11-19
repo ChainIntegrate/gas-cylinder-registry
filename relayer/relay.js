@@ -19,12 +19,23 @@ require("module").Module._initPaths();
 const { URL } = require("url");
 const { Wallet, JsonRpcProvider, Contract, getAddress, isAddress, keccak256, formatEther, parseEther, getBytes, verifyMessage, hashMessage } =
   require("ethers");
-const REGISTRY_ABI = require("../shared/abi/GasCylinderRegistry.json");
-const FACTORY_ABI = require("../shared/abi/GasCylinderRegistryFactory.json");
+// Version 2 of the contracts (DESIGN.md 10.1).
+const REGISTRY_ABI = require("../shared/abi/GasCylinderRegistryV2.json");
+const FACTORY_ABI = require("../shared/abi/GasCylinderRegistryFactoryV2.json");
 const { validateMail, mailDigest, renderMail } = require("../shared/mail");
-const { recordDocumentDigest } = require("../shared/eip712");
+const { recordDocumentDigest, validityTuple } = require("../shared/eip712");
 
-const OWNER_METHODS = ["setOperatorSigned", "setDataSigned", "transferOwnershipSigned", "acceptOwnershipSigned"];
+// Signed operations sent through /gcr/owner. recordDocument there is the owner's (a correction: the
+// signer must be the owner); cancelNoncesSigned by a phone for itself, or by the owner.
+const OWNER_METHODS = [
+  "setOperatorSigned",
+  "setDataSigned",
+  "transferOwnershipSigned",
+  "cancelOwnershipTransferSigned",
+  "acceptOwnershipSigned",
+  "cancelNoncesSigned",
+  "recordDocument",
+];
 const ERC1271_ABI = ["function isValidSignature(bytes32 hash, bytes signature) view returns (bytes4)"];
 
 const DEFAULT_LIMITS = {
@@ -342,6 +353,54 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
     }
   }
 
+  // --- handover alerts (DESIGN.md 10.1, review A01 / X-01) ---
+  // A register's ownership transfer can be accepted only 3 days after it starts. Whoever starts it (through
+  // this relayer or with their own LYX), the relayer sees OwnershipTransferStarted on the chain and e-mails
+  // the register's alert addresses (config.handoverAlerts: { "<registry>": ["mail", …] }, written by
+  // ChainIntegrate when it creates the register) and ChainIntegrate, so that an unwanted one is cancelled.
+  const OWNERSHIP_STARTED = new Contract(config.factory, REGISTRY_ABI).interface.getEvent("OwnershipTransferStarted").topicHash;
+  let watchedTo = null;
+  async function watchHandovers() {
+    const latest = await provider.getBlockNumber();
+    if (watchedTo === null) watchedTo = config.watchFromBlock !== undefined ? Number(config.watchFromBlock) - 1 : latest - 1;
+    for (let from = watchedTo + 1; from <= latest; from += 5000) {
+      const to = Math.min(from + 4999, latest);
+      const logs = await provider.getLogs({ fromBlock: from, toBlock: to, topics: [OWNERSHIP_STARTED] });
+      for (const l of logs) {
+        let registry;
+        try {
+          registry = await checkRegistry(l.address);
+        } catch {
+          continue; // another contract's event
+        }
+        const ev = new Contract(registry, REGISTRY_ABI).interface.parseLog(l);
+        await handoverAlert(registry, ev.args.previousOwner, ev.args.newOwner, Number(ev.args.readyAt), l.transactionHash);
+      }
+      watchedTo = to;
+    }
+  }
+  async function handoverAlert(registry, previousOwner, newOwner, readyAt, txHash) {
+    const alerts = ((config.handoverAlerts || {})[registry] || (config.handoverAlerts || {})[registry.toLowerCase()] || []).filter((m) => /^[^\s@]+@[^\s@]+$/.test(m));
+    const when = new Date(readyAt * 1000).toLocaleString("it-IT", { timeZone: config.mailTimeZone || "Europe/Rome", dateStyle: "long", timeStyle: "short" });
+    const text =
+      `È iniziata la cessione del registro GasTrace ${registry} a un altro account (${newOwner}).\n` +
+      `Si potrà completare dal ${when}.\n\n` +
+      `Se l'avete chiesta voi, non dovete fare nulla.\n` +
+      `Se NON l'avete chiesta: aprite gastrace.chainintegrate.it dal computer amministratore, Impostazioni, ` +
+      `"Annulla la cessione", e scrivete subito a info@chainintegrate.it.\n\n` +
+      `The handover of the GasTrace register ${registry} to another account (${newOwner}) has started; it can ` +
+      `complete from ${new Date(readyAt * 1000).toISOString()}. If you did not ask for it, cancel it from the page ` +
+      `(Settings, "Cancel the handover") and write to info@chainintegrate.it.\n`;
+    log(`handover of ${registry} started (${txHash}) to ${newOwner}, ready at ${readyAt}: ${alerts.length} alert address(es)`);
+    if (!sendMail) return;
+    const subject = "GasTrace: cessione del registro avviata / register handover started";
+    for (const to of alerts.length ? [alerts.join(", "), null] : [null]) {
+      await sendMail({ ...(to ? { to } : {}), subject, text: to ? text : `${text}\n(previous owner ${previousOwner}, transaction ${txHash})` }).catch((e) =>
+        log(`handover alert mail failed: ${e.message}`)
+      );
+    }
+  }
+
   // --- endpoints ---
 
   // The latest released app, from a file the operator updates after each release (appReleaseFile), or the
@@ -402,10 +461,17 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
       }
     }
 
+    let validity;
+    try {
+      validity = validityTuple(body.validity);
+    } catch {
+      throw new Refused("validity: { nonce, validFrom, deadline } required");
+    }
     const payload = {
       docId: p.docId,
       part: p.part,
       parts: p.parts,
+      manifest: p.manifest,
       corrects: p.corrects,
       mints: p.mints,
       updates: p.updates.map((u) => ({ tokenId: u.tokenId, dataKey: u.dataKey, expectedHash: u.expectedHash, newValue: u.newValue })),
@@ -414,13 +480,13 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
     if (mail) {
       let digest;
       try {
-        digest = recordDocumentDigest(registry, config.chainId, getAddress(body.signer), payload, BigInt(body.nonce), BigInt(body.deadline));
+        digest = recordDocumentDigest(registry, config.chainId, getAddress(body.signer), payload, validity);
       } catch {
         throw new Refused("payload: malformed");
       }
       await checkMailSignature(registry, body.signer, digest, mail, body.mailSignature);
     }
-    return relay(registry, "recordDocument", [payload, getAddress(body.signer), BigInt(body.nonce), BigInt(body.deadline), signature], signature, mail);
+    return relay(registry, "recordDocument", [payload, getAddress(body.signer), validity, signature], signature, mail);
   }
 
   async function postOwner(body, ip) {
@@ -431,6 +497,15 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
     if (JSON.stringify(body.args).length > limits.maxDataBytes * 2 + 4096) throw new Refused("args: too large");
     const signature = body.args[body.args.length - 1];
     hexBytes("signature", signature, 2048);
+    const reg = new Contract(registry, REGISTRY_ABI, provider);
+    if (body.method === "recordDocument") {
+      // The owner's own documents (corrections); a phone's documents go through /gcr/document.
+      if (!isAddress(body.args[1]) || getAddress(body.args[1]) !== getAddress(await reg.owner())) throw new Refused("recordDocument here: the owner's only", 403);
+    }
+    if (body.method === "cancelNoncesSigned") {
+      // By a phone for itself, or by the owner (the contract checks the signature).
+      if (!isAddress(body.args[2]) || !(await reg.isAuthorized(body.args[2]))) throw new Refused("cancel: not the owner nor an authorized phone", 403);
+    }
     return relay(registry, body.method, body.args, signature, null);
   }
 
@@ -509,7 +584,7 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
   if (toResume.length) log(`journal: taking up ${toResume.length} operation(s) left pending`);
   const resumed = Promise.all(toResume.map((h) => follow(h).catch((e) => log(`resume ${h}: ${e.message}`))));
 
-  return { server, info, checkBalance, resumed };
+  return { server, info, checkBalance, resumed, watchHandovers };
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -551,6 +626,9 @@ async function main() {
     log(`relayer ${i0.relayer} on chain ${i0.chainId}, balance ${i0.balance} LYX, factory ${i0.factory}, mail ${i0.mail ? "on" : "OFF (no SMTP settings)"}`);
     log(`listening on http://${config.listen.host}:${config.listen.port}`);
     relayer.checkBalance().catch(() => {});
+    const watch = () => relayer.watchHandovers().catch((e) => log(`handover watch: ${e.shortMessage || e.message}`));
+    watch();
+    setInterval(watch, Number(config.watchEveryMs || 60000));
     return;
   }
   console.log("usage: node relay.js new-key <file> | serve --config <file>");

@@ -3,7 +3,31 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { time } = require("@nomicfoundation/hardhat-network-helpers");
-const E = require("../shared/eip712");
+// Version 1's EIP-712 types and payload (the demo's contract); shared/ now follows version 2.
+const E = (() => {
+  const v1 = (fields) => [...fields, { name: "nonce", type: "uint256" }, { name: "deadline", type: "uint256" }];
+  const TYPES = {
+    RecordDocument: v1([{ name: "signer", type: "address" }, { name: "payloadHash", type: "bytes32" }]),
+    SetOperator: v1([{ name: "operator", type: "address" }, { name: "enabled", type: "bool" }]),
+    SetData: v1([{ name: "dataKeys", type: "bytes32[]" }, { name: "dataValuesHash", type: "bytes32" }]),
+    TransferOwnership: v1([{ name: "newOwner", type: "address" }]),
+    AcceptOwnership: v1([{ name: "newOwner", type: "address" }]),
+  };
+  const PAYLOAD_TUPLE =
+    "tuple(bytes32 docId,uint16 part,uint16 parts,bytes32 corrects,bytes32[] mints," +
+    "tuple(bytes32 tokenId,bytes32 dataKey,bytes32 expectedHash,bytes newValue)[] updates,bytes document)";
+  const coder = ethers.AbiCoder.defaultAbiCoder();
+  return {
+    TYPES,
+    INFO_KEY: ethers.id("GCRInfo"),
+    STATE_KEY: ethers.id("GCRState"),
+    EMPTY_HASH: ethers.keccak256("0x"),
+    domain: (registry, chainId) => ({ name: "GasCylinderRegistry", version: "1", chainId, verifyingContract: registry }),
+    hashPayload: (p) => ethers.keccak256(coder.encode([PAYLOAD_TUPLE], [p])),
+    hashDataValues: (values) => ethers.keccak256(coder.encode(["bytes[]"], [values])),
+    randomNonce: () => BigInt(ethers.hexlify(ethers.randomBytes(32))),
+  };
+})();
 
 const ZERO32 = ethers.ZeroHash;
 const rnd32 = () => ethers.hexlify(ethers.randomBytes(32));

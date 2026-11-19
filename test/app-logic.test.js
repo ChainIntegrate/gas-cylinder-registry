@@ -23,13 +23,13 @@ class MemoryStorage {
 describe("app logic", function () {
   this.timeout(120000);
   const password = "le bombole di argon tornano vuote";
-  let ctx, server, base, mails, phone, reg, customerA, customerB, refill, names, now;
+  let ctx, server, base, mails, phone, reg, customerA, customerB, refill, names, types, now;
 
   const signDigests = (wallet) => async (digests) => digests.map((d) => wallet.signingKey.sign(d).serialized);
 
   async function scan(code, counterparty, kind) {
     const c = await reg.readCylinder(code);
-    const p = A.propose(c, counterparty, kind, names);
+    const p = A.propose(c, counterparty, kind, names, types, now);
     return { ...c, gas: c.info ? c.info.gas : "argon", ...p };
   }
 
@@ -46,9 +46,9 @@ describe("app logic", function () {
     const [chainIntegrate, relayerSigner] = await ethers.getSigners();
     const owner = ethers.Wallet.createRandom().connect(ethers.provider);
     phone = ethers.Wallet.createRandom();
-    const f = await O.deployFactory(chainIntegrate);
+    const f = await O.deployFactory(chainIntegrate, 2);
     const factory = new ethers.Contract(f.address, O.FACTORY_ABI, chainIntegrate);
-    const prepared = await O.prepareRegistry({ factory, password, language: "it" });
+    const prepared = await O.prepareRegistry({ factory });
     const r = await O.createRegistry({ factory, prepared, owner: owner.address, name: "Argonia Gas Tecnici cylinders", symbol: "ARGCYL" });
 
     mails = [];
@@ -64,6 +64,7 @@ describe("app logic", function () {
 
     // The owner tools prepare the demo.
     ctx = await O.context({ provider: ethers.provider, registry: r.address, owner, submit: O.relayerSubmitter(base, ethers.provider), fromBlock: r.block });
+    await O.initializeKeys(ctx, await O.prepareKeys(r.address, password, "it"));
     const { keys } = await O.unlockWithPassword(ctx, password);
     await O.writeSettings(ctx, keys, { company: "Argonia Gas Tecnici", emails: ["ufficio@example.com"] });
     await O.addCounterparty(ctx, keys, { type: "customer", name: "Officina Demo", emails: ["demo@example.com"] });
@@ -76,11 +77,12 @@ describe("app logic", function () {
     reg = new A.Registry({ provider: ethers.provider, address: setup.registry, fromBlock: setup.fromBlock });
     expect(await reg.isAuthorized(phone.address)).to.equal(true);
     const dek = await S.unwrapWithPassword(await reg.passwordWrap(), password, reg.address);
-    reg.keys = await S.deriveKeys(dek, reg.address);
+    reg.keys = await reg.openKeys(dek);
 
     const list = await reg.counterparties();
     [customerB, refill, customerA] = [list.find((c) => c.name === "Cliente Due"), list.find((c) => c.type === "refill"), list.find((c) => c.name === "Officina Demo")];
     names = Object.fromEntries(list.map((c) => [c.id, c.name]));
+    types = Object.fromEntries(list.map((c) => [c.id, c.type]));
     now = (await ethers.provider.getBlock("latest")).timestamp;
   });
 
@@ -210,7 +212,8 @@ describe("app logic", function () {
     const p = built.parts[0];
     const bad = p.payload.updates.find((u) => u.dataKey === S.INFO_KEY && u.tokenId === lines[0].tokenId);
     bad.newValue = "0x" + "5a".repeat(300); // what a faulty or hostile phone could write
-    p.digest = S.recordDocumentDigest(reg.address, 31337n, phone.address, p.payload, p.nonce, p.deadline);
+    [p.payload] = S.withManifest([p.payload]);
+    p.digest = S.recordDocumentDigest(reg.address, 31337n, phone.address, p.payload, p.validity);
     const item = await A.signDocument({ registry: reg, operator: phone.address, built, mail: null, signDigests: signDigests(phone), meta: {} });
     expect((await A.sendItem(item, { relayer: base, pollMs: 20 })).done).to.equal(true);
 
@@ -296,6 +299,71 @@ describe("app logic", function () {
     expect(await id("delivery_note", "1", now)).to.equal(await id("delivery_note", " 1 ", now + 60)); // the same note
     expect(await id("delivery_note", "1", now)).to.not.equal(await id("delivery_note", "1", now + year)); // next year's 1
     expect(await id("stock_count", "", now)).to.not.equal(await id("stock_count", "", now)); // same second, two phones
+  });
+
+  it("registers who owns a new cylinder and its periodic test; a refill plant's cylinders give no warning", async function () {
+    const own = await scan("OWN-1", customerA, "delivery_note");
+    const test = S.completeTest({ due: "2031-04" }, 10);
+    await record({ counterparty: customerA, kind: "delivery_note", number: "DDT OWN", lines: [{ ...own, owner: refill.id, test }] });
+    const c = await reg.readCylinder("OWN-1");
+    expect(c.info.owner).to.equal(refill.id);
+    expect(c.state.test).to.deep.equal({ last: "2021-04", due: "2031-04" });
+    // Collected, then delivered to another customer: owned by a refill plant, no warning.
+    await record({ counterparty: customerA, kind: "delivery_note", number: "DDT OWN 2", lines: [await scan("OWN-1", customerA, "delivery_note")] });
+    const again = await scan("OWN-1", customerB, "delivery_note");
+    expect(again.anomaly).to.equal(null);
+    expect((await reg.readCylinder("OWN-1")).state.test).to.deep.equal(test); // carried from state to state
+
+    // A customer's own cylinder delivered to another customer: warned.
+    const theirs = await scan("OWN-2", customerA, "delivery_note");
+    await record({ counterparty: customerA, kind: "delivery_note", number: "DDT OWN 3", lines: [{ ...theirs, owner: customerA.id }] });
+    await record({ counterparty: customerA, kind: "delivery_note", number: "DDT OWN 4", lines: [await scan("OWN-2", customerA, "delivery_note")] });
+    expect((await scan("OWN-2", customerB, "delivery_note")).anomaly).to.deep.equal({ code: "owned_by_other", name: "Officina Demo" });
+  });
+
+  it("warns when delivering a cylinder whose periodic test expired, and updates it when back tested", async function () {
+    const l = await scan("TEST-1", refill, "refill_note");
+    await record({ counterparty: refill, kind: "refill_note", number: "R-T1", lines: [{ ...l, gas: "argon", test: S.completeTest({ due: "2020-01" }, 10) }] });
+    // Back from the refill plant, tested: the new test date.
+    const back = await scan("TEST-1", refill, "refill_note");
+    expect(back.movement).to.equal("from_refill");
+    // Before: delivering it would warn.
+    const before = A.propose({ ...(await reg.readCylinder("TEST-1")), state: { ...(await reg.readCylinder("TEST-1")).state, location: { type: "depot" } } }, customerB, "delivery_note", names, types, now);
+    expect(before.anomaly).to.deep.equal({ code: "test_expired", name: "01/2020" });
+    const newTest = S.completeTest({ last: S.monthOf(now) }, 10);
+    const { item, built } = await record({ counterparty: refill, kind: "refill_note", number: "R-T2", lines: [{ ...back, test: newTest, testChanged: true }] });
+    expect(item.done).to.equal(true);
+    expect(built.document.lines[0].test).to.deep.equal(newTest);
+    expect((await reg.readCylinder("TEST-1")).state.test).to.deep.equal(newTest);
+    expect((await scan("TEST-1", customerB, "delivery_note")).anomaly).to.equal(null);
+    expect(S.renderMail({ ...A.buildMail({ lang: "it", company: "X", counterparty: customerB, kind: "delivery_note", number: "1", lines: [{ ...back, anomaly: before.anomaly }], now, recipients: ["a@b.it"] }) }).text).to.include("Collaudo scaduto (01/2020)");
+  });
+
+  it("cancels a document waiting to be sent: it can never be recorded (review G-07)", async function () {
+    const lines = [await scan("CANCEL-1", customerB, "delivery_note")];
+    const built = await A.buildDocument({ registry: reg, operator: phone.address, counterparty: customerB, kind: "delivery_note", number: "DDT CANCEL", lines, now });
+    const item = await A.signDocument({ registry: reg, operator: phone.address, built, mail: null, signDigests: signDigests(phone), meta: {} });
+    expect(await A.cancelItem(item, { registry: reg, operator: phone.address, signDigests: signDigests(phone), relayer: base, now })).to.equal(1);
+    const r = await A.sendItem(item, { relayer: base, pollMs: 20 });
+    expect(r.failed.error).to.equal("NonceAlreadyUsed");
+    expect((await reg.readCylinder("CANCEL-1")).known).to.equal(false);
+  });
+
+  it("asks for the password again when the owner replaced the data key (review A05)", async function () {
+    const { dek } = await O.unlockWithPassword(ctx, password);
+    const ownerKeys = (await O.unlockWithPassword(ctx, password)).keys;
+    const prepared = await S.replaceDataKey(ownerKeys, dek, "frase nuova dopo un telefono perso", "it");
+    await O.applyDataKey(ctx, prepared);
+    const e = await reg.openKeys(dek).then(() => null, (x) => x);
+    expect(e && e.code).to.equal("KEY_REPLACED");
+    // The owner types the new password on the phone: everything reads again, old and new.
+    const dek2 = await S.unwrapWithPassword(await reg.passwordWrap(), "frase nuova dopo un telefono perso", reg.address);
+    reg.keys = await reg.openKeys(dek2);
+    expect((await reg.readCylinder("AR-300")).info.gas).to.equal("argon");
+    const { item } = await record({ counterparty: customerB, kind: "delivery_note", number: "DDT EPOCH", lines: [await scan("EPOCH-1", customerB, "delivery_note")] });
+    expect(item.done).to.equal(true);
+    expect((await reg.readCylinder("EPOCH-1")).known).to.equal(true);
+    expect((await reg.counterparties()).length).to.equal(3);
   });
 
   it("refuses codes that cannot be a label", async function () {

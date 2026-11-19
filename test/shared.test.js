@@ -86,10 +86,17 @@ describe("shared library", function () {
     it("hide the length of their content: every state has the same size", async function () {
       const atDepot = await S.encryptValue(keys, tokenId, "state", { ...state, location: { type: "depot" } });
       const atCustomer = await S.encryptValue(keys, tokenId, "state", state);
-      const longest = S.validateState({ ...state, condition: "defective", lifecycle: "retired", movement: "from_refill", at: 4102444800 });
+      const longest = S.validateState({
+        ...state,
+        condition: "defective",
+        lifecycle: "retired",
+        movement: "from_refill",
+        at: 4102444800,
+        test: { last: "2099-12", due: "2100-12" },
+      });
       const sizes = [atDepot, atCustomer, await S.encryptValue(keys, tokenId, "state", longest)].map((v) => ethers.getBytes(v).length);
-      expect(sizes).to.deep.equal([221, 221, 221]);
-      const bigInfo = S.validateInfo({ v: 1, serial: "X".repeat(40), gas: "acetylene", capacityL: 999.9, owner: "0x" + "ab".repeat(20), registeredAt: 4102444800 });
+      expect(sizes).to.deep.equal([285, 285, 285]);
+      const bigInfo = S.validateInfo({ v: 1, serial: "X".repeat(40), gas: "acetylene", capacityL: 999.9, owner: "0x" + "ab".repeat(20), testYears: 30, registeredAt: 4102444800 });
       expect(ethers.getBytes(await S.encryptValue(keys, tokenId, "info", bigInfo)).length).to.equal(221);
       expect(ethers.getBytes(await S.encryptValue(keys, tokenId, "document", { a: 1 })).length).to.equal(1 + 12 + 64 + 16);
     });
@@ -149,6 +156,102 @@ describe("shared library", function () {
     });
   });
 
+  describe("key epochs (review A05)", function () {
+    const registry = "0x00000000000000000000000000000000000000A1";
+    const tokenId = ethers.hexlify(ethers.randomBytes(32));
+    const state = { v: 1, location: { type: "depot" }, condition: "full", lifecycle: "active", movement: "delivery", at: 1767225600 };
+
+    it("replace the data key: old values still read, new values only with the new key, ids unchanged", async function () {
+      const dek0 = S.generateDataKey();
+      const k0 = await S.deriveKeys(dek0, registry);
+      const old = await S.encryptValue(k0, tokenId, "state", state);
+      const id0 = await S.cylinderTokenId(k0, "AR-1");
+
+      const r = await S.replaceDataKey(k0, dek0, "una frase nuova per i dati", "it");
+      expect(r.dataKeys).to.deep.equal([S.KEY_WRAP_DATA_KEYS.password, S.KEY_WRAP_DATA_KEYS.recovery, S.KEY_EPOCH_DATA_KEY, S.KEY_RING_DATA_KEY]);
+      expect(r.recoveryCode.split(" ")).to.have.length(24);
+      // What a phone or the page does with the register's values and the new password.
+      const dek1 = await S.unwrapWithPassword(r.dataValues[0], "una frase nuova per i dati", registry);
+      const k1 = await S.openKeys(dek1, registry, r.dataValues[2], r.dataValues[3]);
+      expect(k1.epoch).to.equal(1);
+      expect(await S.decryptValue(k1, tokenId, "state", old)).to.deep.equal(state);
+      expect(await S.cylinderTokenId(k1, "AR-1")).to.equal(id0);
+      const fresh = await S.encryptValue(k1, tokenId, "state", state);
+      expect(ethers.getBytes(fresh)[0]).to.equal(2);
+      await expectReject(S.decryptValue(k0, tokenId, "state", fresh), /epoch 1/);
+      // The old key (a revoked phone's) is refused against the new ring.
+      const stale = await expectReject(S.openKeys(dek0, registry, r.dataValues[2], r.dataValues[3]), /replaced/);
+      expect(stale.code).to.equal("KEY_REPLACED");
+
+      // A second replacement keeps both older keys.
+      const r2 = await S.replaceDataKey(k1, dek1, "ancora una frase diversa", "en");
+      const k2 = await S.openKeys(await S.unwrapWithRecoveryCode(r2.dataValues[1], r2.recoveryCode, registry), registry, r2.dataValues[2], r2.dataValues[3]);
+      expect(k2.epoch).to.equal(2);
+      expect(await S.decryptValue(k2, tokenId, "state", old)).to.deep.equal(state);
+      expect(await S.decryptValue(k2, tokenId, "state", fresh)).to.deep.equal(state);
+      expect(await S.cylinderTokenId(k2, "AR-1")).to.equal(id0);
+    });
+
+    it("an epoch never written is epoch 0", async function () {
+      const dek = S.generateDataKey();
+      expect((await S.openKeys(dek, registry, "0x", "0x")).epoch).to.equal(0);
+    });
+  });
+
+  describe("periodic test", function () {
+    it("works out the expiry from the last test, or the last test from the expiry", function () {
+      expect(S.completeTest({ last: "2024-03" }, 10)).to.deep.equal({ last: "2024-03", due: "2034-03" });
+      expect(S.completeTest({ due: "2030-01" }, 5)).to.deep.equal({ last: "2025-01", due: "2030-01" });
+      expect(S.completeTest({ last: "2020-11", due: "2031-02" }, 10)).to.deep.equal({ last: "2020-11", due: "2031-02" });
+      expect(S.completeTest({ unreadable: true }, 10)).to.deep.equal({ unreadable: true });
+      expect(() => S.validateTest({})).to.throw(/neither/);
+      expect(() => S.validateTest({ last: "2024-13" })).to.throw(/month/);
+      expect(() => S.validateTest({ last: "2030-01", due: "2029-01" })).to.throw(/after/);
+    });
+
+    it("tells expired, soon and ok tests", function () {
+      const now = Math.floor(new Date(2026, 10, 19).getTime() / 1000);
+      expect(S.testStatus({ due: "2026-10" }, now)).to.equal("expired");
+      expect(S.testStatus({ due: "2026-11" }, now)).to.equal("soon");
+      expect(S.testStatus({ due: "2027-02" }, now)).to.equal("soon");
+      expect(S.testStatus({ due: "2027-03" }, now)).to.equal("ok");
+      expect(S.testStatus({ unreadable: true }, now)).to.equal("unknown");
+      expect(S.testStatus(undefined, now)).to.equal("unknown");
+    });
+
+    it("years: the cylinder's, else the gas's in the settings, else 10", function () {
+      const settings = S.validateSettings({ v: 1, company: "X", emails: [], testYears: { acetylene: 5 } });
+      expect(S.testYearsFor({ gas: "acetylene" }, settings)).to.equal(5);
+      expect(S.testYearsFor({ gas: "argon" }, settings)).to.equal(10);
+      expect(S.testYearsFor({ gas: "acetylene", testYears: 7 }, settings)).to.equal(7);
+      expect(() => S.validateSettings({ v: 1, company: "X", testYears: { propane: 5 } })).to.throw(/testYears/);
+    });
+  });
+
+  describe("documents of version 2", function () {
+    it("bind every part to one manifest", function () {
+      const part = (i, n) => ({ docId: ethers.id("doc"), part: i, parts: n, corrects: ethers.ZeroHash, mints: [], updates: [], document: "0x" });
+      const parts = S.withManifest([part(0, 2), part(1, 2)]);
+      expect(parts[0].manifest).to.equal(parts[1].manifest).and.not.equal(ethers.ZeroHash);
+      expect(parts[0].manifest).to.equal(S.documentManifest(ethers.id("doc"), [part(0, 2), part(1, 2)]));
+      expect(() => S.withManifest([part(0, 2)])).to.throw(/one document/);
+    });
+
+    it("a correction has a reason and no counterparty", function () {
+      const line = { tokenId: "0x" + "ab".repeat(32), serial: "AR-1", gas: "argon", movement: "correct", condition: "full", owner: "supplier", test: { last: "2024-01", due: "2034-01" } };
+      const d = S.validateDocument({ v: 1, kind: "correction", date: 1767225600, lines: [line], reason: "gas sbagliato" });
+      expect(d.counterparty).to.equal(undefined);
+      expect(d.lines[0].test).to.deep.equal({ last: "2024-01", due: "2034-01" });
+      expect(() => S.validateDocument({ v: 1, kind: "correction", date: 1767225600, lines: [line] })).to.throw(/reason/);
+    });
+
+    it("validity: at most seven days, starting a minute early", function () {
+      const v = S.validity(1767225600, 30 * 86400, 5n);
+      expect(v).to.deep.equal({ nonce: 5n, validFrom: 1767225540n, deadline: 1767225540n + 7n * 86400n });
+      expect(S.validityTuple(S.validityJson(v))).to.deep.equal(v);
+    });
+  });
+
   describe("password check", function () {
     it("accepts long phrases and mixed passwords, refuses short or simple ones", function () {
       expect(S.checkPassword("le bombole di argon tornano vuote").ok).to.equal(true);
@@ -200,4 +303,5 @@ async function expectReject(promise, pattern) {
   }
   expect(error, "expected a rejection").to.be.instanceOf(Error);
   if (pattern) expect(error.message).to.match(pattern);
+  return error;
 }
