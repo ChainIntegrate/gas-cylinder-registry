@@ -658,7 +658,11 @@ function viewCylinders() {
         st.correcting ? null : btn(tx.correct, () => { st.correcting = { mode: "due", month: c.state && c.state.test && c.state.test.due ? c.state.test.due : "" }; render(); }, "ghost small"),
         btn("←", () => { st.history = null; st.correcting = null; render(); }, "ghost small"))),
       h("p", {}, `${tx.gas}: ${tx.gases[c.info.gas]}${c.info.capacityL ? ` · ${tx.capacity} ${c.info.capacityL} l` : ""} · ${tx.registeredOn} ${fmtDate(c.info.registeredAt)} · ${tx.ownedBy} ${ownerText(c.info.owner)}`),
-      h("p", {}, `${tx.testLabel}: ${c.state && c.state.test && c.state.test.last ? `${tx.testLast} ${monthText(c.state.test.last)} · ` : ""}${tx.testDue} ${testText(c.state && c.state.test)} (${tx.everyYears(S.testYearsFor(c.info, st.data.settings))})`),
+      h("p", {}, `${tx.testLabel}: ${
+        c.state && c.state.test && !c.state.test.unreadable
+          ? `${c.state.test.last ? `${tx.testLast} ${monthText(c.state.test.last)} · ` : ""}${tx.testDue} ${monthText(c.state.test.due)}`
+          : c.state && c.state.test ? tx.testUnreadable : "—"
+      } (${tx.everyYears(S.testYearsFor(c.info, st.data.settings))})`),
       st.correcting ? correctForm(c) : null,
       h(
         "ol",

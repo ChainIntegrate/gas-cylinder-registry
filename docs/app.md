@@ -8,13 +8,20 @@ at the top right. It speaks plain words only: cylinders, delivery notes, custome
 - **Delivery / collection**: pick the customer, scan the cylinders one at a time (or type the code),
   type the delivery note number, send. For each cylinder the app reads its last state and proposes the
   movement: a cylinder at the depot or never seen is a delivery (full); a cylinder at this customer is a
-  collection (empty by default; full or defective can be chosen). A new cylinder asks for its gas.
-  Warnings (a cylinder recorded at another customer, at a refill plant, retired, owned by someone else)
-  must be confirmed before sending, and are listed in the e-mail.
+  collection (empty by default; full or defective can be chosen). A new cylinder asks for its gas, who
+  owns it (ours, the document's customer or refill plant, another refill plant) and its periodic test
+  (the last test or the expiry, as stamped, or unreadable). Warnings (a cylinder recorded at another
+  customer, at a refill plant, retired, another customer's own cylinder, an expired test) must be
+  confirmed before sending, and are listed in the e-mail.
 - **Stock count**: registers the cylinders already at a customer or refill plant when the system starts;
   no delivery note, no e-mail unless an address is added.
-- **Refill**: cylinders sent to a refill plant and back.
-- **Check a cylinder**: gas, where it is, its condition and last movement.
+- **Refill**: cylinders sent to a refill plant and back; a cylinder back tested gets "Tested" and its
+  new test month.
+- **Check a cylinder**: gas, who owns it, where it is, its condition, its test expiry and last movement.
+- **Cancel** a document waiting in "To send": its unsent signatures are cancelled on the register (it
+  needs the network), so that it can never be recorded (review G-07).
+- **A new data key** (review A05): when the owner replaces it, the app asks for the new password at the
+  next opening and keeps its documents to send.
 - **Send**: one fingerprint (or PIN) confirms the whole document and its e-mail. The relayer records
   it, then e-mails it to the customer's and the supplier's addresses and up to three typed for that
   document; the e-mail's text is written by the service from a fixed template (review G-03). Without network, or when the service is busy, the document waits in "To send" and leaves

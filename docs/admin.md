@@ -50,13 +50,16 @@ test checks every request against the catalog of the release named in CI (`UPONB
 
 | Section | What |
 |---|---|
-| **Overview** | Cylinders in total, at the depot, at customers, being refilled, defective; by gas; the latest documents |
-| **Cylinders** | Every cylinder with its gas, where it is, its condition and last movement; search; click for its history (each movement with its document) |
-| **Documents** | Delivery notes, stock counts and refill notes, each with its cylinders and the warnings the driver confirmed |
+| **Overview** | Cylinders in total, at the depot, at customers, being refilled, defective, with the test expired or expiring within 3 months; by gas; the latest documents |
+| **Cylinders** | Every cylinder with its gas, owner, where it is, condition, test expiry and last movement; search; filters for the periodic test (expired, expiring, to complete); click for its history (each movement with its document, corrections with their reason) and "Correct" (gas, litres, owner, test, years between tests: a correction document signed by the owner, review A06) |
+| **Documents** | Delivery notes, stock counts, refill notes and corrections, each with its cylinders and the warnings the driver confirmed; an incomplete document (parts recorded of parts) is marked |
 | **Customers** | Customers and refill plants: add, edit (name, e-mails: they receive that customer's documents), remove (archived, not erased: the app no longer offers it, its documents keep its name; review A21) |
 | **Phones** | The authorized phones; authorize one by the code the app shows; revoke; the setup QR the app scans at its first start |
 | **Download data** | The register as CSV files made in the page (no server): cylinders, movements (each cylinder of each document), documents, customers and refill plants. UTF-8 with a byte order mark; `;` in Italian, `,` in English; a value starting with `= + - @` gets an apostrophe so a spreadsheet never runs it. The files are not encrypted, and the page says so |
-| **Settings** | The company name (shown in the app and the e-mails) and the company's own e-mails (they receive a copy of every document); a new data password |
+| **Settings** | The company name (shown in the app and the e-mails), the company's own e-mails (they receive a copy of every document), the years between periodic tests by gas; a new data password; handing the register to another account (3 days, cancellable); rare cases: a new data key (review A05) |
+
+**Several admin computers.** A customer or the settings are saved only if nobody changed them since the
+page read them; otherwise the page says so and shows the current value.
 
 **First sign-in.** A new register has no data key yet: the page shows only "Prepare the register's
 data". The owner chooses the data password, the page makes the data key and the 24-word recovery code
@@ -70,9 +73,7 @@ lost the password" opens the data with the 24-word recovery code and sets a new 
 
 ## The users' guide
 
-The guide describes version 2 (DESIGN.md 10.1): the parts not built yet (owner, periodic test,
-corrections, handover, data key change) arrive with it; the activation request and the first sign-in's
-confirmations are already in the page. An account without a register sees "GasTrace is not active yet"
+The guide describes version 2 (DESIGN.md 10.1). An account without a register sees "GasTrace is not active yet"
 and sends ChainIntegrate a ready-made e-mail (or copies it) with the account's address, which is never
 shown on screen.
 

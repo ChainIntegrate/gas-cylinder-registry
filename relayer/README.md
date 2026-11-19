@@ -18,11 +18,11 @@ operation.
 | Method and path | Body | Answer |
 |---|---|---|
 | `GET /gcr/info` | | `{ relayer, chainId, factory, balance, mail, limits, app? }`; `app: { version, url }` is the latest released app, when announced ([below](#announce-a-new-app-release)) |
-| `POST /gcr/document` | `{ registry, payload, signer, nonce, deadline, signature, mail?, mailSignature? }` | `{ hash }`, or `{ error, detail? }` with 4xx |
-| `POST /gcr/owner` | `{ registry, method, args }`, `method` one of `setOperatorSigned`, `setDataSigned`, `transferOwnershipSigned`, `acceptOwnershipSigned` | `{ hash }`, or `{ error, detail? }` |
+| `POST /gcr/document` | `{ registry, payload, signer, validity: { nonce, validFrom, deadline }, signature, mail?, mailSignature? }` (a phone's document; `payload` with its `manifest`) | `{ hash }`, or `{ error, detail? }` with 4xx |
+| `POST /gcr/owner` | `{ registry, method, args }`, `method` one of `setOperatorSigned`, `setDataSigned`, `transferOwnershipSigned`, `cancelOwnershipTransferSigned`, `acceptOwnershipSigned`, `cancelNoncesSigned` (by a phone for itself, or by the owner), `recordDocument` (the owner's corrections only) | `{ hash }`, or `{ error, detail? }` |
 | `GET /gcr/status?hash=0x…` | | `{ state: pending/confirmed/failed, blockNumber, mail: none/pending/sent/failed/not_sent }` for the transactions it sent (the last 5,000) |
 
-Numbers (`nonce`, `deadline`, owner arguments) are decimal strings. `detail.error` names the
+Version 2 of the contracts (DESIGN.md §10.1). Numbers (the validity's, owner arguments) are decimal strings. `detail.error` names the
 registry's refusal when there is one (for example `StaleValue`: a cylinder changed since the phone
 read it; `DocumentPartAlreadyRecorded`: the same document number was sent before).
 
@@ -123,6 +123,22 @@ curl -s https://gastrace.chainintegrate.it/gcr/info
 For an owner that uses ChainIntegrate's command-line tools with a key file, set
 `"relayer": "https://gastrace.chainintegrate.it"` in their `gcr-registry.json`: owner operations then go
 through the relayer too.
+
+## Handover alerts
+
+A register's ownership can pass to another account only 3 days after the handover starts (version 2).
+Whoever starts it, through the relayer or with their own LYX, the relayer sees `OwnershipTransferStarted`
+on the chain (it reads the logs every minute from `watchFromBlock`, then from where it stopped) and
+e-mails, in Italian and English, the register's alert addresses and ChainIntegrate (`NOTIFICATION_EMAIL`),
+so that an unwanted handover is cancelled from the page. In `/etc/gcr-relayer/config.json`:
+
+```json
+"watchFromBlock": 8803983,
+"handoverAlerts": { "<register address>": ["office@example.com"] }
+```
+
+The addresses are written by ChainIntegrate when it creates a register (the relayer cannot read the
+register's encrypted settings). A register without an entry still alerts ChainIntegrate.
 
 ## The journal (what survives a restart)
 

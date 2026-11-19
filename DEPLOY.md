@@ -198,6 +198,49 @@ Done on LUKSO mainnet on 2026-11-17: factory [`0xd60146C03f288fCeEEdB90731f162fF
 `0x4a2605796e0d91A9667d6E30365aEEC384C48c27` (checked on the explorer: `owner`, `VERSION` 2,
 `registryCount` 0).
 
+## 9. Version 2 online (on the server, then GitHub and the extension)
+
+The page, the app 0.3.0 and the relayer work with version 2 only: once the server is updated, the version
+1 demo register no longer opens in the page. In this order:
+
+**1. The server**: the page and the relayer, with the version 2 factory.
+
+```bash
+cd /var/www/gas-cylinder-registry && sudo git pull --ff-only
+(cd relayer && sudo npm ci --omit=dev)
+sudo nano /etc/gcr-relayer/config.json
+```
+
+In the file: `"factory": "0xd60146C03f288fCeEEdB90731f162fF57F7ebdd2"`, and two new entries,
+`"watchFromBlock": 8803983` (where the handover watch starts) and `"handoverAlerts": {}` (filled in step
+5). Then:
+
+```bash
+sudo systemctl restart gcr-relayer
+sudo journalctl -u gcr-relayer -n 5 --no-pager      # "factory 0xd601…", mail on
+curl -s https://gastrace.chainintegrate.it/gcr/info  # "factory": "0xd60146C0…"
+```
+
+**2. The extension's catalog** (up-onboarding, its own conversation): version 2's factory, domain and
+requests. Until its release, the page's requests are refused by the extension.
+
+**3. The app**: publish the release `v0.3.0` on GitHub (the "release" job signs the APK after approval),
+then announce it to the phones in `/etc/gcr-relayer/app-release.json` (version `0.3.0` and the APK's
+link; no restart needed).
+
+**4. A trial** with a test register of sample data (the operator page, then the page and a phone),
+before the supplier's.
+
+**5. The supplier's register**, after their activation request (the page's "Request activation"
+e-mail): create it from the operator page for the account address in the e-mail, then add the address
+the alerts go to (the e-mail the request came from, or the one they give) and restart the relayer:
+
+```json
+"handoverAlerts": { "<the register's address>": ["office@example.com"] }
+```
+
+Then answer the request: "GasTrace is active".
+
 ## Every update
 
 ```bash

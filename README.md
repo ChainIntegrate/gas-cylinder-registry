@@ -9,9 +9,11 @@ supplier ever holds LYX.
 
 **Status: live on LUKSO mainnet for a demo** (Argonia Gas Tecnici, a fictional supplier). A first
 external review (2026-11-13) is closed for the demo: what was fixed, documented or planned is in
-[docs/security-review-2026-11.md](docs/security-review-2026-11.md). Before real customer data, version 2
-of the contracts (deployed on 2026-11-17, [DESIGN.md §10.1](DESIGN.md)) must be adopted by the app, the
-pages and the relayer, and the owner's points listed there done.
+[docs/security-review-2026-11.md](docs/security-review-2026-11.md). Version 2 of the contracts (deployed
+on 2026-11-17, [DESIGN.md §10.1](DESIGN.md)) is what the app 0.3.0, the pages and the relayer use in this
+repository: the cylinder's owner, the periodic test, corrections, handovers with their wait, a replaceable
+data key. Before real customer data: the extension's catalog for version 2 and the server's update
+([DEPLOY.md](DEPLOY.md), "Version 2 online").
 
 ## The parts
 

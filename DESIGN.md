@@ -56,8 +56,17 @@ Per-token data, each value encrypted (section 5):
 
 | Data key | Plaintext |
 |---|---|
-| `GCRInfo` | serial, gas, capacity (optional), owner of the cylinder (`supplier` or a counterparty id), registered at |
-| `GCRState` | location (`depot`, or a customer or refill plant by id), condition (`full`, `empty`, `defective`), lifecycle (`active`, `retired`), last movement, scan time |
+| `GCRInfo` | serial, gas, capacity (optional), owner of the cylinder (`supplier`, or a customer or refill plant by id), years between periodic tests (optional, when not the gas's), registered at |
+| `GCRState` | location (`depot`, or a customer or refill plant by id), condition (`full`, `empty`, `defective`), lifecycle (`active`, `retired`), last movement, scan time, periodic test (optional: last test and expiry as months, or unreadable) |
+
+The **owner** of a cylinder is chosen by the driver when the cylinder is first recorded (ours, the
+document's customer or refill plant, or another refill plant); afterwards only the register's owner
+corrects it. The **periodic test** is in the state, because a phone writes it again when a cylinder
+comes back tested: the driver types the month stamped on the cylinder, the last test or the expiry, and
+the other is worked out with the years set for the gas (settings; 10 when not set). The app warns when a
+cylinder whose test has expired is delivered, or when a customer's own cylinder goes to another customer
+(a refill plant's cylinders go to customers without a warning). The admin page lists expired and
+expiring tests (within 3 months).
 
 Every change emits LSP8's `TokenIdDataChanged` with the encrypted value: a cylinder's **history** is
 rebuilt from the logs. The document and the signer of a change are in the same transaction's
@@ -349,29 +358,44 @@ What version 2 does:
 - **The factory** creates registers with no data: `createRegistry(salt, owner, name, symbol)`.
   `VERSION()` is 2 in both contracts.
 
-To do before the first supplier's register (the work after the deployment):
+Built on version 2 (2026-11): `shared/` (the `Validity` tuple, the manifest, key epochs), the app 0.3.0,
+the admin page, the operator page, the owner tools and the relayer work on version 2 only; version 1
+stays in the repository for its contracts and tests. Still to do before the first supplier's register:
 
-- `shared/`: version 2's EIP-712 types (`validFrom`, the `Validity` tuple, the new operations) and the
-  manifest; A05's key epochs (below).
-- The app: `validFrom` in each signature, the manifest, the interrupted documents, cancelling a waiting
-  document, a phone receiving a new data key.
-- The cylinder's owner (`GCRInfo.owner`: the supplier or a customer). Today the app always writes
-  `supplier` and no tool lets anyone choose or change it. In the app, when a new cylinder is registered:
-  "ours" or "the customer's", proposing the document's customer (the delivery's customer, or where the
-  stock is counted). In the admin page, the "Correct" button also changes it. No contract change: the
-  register stores the information encrypted and never reads it; version 2 already lets a phone write it
-  only at registration and the owner correct it (A06). The guides and the tests follow.
-- The admin page: the "Correct" button, the ownership transfer with its wait and cancellation, the new
-  data key (A05), cancelling a phone's waiting documents, interrupted documents.
-- The operator page and the owner tools: `createRegistry` with four arguments, the version 2 factory.
-- The relayer: version 2's ABI and factory, the e-mail when an ownership transfer starts.
-- The extension's catalog (up-onboarding): version 2's requests and factory.
+- The extension's catalog (up-onboarding, its own conversation): version 2's factory, domain and
+  requests (validity, handover and its cancellation, corrections, the key epoch and ring).
+- Putting it online: the server (page, relayer configuration with the handover alert addresses), the
+  app's release and its announcement (DEPLOY.md, "Version 2 online").
+- Advised: an external review of the version 2 contract before real data, since it cannot be changed.
+
+How the rest works:
+
+- **Key epochs (A05)**: replacing the data key makes a new key (epoch n + 1) with a new password and
+  recovery code; `GCRKeyEpoch` holds the epoch and `GCRKeyRing` the older keys, encrypted with the new
+  one, so older values stay readable; values written afterwards use the new key (format byte 2 and the
+  epoch in the associated data). Token IDs and document IDs come from the first key, so they never
+  change. A phone holding an older key is told so when it opens (`KEY_REPLACED`): the owner types the new
+  password on it, and what it keeps is sealed again with the new key.
+- **Corrections (A06)**: a "correction" document signed by the owner, with its reason, writing the
+  cylinder's information and, for the test, its state; it stays in the cylinder's history.
+- **Several admin computers**: a customer or the settings are written only if nobody changed them since
+  the page read them (read again before signing and after the write); otherwise the page says so and
+  shows the current value. The contract has no such check for the owner's data: two writes of the same
+  entry within seconds of each other can still overwrite one another.
+- **Handover alerts**: the relayer watches `OwnershipTransferStarted` on the chain (also handovers not
+  sent through it) and e-mails the register's alert addresses (`handoverAlerts` in its configuration,
+  set by ChainIntegrate when it creates the register) and ChainIntegrate.
+- **Cancelling a waiting document**: the phone signs `CancelNonces` for the parts not sent yet; it
+  needs the network. The owner can cancel a phone's signatures only by their nonces, which only the phone
+  knows: for a lost phone, revoking it is what stops its documents.
+- **Cost**: on the local network a new cylinder costs about 510,000 gas (its information and state), a
+  movement about 75,000 gas per cylinder in a document of 10 to 25 (scripts/gas-report.js).
 
 | Review | What version 2 changes |
 |---|---|
 | A01 / X-01 | Every owner operation accepted only from a key with administrator permissions on the owner's account (EDITPERMISSIONS), read from the account (LSP6), not from any SIGN key; the direct owner paths closed; an ownership transfer that waits 3 days and can be cancelled, with an e-mail alert from the relayer. The extension's side is done in up-onboarding 0.6.0: owner requests confirmed only on administrator computers, access keys limited to the catalog's calls. |
 | A05 / G-02 | A replaceable data key: key epochs, new values under the new key, the remaining phones given it again; identifiers (token IDs, document IDs) kept on a separate, stable key. A revoked phone, or an old password or recovery code, then no longer reads new data. No contract change: each epoch's key wraps are owner data (`setDataSigned`, administrator keys only); the work is in `shared/`, the app and the admin page. |
-| A06 | What a phone may write: movements of existing cylinders and new cylinders, not the information of a cylinder already registered. Corrections stay possible, by the owner: a "Correct" button in the admin page (a cylinder's gas, litres, owner), signed in the extension and kept in the cylinder's history. Today no tool offers it (the app writes a cylinder's information only when it registers it). |
+| A06 | What a phone may write: movements of existing cylinders and new cylinders, not the information of a cylinder already registered. Corrections by the owner: the "Correct" button in the admin page (gas, litres, owner, periodic test, years between tests), signed in the extension and kept in the cylinder's history. |
 | A11 | A document's parts bound to a manifest (document ID, number of parts, every part's hash), a signer and a number of parts, fixed by the first recorded part; parts that do not match are refused, and `documentStatus` shows an interrupted document. |
 | G-07 | A maximum validity for signatures (seven days from `validFrom`) checked by the contract, and `cancelNoncesSigned` for the owner and the phones to cancel an unsent signature. |
 
