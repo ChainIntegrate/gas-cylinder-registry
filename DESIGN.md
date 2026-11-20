@@ -360,10 +360,10 @@ What version 2 does:
 
 Built on version 2 (2026-11): `shared/` (the `Validity` tuple, the manifest, key epochs), the app 0.3.0,
 the admin page, the operator page, the owner tools and the relayer work on version 2 only; version 1
-stays in the repository for its contracts and tests. Still to do before the first supplier's register:
+stays in the repository for its contracts and tests. The extension's catalog follows from up-onboarding's extension 0.6.1 (version 2's factory, domain and
+requests; the page's browser test checks every request against it). Still to do before the first
+supplier's register:
 
-- The extension's catalog (up-onboarding, its own conversation): version 2's factory, domain and
-  requests (validity, handover and its cancellation, corrections, the key epoch and ring).
 - Putting it online: the server (page, relayer configuration with the handover alert addresses), the
   app's release and its announcement (DEPLOY.md, "Version 2 online").
 - Advised: an external review of the version 2 contract before real data, since it cannot be changed.

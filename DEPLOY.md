@@ -221,8 +221,9 @@ sudo journalctl -u gcr-relayer -n 5 --no-pager      # "factory 0xd601…", mail 
 curl -s https://gastrace.chainintegrate.it/gcr/info  # "factory": "0xd60146C0…"
 ```
 
-**2. The extension's catalog** (up-onboarding, its own conversation): version 2's factory, domain and
-requests. Until its release, the page's requests are refused by the extension.
+**2. The extension**: ChainIntegrate Account 0.6.1 or later (up-onboarding's `extension-v0.6.1`, with
+version 2 in its catalog) on the supplier's computers; with an older one the page's requests are
+refused.
 
 **3. The app**: publish the release `v0.3.0` on GitHub (the "release" job signs the APK after approval),
 then announce it to the phones in `/etc/gcr-relayer/app-release.json` (version `0.3.0` and the APK's
