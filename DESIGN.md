@@ -397,6 +397,11 @@ Universal Profile.
 - From the external review (2026-11-13, [docs/security-review-2026-11.md](docs/security-review-2026-11.md)):
   P-01 (privacy notices for drivers and customers, the processor agreement) and the operational points
   (X-04 distribution, X-05 server).
+- From the verification of version 2 (2026-11-20), to fix: N-01 (the owner's correction described in the
+  extension), N-02 (identifiers after a data key replacement), N-03 (reliable handover alerts), N-04
+  (after a handover), N-05 (a phone taking a document number in advance), and the earlier A07, R02, A10,
+  R-03, R-04, R-06, R-09: the list and their status in
+  [docs/security-review-2026-11.md](docs/security-review-2026-11.md#verification-of-2026-11-20-version-2).
 
 ## 11. The external review's contract points
 

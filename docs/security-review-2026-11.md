@@ -53,6 +53,33 @@ relayer that use it), **Owner** (operational, outside the code).
 | X-05 | One server for every service; shared SMTP credentials; a tools key on the server | **Owner**: separate SMTP credentials, off-site backups, the tools key off the server | |
 | P-01 · A16 | No privacy notice, processor agreement or employee information | **Owner**, with the supplier and an adviser, before real data | |
 
+## Verification of 2026-11-20 (version 2)
+
+An independent re-check of version 2 and extension 0.6.1, on this repository at `eeda662` (the report is
+kept privately by ChainIntegrate). No High or Medium issue. The items left to version 2 (A01 · X-01,
+A05 · G-02, A06, A11, G-07) were confirmed fixed, also against the account the extension creates; the
+follow-up's R-01 is fixed and R-07 closed (version 1 retired).
+
+To fix, in this repository:
+
+| ID | Severity | What | Status |
+|---|---|---|---|
+| N-01 | Low | The owner's correction (`RecordDocument` signed by the owner) is shown in the extension with one fixed sentence: one signature could create cylinders and rewrite several. The page to send the payload beside the request, the extension to recompute its hash and describe it (counts), and to refuse what it cannot describe (with up-onboarding) | Open |
+| N-02 | Low | After a data key replacement, an old key still computes token IDs and document IDs (both on the first key): it can follow cylinders and tell which customer a new document is for, not its content. DESIGN §4.5 and §5 and the guide to say so; document IDs possibly from the current key | Open |
+| N-03 | Low | Handover alerts: the watch's position is kept in memory (alerts sent again at each restart from `watchFromBlock`, or missed while the relayer is down); no check that the handover is still pending; runs may overlap; `handoverAlerts` written by hand per register. The position in the journal, the pending state checked and said, one run at a time, a reminder (or a refusal) for the alert address when a register is created | Open |
+| N-04 | Info | After a handover the new owner keeps the previous account's phones and the same data key: after accepting, show the phones and suggest changing the data key; one line in the guide | Open |
+| N-05 | Info | An authorized phone can take a predicted document number in advance (as in version 1): visible, stopped by revoking it. To mention in DESIGN §10 with the other insider limits | Open |
+| A07 (rest) | Low | The relayer saves its journal after sending a transaction: a stop in between loses that document's e-mail | Open |
+| R02 | Low | The phone's vault drops write errors silently (`app/src/vault.js`) | Open |
+| A10 (rest) | Low | A document's year comes from the phone's time zone (`app/src/logic.js`) | Open |
+| R-04 | Low | The e-mail's company and customer names are taken from the phone, not from the register | Open |
+| R-06 | Low | No build provenance for the APK | Open |
+| R-03 | Low | `SetData` without its values is still confirmable with a warning (the page always sends them; the extension's side in up-onboarding) | Open |
+| R-09 | Info | Advisories in development-only packages (the Hardhat 2 toolchain) | Open, low |
+
+The others listed there are up-onboarding's (R-02 wording, R-05, R-08, U-09) or the owner's (P-01, X-04,
+X-05, unchanged).
+
 ## Handled in up-onboarding
 
 The extension's and the account service's findings: A01 · X-01 (access keys), A13 · U-01 (upload
