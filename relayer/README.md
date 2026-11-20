@@ -3,7 +3,8 @@
 A small Node.js service on ChainIntegrate's server (the same server as Cross_Chain's relayer). Phones
 and owners **sign** their operations; this service **sends** them to their registry on LUKSO and pays
 the gas with its own key, so that nobody at the gas supplier ever holds LYX. After a document's
-transaction is confirmed, it sends the document's e-mail.
+transaction is confirmed, it sends the document's e-mail; when a register's handover starts, it alerts.
+It serves version 2 of the contracts (the factory in its configuration).
 
 ## What the relayer key can do
 
@@ -22,7 +23,7 @@ operation.
 | `POST /gcr/owner` | `{ registry, method, args }`, `method` one of `setOperatorSigned`, `setDataSigned`, `transferOwnershipSigned`, `cancelOwnershipTransferSigned`, `acceptOwnershipSigned`, `cancelNoncesSigned` (by a phone for itself, or by the owner), `recordDocument` (the owner's corrections only) | `{ hash }`, or `{ error, detail? }` |
 | `GET /gcr/status?hash=0x…` | | `{ state: pending/confirmed/failed, blockNumber, mail: none/pending/sent/failed/not_sent }` for the transactions it sent (the last 5,000) |
 
-Version 2 of the contracts (DESIGN.md §10.1). Numbers (the validity's, owner arguments) are decimal strings. `detail.error` names the
+Version 2 of the contracts (DESIGN.md §6–7). Numbers (the validity's, owner arguments) are decimal strings. `detail.error` names the
 registry's refusal when there is one (for example `StaleValue`: a cylinder changed since the phone
 read it; `DocumentPartAlreadyRecorded`: the same document number was sent before).
 
@@ -32,6 +33,9 @@ read it; `DocumentPartAlreadyRecorded`: the same document number was sent before
   spend its gas.
 - Documents signed by the registry's owner or an authorized phone, with at most 25 new cylinders and
   60 data updates per operation, a document of at most 16 KB, values of at most 1 KB.
+- On `/gcr/owner`: the owner's operations; `recordDocument` only when its signer is the registry's owner
+  (a correction); `cancelNoncesSigned` only when `by` is the owner or an authorized phone. The registry
+  checks each signature (an owner's: an administrator key of its account).
 - Operations that succeed in simulation; the registry's error is returned otherwise and nothing is
   sent. Gas limit: the estimate plus 25%, never more than 16 million (when a node's estimate fails
   after a successful simulation, the 16 million cap; only the gas used is paid).
@@ -98,7 +102,7 @@ sudo install -m 600 -o gcr-relayer -g gcr-relayer /etc/crosschain-relayer/smtp.e
 ```
 
 **4. Fund the relayer** with LYX on LUKSO (`new-key` printed its address). A new cylinder costs about
-460,000 gas, a movement about 60,000.
+510,000 gas, a movement about 75,000 to 80,000 (DESIGN.md §6.3).
 
 **5. Service.**
 
@@ -121,7 +125,7 @@ curl -s https://gastrace.chainintegrate.it/gcr/info
 ```
 
 For an owner that uses ChainIntegrate's command-line tools with a key file, set
-`"relayer": "https://gastrace.chainintegrate.it"` in their `gcr-registry.json`: owner operations then go
+`"relayer": "https://gastrace.chainintegrate.it"` in their config file (`gcr-v2.json`): owner operations then go
 through the relayer too.
 
 ## Handover alerts

@@ -5,7 +5,7 @@
 
 const { Contract, ContractFactory, getAddress, hexlify, randomBytes, id, keccak256, ZeroHash, toUtf8String } = require("ethers");
 const S = require("../../shared");
-// Version 2 of the contracts (DESIGN.md 10.1). Version 1 (the demo) is only deployed, never used here.
+// Version 2 of the contracts (DESIGN.md §6). Version 1 (the demo) is only deployed, never used here.
 const REGISTRY_ABI = require("../../shared/abi/GasCylinderRegistryV2.json");
 const FACTORY_ABI = require("../../shared/abi/GasCylinderRegistryFactoryV2.json");
 const FACTORY_V1_ABI = require("../../shared/abi/GasCylinderRegistryFactory.json");
@@ -123,7 +123,7 @@ async function scanLogs(ctx, filter, step = 50000) {
 
 /**
  * Deploys the factory (and with it the registry implementation), owned by `deployer`. `version` 2: the
- * contracts of the external review (contracts/GasCylinderRegistryV2.sol, DESIGN.md §10.1).
+ * contracts of the external review (contracts/GasCylinderRegistryV2.sol, DESIGN.md §6).
  */
 async function deployFactory(deployer, version = 1) {
   const name = version === 2 ? "GasCylinderRegistryFactoryV2" : "GasCylinderRegistryFactory";

@@ -4,26 +4,23 @@ Tracking of technical gas cylinders on LUKSO, for gas suppliers and their driver
 LSP8 token in the supplier's own register; its data is encrypted on-chain with the register's data key,
 made by the supplier at the first sign-in and opened by their password (and held by the authorized
 phones: see [DESIGN.md](DESIGN.md), "Who holds the data key"). Drivers scan the barcodes with an Android
-app at delivery and collection; the supplier manages the register from a web page; nobody at the
-supplier ever holds LYX.
+app at delivery, collection, stock count and refill, with each cylinder's owner and periodic test; the
+supplier manages the register from a web page; nobody at the supplier ever holds LYX.
 
-**Status: live on LUKSO mainnet for a demo** (Argonia Gas Tecnici, a fictional supplier). A first
-external review (2026-11-13) is closed for the demo: what was fixed, documented or planned is in
-[docs/security-review-2026-11.md](docs/security-review-2026-11.md). Version 2 of the contracts (deployed
-on 2026-11-17, [DESIGN.md §10.1](DESIGN.md)) is what the app 0.3.0, the pages and the relayer use in this
-repository: the cylinder's owner, the periodic test, corrections, handovers with their wait, a replaceable
-data key. Before real customer data: the server's update
-([DEPLOY.md](DEPLOY.md), "Version 2 online").
+**Status: version 2, live on LUKSO mainnet** (2026-11-20): the contracts' version 2, the app 0.3.0, the
+admin and operator pages and the relayer; no supplier's register yet. A first external review
+(2026-11-13) and how each point was handled: [docs/security-review-2026-11.md](docs/security-review-2026-11.md).
+Version 1 served a demo with fictional data and is no longer used ([DESIGN.md §6.4](DESIGN.md)).
 
 ## The parts
 
 | Part | What it is | Where | Guide |
 |---|---|---|---|
-| **Contracts** | The register (one LSP8 collection per supplier) and the factory that creates them | `contracts/` | [DESIGN.md](DESIGN.md) |
-| **Shared library** | Encryption, key wraps, identifiers, formats, EIP-712 types, the signed e-mail | `shared/` | [DESIGN.md](DESIGN.md) |
-| **Drivers' app "GasTrace"** | Android (Capacitor): scan, deliver, collect, stock count, refill; signs with a key kept on the phone | `app/`, `android/` | [docs/app.md](docs/app.md) |
-| **Admin page "GasTrace"** | The supplier's web page: the data key prepared at the first sign-in, overview, cylinders and their history, documents, customers, phones, settings, data download (CSV); signed in with the ChainIntegrate Account extension | `admin/` | [docs/admin.md](docs/admin.md) |
-| **Relayer** | Sends the signed operations, pays the gas, sends each document's e-mail | `relayer/` | [relayer/README.md](relayer/README.md) |
+| **Contracts** | The register (one LSP8 collection per supplier) and the factory that creates them; version 2 in use | `contracts/` | [DESIGN.md](DESIGN.md) |
+| **Shared library** | Encryption, key wraps and epochs, identifiers, formats, EIP-712 types, the signed e-mail | `shared/` | [DESIGN.md](DESIGN.md) |
+| **Drivers' app "GasTrace"** | Android (Capacitor): scan, deliver, collect, stock count, refill; new cylinders' owner and periodic test; signs with a key kept on the phone | `app/`, `android/` | [docs/app.md](docs/app.md) |
+| **Admin page "GasTrace"** | The supplier's web page: activation request, the data key prepared at the first sign-in, overview, cylinders (owner, periodic test) and their history, corrections, documents, customers, phones, settings, handover, a new data key, data download (CSV); signed in with the ChainIntegrate Account extension | `admin/` | [docs/admin.md](docs/admin.md) |
+| **Relayer** | Sends the signed operations, pays the gas, sends each document's e-mail, alerts when a register's handover starts | `relayer/` | [relayer/README.md](relayer/README.md) |
 | **Operator page** | ChainIntegrate's page to create a supplier's register from the browser (`operator.html`), signed by ChainIntegrate's Universal Profile | `admin/` | [docs/admin.md](docs/admin.md#the-operator-page-chainintegrate-only) |
 | **ChainIntegrate's tools** | Command line: deploy the factory, hand it to ChainIntegrate's profile, create registers, verify the source, owner operations for an owner using a key file | `scripts/` | [docs/owner-tools.md](docs/owner-tools.md) |
 
@@ -31,7 +28,7 @@ How they fit together:
 
 ```
  driver's phone (GasTrace app)          supplier's browser (admin page + ChainIntegrate Account)
-        │ signs a document                       │ signs a change (customers, phones, settings)
+        │ signs a document                       │ signs a change (customers, phones, settings, corrections)
         └──────────────► relayer (gastrace.chainintegrate.it/gcr/) ◄──────────────┘
                             │ checks, sends, pays the gas; e-mails the document
                             ▼
@@ -46,22 +43,21 @@ How they fit together:
 |---|---|
 | Admin page | https://gastrace.chainintegrate.it/ |
 | Relayer | https://gastrace.chainintegrate.it/gcr/info |
-| Factory | [`0xA128e7162fa8Dc779bf31EF569F06B53a499A50e`](https://explorer.execution.mainnet.lukso.network/address/0xA128e7162fa8Dc779bf31EF569F06B53a499A50e) (block 8774243, source verified), owned by ChainIntegrate's Universal Profile `0x4a26…8c27` |
 | Operator page | https://gastrace.chainintegrate.it/operator.html (ChainIntegrate only) |
-| Users' guide | https://gastrace.chainintegrate.it/guida.html (Italian), [guide.html](https://gastrace.chainintegrate.it/guide.html) (English): the owner's page and the drivers' app in plain words |
-| Register implementation | [`0x3075ED17F09E0006cECC0D7e67Fe7E7A4Dc95b00`](https://explorer.execution.mainnet.lukso.network/address/0x3075ED17F09E0006cECC0D7e67Fe7E7A4Dc95b00) (source verified; registers are its clones) |
-| Factory, version 2 | [`0xd60146C03f288fCeEEdB90731f162fF57F7ebdd2`](https://explorer.execution.mainnet.lukso.network/address/0xd60146C03f288fCeEEdB90731f162fF57F7ebdd2) (block 8803983, source verified), owned by ChainIntegrate's Universal Profile `0x4a26…8c27`; no registers yet ([DESIGN.md §10.1](DESIGN.md)) |
-| Register implementation, version 2 | [`0xaC0D8EffB68C5FE9F291dd34570dD2f6c53026af`](https://explorer.execution.mainnet.lukso.network/address/0xaC0D8EffB68C5FE9F291dd34570dD2f6c53026af) (source verified) |
-| Demo register | [`0xEae1a8B84977694e5c9925028a23599bc345b801`](https://explorer.execution.mainnet.lukso.network/address/0xEae1a8B84977694e5c9925028a23599bc345b801), owned by Argonia Gas Tecnici's ChainIntegrate account `0xC335…D773` |
-| App | [Releases](https://github.com/ChainIntegrate/gas-cylinder-registry/releases) (`gastrace-v<version>.apk`) |
+| Users' guide | https://gastrace.chainintegrate.it/guida.html (Italian), [guide.html](https://gastrace.chainintegrate.it/guide.html) (English): activation, the owner's page and the drivers' app in plain words |
+| Factory (version 2) | [`0xd60146C03f288fCeEEdB90731f162fF57F7ebdd2`](https://explorer.execution.mainnet.lukso.network/address/0xd60146C03f288fCeEEdB90731f162fF57F7ebdd2) (block 8803983, source verified), owned by ChainIntegrate's Universal Profile `0x4a26…8c27` |
+| Register implementation (version 2) | [`0xaC0D8EffB68C5FE9F291dd34570dD2f6c53026af`](https://explorer.execution.mainnet.lukso.network/address/0xaC0D8EffB68C5FE9F291dd34570dD2f6c53026af) (source verified; registers are its clones) |
+| App | [Releases](https://github.com/ChainIntegrate/gas-cylinder-registry/releases) (`gastrace-v<version>.apk`), 0.3.0 |
+| Extension | ChainIntegrate Account 0.6.1 or later (up-onboarding), with version 2 in its catalog |
+| Version 1 (no longer used) | Factory [`0xA128e7162fa8Dc779bf31EF569F06B53a499A50e`](https://explorer.execution.mainnet.lukso.network/address/0xA128e7162fa8Dc779bf31EF569F06B53a499A50e) (block 8774243), implementation [`0x3075ED17F09E0006cECC0D7e67Fe7E7A4Dc95b00`](https://explorer.execution.mainnet.lukso.network/address/0x3075ED17F09E0006cECC0D7e67Fe7E7A4Dc95b00), demo register [`0xEae1a8B84977694e5c9925028a23599bc345b801`](https://explorer.execution.mainnet.lukso.network/address/0xEae1a8B84977694e5c9925028a23599bc345b801) (fictional data) |
 
 How it was published, step by step: [DEPLOY.md](DEPLOY.md).
 
 ## Repository
 
 ```
-contracts/   GasCylinderRegistry.sol, GasCylinderRegistryFactory.sol (version 1, the demo); their V2 files (version 2,
-             DESIGN.md §10.1); test-only accounts (a mock, and LUKSO's LSP0 and LSP6 for version 2's tests)
+contracts/   GasCylinderRegistryV2.sol, GasCylinderRegistryFactoryV2.sol (version 2, in use); the version 1 files (the
+             demo, no longer used); test-only accounts (a mock, and LUKSO's LSP0 and LSP6 for version 2's tests)
 shared/      encryption, identifiers, formats, EIP-712, e-mail; used by the app, the page, the relayer, the tools
 app/         the drivers' app: logic, interface, native bridge, icon (built into app/www)
 android/     the Capacitor Android project: the phone key plugin (DeviceKeyPlugin), signing
@@ -86,6 +82,7 @@ the extension's catalog). The Android build needs Java 21 and the Android SDK.
 npm ci
 npx hardhat compile                 # solc 0.8.28 from npm (solc-js), no compiler download
 npx hardhat test                    # contracts, library, tools, relayer, app logic
+npx hardhat run scripts/gas-report.js  # gas of documents of 1, 10 and 25 cylinders
 npx hardhat node &                  # then the three browser tests:
 node scripts/ui-demo.js [shots]     #   the app's interface, the demo step by step
 UPONBOARDING_DIR=<clone> node scripts/admin-demo.js [shots]  # the admin page, against the extension's catalog
@@ -104,7 +101,7 @@ signed APK ([docs/app.md](docs/app.md#releases-and-signing)).
   notes. The app's and the page's Italian texts are translations, in their `i18n.js` files.
 - The examples use the fictional supplier Argonia Gas Tecnici. Real company names never appear here:
   not in code, tests, fixtures, commits or pull requests.
-- Key files, passwords and the tools' `gcr-registry.json` never enter the repository (`.gitignore`).
+- Key files, passwords and the tools' config files (`gcr-*.json`) never enter the repository (`.gitignore`).
 
 ## License
 

@@ -17,34 +17,38 @@ own ("Authorize another computer" in the extension), as an **administrator** or 
 From extension 0.6.0 the owner's requests are confirmed only on an **administrator** computer: the
 confirmation window reads the computer's permissions on the account and, from an access computer,
 refuses GasTrace's requests (error 4100, `admin_only`); the page then says "This operation is confirmed
-from an administrator computer of your account" (review A01 / X-01). The accepted risk: an access key
-still has SIGN, so outside the extension it could sign for the account (ERC-1271) and the register would
-accept it. The register's own check (administrator keys only for handing the register over and for the
-key wraps) comes with version 2 of the contracts ([DESIGN.md §10.1](../DESIGN.md)); until then authorize
-other computers only for people who may administer the register. The demo account has administrator
-keys only.
+from an administrator computer of your account" (review A01 / X-01). The version 2 register checks it
+too: an owner's signature is accepted only from a key with administrator permissions on the account
+(EDITPERMISSIONS), so an access key, which has SIGN, is refused even outside the extension
+([DESIGN.md §6.2](../DESIGN.md)).
+
+**Accounts without a register.** The page says "GasTrace is not active yet for this account" and offers
+"Request activation" (a ready-made e-mail to info@chainintegrate.it holding the account's address, which
+is not shown on screen) or "Copy the request". A register being handed over to the account is listed with
+"Accept the register", from the end of its 3 days.
 
 **The extension's catalog.** The extension serves only the sites and requests declared in its catalog
-(`extension/shared/catalog.js` in up-onboarding). For GasTrace the four requests (`SetOperator`,
-`SetData`, `TransferOwnership`, `AcceptOwnership`) are declared, with the factory and the site (from
-extension 0.4.3):
+(`extension/shared/catalog.js` in up-onboarding). From extension 0.6.1 it declares version 2: the
+factory, the domain `GasCylinderRegistry` version `2` and the requests `SetOperator`, `SetData`,
+`TransferOwnership`, `CancelOwnershipTransfer`, `AcceptOwnership`, `RecordDocument` (the owner's
+corrections) and `CancelNonces`, each with `nonce`, `validFrom` and `deadline`:
 
 ```js
-const CYLINDER_FACTORY = "0xA128e7162fa8Dc779bf31EF569F06B53a499A50e";
+const CYLINDER_FACTORY = "0xd60146C03f288fCeEEdB90731f162fF57F7ebdd2";
 // in the "gas-cylinders" project:
 sites: ["gastrace.chainintegrate.it"],
 ```
 
-From extension 0.5.1 (review A02/G-04; the current release is 0.6.0) the page sends each `SetData`'s values beside
+From extension 0.5.1 (review A02/G-04) the page sends each `SetData`'s values beside
 the signed hash (`dataValues`, a top-level field of the `eth_signTypedData_v4` request that other
-wallets ignore): the extension recomputes the hash (a mismatch is refused), accepts only GasTrace's five
-kinds of data key, reads the registry's current values and says what the change is ("Prepare the
-encryption of the registry's data… (first time)", "Change the data password", "Add 1 customer or refill
-centre", "The company's settings"…), never both key wraps once they exist; it shows how long the request
-is valid and refuses more than seven days. The values are encrypted: the window names the kind of change,
-not its content. From 0.6.0 the catalog also marks GasTrace's requests `signer: "admin"`. The browser
+wallets ignore): the extension recomputes the hash (a mismatch is refused), accepts only GasTrace's kinds
+of data key, reads the registry's current values and says what the change is ("Prepare the encryption of
+the registry's data… (first time)", "Change the data password", "Add 1 customer or refill centre", "The
+company's settings", "Change the data key: new data password and new recovery code"…); it shows how long
+the request is valid and refuses more than seven days. The values are encrypted: the window names the
+kind of change, not its content. The catalog marks GasTrace's requests `signer: "admin"`. The browser
 test checks every request against the catalog of the release named in CI (`UPONBOARDING_REF`,
-`extension-v0.6.0`), and the page's message when an access computer is refused.
+`extension-v0.6.1`), and the page's message when an access computer is refused.
 
 ## What the supplier does there
 
@@ -73,7 +77,7 @@ lost the password" opens the data with the 24-word recovery code and sets a new 
 
 ## The users' guide
 
-The guide describes version 2 (DESIGN.md 10.1). An account without a register sees "GasTrace is not active yet"
+The guide describes version 2 (DESIGN.md §§6–9). An account without a register sees "GasTrace is not active yet"
 and sends ChainIntegrate a ready-made e-mail (or copies it) with the account's address, which is never
 shown on screen.
 
@@ -136,7 +140,11 @@ signatures with ERC-1271, as a ChainIntegrate account does, and checks every req
 extension's own catalog (from up-onboarding; CI clones it). Steps: sign-in, the first sign-in's data
 key (password, 24 words shown and two checked, both open the same key), the next sign-in with the password, settings,
 customers, a refill plant, a phone authorized by its code; the driver's app records a stock count and a
-delivery note; the page shows them (overview, cylinders, a cylinder's history, documents) and downloads
-them (CSV); the password is changed; after 30 minutes the page locks. With the extension's catalog it
+delivery note (one cylinder with an expired test); the page shows them (overview, cylinders, a
+cylinder's history, documents) and downloads them (CSV); a cylinder is corrected (owner and test, with a
+reason); the test filter shows the expired cylinder; a customer changed meanwhile from another computer
+is not overwritten; a handover is started and cancelled; the password is changed and the data key
+replaced (new password and 24 words, the old password refused); after 30 minutes the page locks. An
+account without a register gets the activation request, with its address in the e-mail. With the extension's catalog it
 checks each request's description (no "content not verifiable") and that values changed after the
 hash are refused. It also checks that no technical word appears and that the page fits a phone's width.

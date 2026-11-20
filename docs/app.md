@@ -34,6 +34,10 @@ at the top right. It speaks plain words only: cylinders, delivery notes, custome
   from their current state, to check and send (review A12). A document too large for one send is
   refused before signing: split it in two.
 
+From 0.3.0 the app works with version 2 registers only (DESIGN.md §6). A phone set up on the version 1
+demo register is set up again: clear the app's data in Android's settings, then the setup below (the
+next update will offer this from the app).
+
 ## Install
 
 The APK is attached to each [release](https://github.com/ChainIntegrate/gas-cylinder-registry/releases)
@@ -66,7 +70,9 @@ Each time the app opens, the driver unlocks it with the fingerprint or PIN. A lo
 leaves: the owner revokes the phone from the admin page. Revoking stops the phone from writing; at
 its next unlock with network the app sees it and erases its keys and everything it kept (review A09). A
 phone that is never unlocked again still holds the data key (protected by the Keystore), so a returned
-phone should be wiped (company phones make this simple).
+phone should be wiped (company phones make this simple); if someone may still read with it (its PIN
+known), the owner replaces the data key from the admin page, and the remaining phones ask for the new
+password at their next opening.
 
 What the app keeps on the phone (the customer list and settings, the documents waiting to be sent with
 their e-mails, a document left half-made) is encrypted with a key derived from the data key

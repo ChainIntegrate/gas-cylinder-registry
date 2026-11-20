@@ -1,5 +1,5 @@
 "use strict";
-// EIP-712 types and payload encoding of GasCylinderRegistryV2's signed operations (DESIGN.md 10.1).
+// EIP-712 types and payload encoding of GasCylinderRegistryV2's signed operations (DESIGN.md §6).
 // Shared by the tests, the owner scripts, the relayer, the pages and the app: they must hash exactly as the
 // contract. Every signature carries a Validity { nonce, validFrom, deadline }: deadline - validFrom at most
 // seven days, validFrom at most an hour ahead of the chain's clock.

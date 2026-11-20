@@ -4,7 +4,7 @@
 
 const { Contract, getAddress, id } = require("ethers");
 const S = require("../../shared");
-// Version 2 of the contracts (DESIGN.md 10.1).
+// Version 2 of the contracts (DESIGN.md §6).
 const REGISTRY_ABI = require("../../shared/abi/GasCylinderRegistryV2.json");
 const FACTORY_ABI = require("../../shared/abi/GasCylinderRegistryFactoryV2.json");
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";

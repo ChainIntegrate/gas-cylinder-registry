@@ -7,12 +7,15 @@ issue under both numbers; this table gives both. The reports themselves are kept
 ChainIntegrate.
 
 This file closes the review for **this repository**. The extension's findings are handled in
-up-onboarding (listed at the end). Remediation was done between 2026-11-14 and 2026-11-15; the state
-it describes is commit `f50a9b1` and later (app 0.2.4, extension 0.5.1).
+up-onboarding (listed at the end). Remediation was done between 2026-11-14 and 2026-11-15 (commit
+`f50a9b1`, app 0.2.4, extension 0.5.1); the points that needed a contract change were done in version 2 of
+the contracts, deployed on 2026-11-17 and in use from 2026-11-20 (app 0.3.0, extension 0.6.1). The state it
+describes is commit `ffe5f52` and later.
 
 Status: **Fixed** (changed and tested), **Fixed (GasTrace side)** (the other side is the extension's),
-**Partly fixed**, **Documented** (an accepted limit, now described plainly), **Version 2** (needs a contract
-change: planned before real use, [DESIGN.md §10.1](../DESIGN.md)), **Owner** (operational, outside the code).
+**Partly fixed**, **Documented** (an accepted limit, now described plainly), **Fixed in version 2** (a
+contract change: version 2 of the contracts, [DESIGN.md §6](../DESIGN.md), with the app, the pages and the
+relayer that use it), **Owner** (operational, outside the code).
 
 ## Findings and their status
 
@@ -29,17 +32,17 @@ change: planned before real use, [DESIGN.md §10.1](../DESIGN.md)), **Owner** (o
 | G-06 · A17 | APK signing key exposed in CI; actions unpinned; nodemailer advisories | **Fixed**: tests read-only without secrets, signing in a separate job in the protected `release` environment; actions pinned by commit; nodemailer 10.5.0; the up-onboarding release pinned | `1f6b1e3`, `92aef85` |
 | A17 (rest) | Advisories in development-only packages | **Open, low**: build tools, not deployed | |
 | G-08 · A06 (part) | One unreadable value stopped the admin page | **Fixed**: values read one by one, problems counted | `9e88fef` |
-| A06 | A phone can rewrite a registered cylinder's information | **Version 2**: in the version 2 contract (a phone writes it only when registering the cylinder); the owner's "Correct" in the admin page, a correction document with its reason | `429e3d0`, `3fa7a9f`, `317ac68` |
+| A06 | A phone can rewrite a registered cylinder's information | **Fixed in version 2**: a phone writes it only when registering the cylinder; the owner's "Correct" in the admin page, a correction document with its reason | `429e3d0`, `3fa7a9f`, `317ac68` |
 | G-10 · D-16 | No export for the office | **Fixed**: CSV download of cylinders, movements, documents, customers (formula injection neutralized) | `0bc15c3` |
 | X-02 | ChainIntegrate generated and saw the data password and recovery code | **Fixed**: registers created without a data key; the owner makes it at the first sign-in in the admin page | `56ba678` |
 | A02 · G-04 | The confirmation window could not tell a key change from a customer | **Fixed (GasTrace side)**: the page sends the values; extension 0.5.1 checks them and names each change | `92aef85` |
 | G-03 · A16 (part) | The relayer sent any text and PDF to ten addresses | **Fixed**: the phone signs the document's facts, the relayer writes the e-mail from a fixed template; no attachments, 8 recipients, a daily limit per registry | `f4f16a8` |
 | A07 | A relayer restart lost e-mails and states | **Fixed**: journal on disk, taken up at start | `56d7406` |
 | A09 · G-02 (part) | Plain caches on the phone; no idle lock; revoked phones kept their data | **Fixed**: caches sealed under a key derived from the data key; app locks after 10 minutes, page after 30; a revoked phone erases its keys and data | `f50a9b1` |
-| A05 · G-02 | A revoked phone, or an old password, can still read new data (the data key cannot be replaced) | **Version 2**: key epochs and key ring (`shared/`), "Change the data key" in the admin page (new password and recovery code), phones asked for the new password; identifiers on the first key | `2ff8b8f`, `25eba11`, `317ac68` |
-| A01 · X-01 | Any key of the owner's account with SIGN can sign the register's owner operations | **Partly fixed**: from extension 0.6.0 (2026-11-16) the owner's requests are confirmed only on an administrator computer, and the admin page says so when an access computer is refused; **Version 2**: the register's own check, in the version 2 contract (administrator keys only for every owner operation, direct owner paths closed, ownership transfer after 3 days, cancellable from the page, the relayer's e-mail alert) | `2ff8b8f`, `429e3d0`, `25eba11` |
-| A11 | Multipart documents have no manifest | **Version 2**: in the version 2 contract (manifest, signer and parts fixed by the first part; `documentStatus`); the app sends it, the page shows incomplete documents | `429e3d0`, `25eba11` |
-| G-07 | Signatures without maximum validity, not cancellable | **Version 2**: in the version 2 contract (`validFrom`, seven days at most, `cancelNoncesSigned`); the app cancels a waiting document's signatures; the extension 0.5.1 already refuses more than seven days | `429e3d0`, `695d0f4` |
+| A05 · G-02 | A revoked phone, or an old password, can still read new data (the data key cannot be replaced) | **Fixed in version 2**: key epochs and key ring (`shared/`), "Change the data key" in the admin page (new password and recovery code), phones asked for the new password; identifiers on the first key | `2ff8b8f`, `25eba11`, `317ac68` |
+| A01 · X-01 | Any key of the owner's account with SIGN can sign the register's owner operations | **Fixed in version 2**: the register accepts an owner's signature only from a key with administrator permissions on the account (EDITPERMISSIONS, read from LSP6) for every owner operation; direct owner paths closed; a handover accepted only after 3 days, cancellable from the page, with the relayer's e-mail alert. From extension 0.6.0 (2026-11-16) the owner's requests are also confirmed only on an administrator computer, and the admin page says so when an access computer is refused | `2ff8b8f`, `429e3d0`, `25eba11` |
+| A11 | Multipart documents have no manifest | **Fixed in version 2**: manifest, signer and parts fixed by the first part (`documentStatus`); the app sends it, the page shows incomplete documents | `429e3d0`, `25eba11` |
+| G-07 | Signatures without maximum validity, not cancellable | **Fixed in version 2**: `validFrom`, seven days at most, `cancelNoncesSigned`; the app cancels a waiting document's signatures; the extension refuses more than seven days (from 0.5.1) | `429e3d0`, `695d0f4` |
 | A21 | Removing or renaming a customer changed old documents | **Fixed**: archived, documents keep the name they were made with | `1cd101b` |
 | G-05 | Traffic analysis from public metadata | **Documented** ([DESIGN.md §4.5](../DESIGN.md)), mitigations listed, not implemented | `35b68f1` |
 | X-03 | Code served by ChainIntegrate handles the data key | **Documented** (DESIGN §5, "Who holds the data key") | `2ff8b8f` |
@@ -59,15 +62,14 @@ and the catalog side of A02 · G-04 (released in extension 0.5.1).
 
 ## Verification
 
-Each fix has a test: the Hardhat suite (93 tests: contracts, library, owner tools, relayer, app logic,
-the admin export and the phone's vault) and three browser tests (the app's demo with a refused document
-made again, the 10-minute lock and a revoked phone erased; the admin page against extension 0.5.1's
-catalog, with the first sign-in and the 30-minute lock; the operator page). CI runs them at every push
-([.github/workflows/android.yml](../.github/workflows/android.yml)). Live on LUKSO mainnet: relayer and
-pages at `f50a9b1` or later, app 0.2.4 announced and installed.
-
-A follow-up review should check the changed code and the deployed services against this table, and
-review version 2 of the contracts (`contracts/GasCylinderRegistryV2.sol`, `GasCylinderRegistryFactoryV2.sol`,
-[DESIGN.md §10.1](../DESIGN.md)), deployed on its own on 2026-11-17 (factory `0xd60146C03f288fCeEEdB90731f162fF57F7ebdd2`, implementation
-`0xaC0D8EffB68C5FE9F291dd34570dD2f6c53026af`) and used by the app, the page and the
-relayer once they move to it.
+Each fix has a test: the Hardhat suite (141 tests: contracts of both versions, version 2 against a real
+LUKSO account with an administrator and an access key, library, owner tools, relayer, app logic, the
+admin export and the phone's vault) and three browser tests: the app's demo (new cylinders with owner and
+periodic test, a refused document made again, a refill back tested, the 10-minute lock, a revoked phone
+erased); the admin page against extension 0.6.1's catalog (activation request, first sign-in, correction,
+test filter, a change from another computer, handover started and cancelled, data key replaced, the
+30-minute lock); the operator page. CI runs them at every push
+([.github/workflows/android.yml](../.github/workflows/android.yml)). Live on LUKSO mainnet: the version 2
+factory `0xd60146C03f288fCeEEdB90731f162fF57F7ebdd2` and implementation
+`0xaC0D8EffB68C5FE9F291dd34570dD2f6c53026af` (sources verified), relayer and pages at `20f8183` or later,
+app 0.3.0 released.

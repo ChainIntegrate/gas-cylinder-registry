@@ -24,8 +24,8 @@ Keys
   new-key <file>                     Create an encrypted key file (owner or ChainIntegrate) and show its address.
 
 ChainIntegrate (the factory's owner; also sends the owner's signed operations until the relayer exists)
-  deploy-factory [--version 2]       Deploy the factory; writes its address to the config file (a config
-                                     without a factory: use --config <new file> for version 2).
+  deploy-factory [--version 1|2]     Deploy the factory (version 2 by default); writes its address to the
+                                     config file, which must not have one yet (--config <new file>).
   transfer-factory <address>         Hand the factory over to ChainIntegrate's Universal Profile, so that
                                      registers are created from the operator page. One step, final: the
                                      address must be a Universal Profile, and you retype its end.
@@ -57,7 +57,9 @@ Owner (signs with the owner's key file)
                                      or, with --recovery, with the 24-word recovery code.
 
 Options
-  --config <file>                    Default: gcr-registry.json (addresses only; never commit it).
+  --config <file>                    Default: gcr-v2.json (addresses only; never commit it). These tools
+                                     work on version 2 configs; a version 1 config (gcr-registry.json) is refused
+                                     except by transfer-factory.
   --network lukso|lukso-testnet|local  Default: the config's, else lukso.
   --chainintegrate-keystore <file>   Default: the config's, else chainintegrate.keystore.json.
   --owner-keystore <file>            Default: the config's.
@@ -182,7 +184,7 @@ async function main() {
   const command = args._[0];
   if (!command || command === "help") return console.log(HELP);
 
-  const configFile = args.config || "gcr-registry.json";
+  const configFile = args.config || "gcr-v2.json";
   const config = loadConfig(configFile);
   const network = args.network || config.network || "lukso";
   if (!NETWORKS[network]) throw new Error(`unknown network ${network}`);
@@ -213,7 +215,7 @@ async function main() {
     return;
   }
 
-  // These tools work on version 2 (DESIGN.md 10.1); a version 1 config (the demo) only keeps its factory.
+  // These tools work on version 2 (DESIGN.md §6); a version 1 config (the demo) only keeps its factory.
   if (command !== "transfer-factory" && config.factory && config.factoryVersion !== 2) {
     throw new Error(`${configFile} is for version 1 of the contracts (the demo): these tools work on version 2 only`);
   }

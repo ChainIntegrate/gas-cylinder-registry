@@ -20,6 +20,13 @@ in `/var/lib/gcr-relayer` (the systemd unit installed again), extension 0.5.1 on
 confirmed only on an administrator computer of the account (the demo account has administrator keys
 only).
 
+**Version 2, online on 2026-11-20** (steps 8 and 9): factory `0xd60146C03f288fCeEEdB90731f162fF57F7ebdd2`
+(block 8803983, 2026-11-17) and register implementation `0xaC0D8EffB68C5FE9F291dd34570dD2f6c53026af`,
+verified and owned by ChainIntegrate's profile; the page, the guide and the relayer (`ffe5f52`, with the
+handover watch from block 8803983) on the server; extension 0.6.1 with version 2 in its catalog; app
+release v0.3.0. Version 1's factory and demo register are no longer used. Steps 2 to 7 below are the
+first installation, kept as the procedure for a new server; on this server they are done.
+
 | Part | Where | Port |
 |---|---|---|
 | Admin page | nginx, root `/var/www/gas-cylinder-registry/admin/www` | none (static) |
@@ -50,7 +57,7 @@ From a clone of this repository, with Node.js 20 or later: `npm ci`. ChainIntegr
 million gas once, a register about half a million.
 
 ```bash
-node scripts/owner.js deploy-factory --network lukso
+node scripts/owner.js deploy-factory --network lukso        # version 2 (--version 1 only for the old demo)
 node scripts/owner.js create-registry --network lukso --name "<the company's name>" --symbol <SYMBOL> \
   --owner <the ChainIntegrate account's address>
 ```
@@ -159,20 +166,24 @@ curl -s $R -o /dev/null -w "%{http_code} %{redirect_url}\n" http://gastrace.chai
 
 In `extension/shared/catalog.js`, project `gas-cylinders`: `CYLINDER_FACTORY` = the factory's address and
 `sites: ["gastrace.chainintegrate.it"]`; then a release of the extension (a released version never changes)
-and its update on the owner's computer. Done in extension 0.4.3 (2026-11-13).
+and its update on the owner's computer. Done in extension 0.4.3 (2026-11-13) for version 1, in extension
+0.6.1 (2026-11-20) for version 2 (its factory, domain and requests).
 
 ## 7. First use
 
+0. The supplier opens https://gastrace.chainintegrate.it/ with its account: "GasTrace non è ancora attivo"
+   and "Richiedi l'attivazione" (an e-mail to info@chainintegrate.it with the account's address).
+   ChainIntegrate creates the register from the operator page and adds its alert address (step 9, 5).
 1. https://gastrace.chainintegrate.it/ → "Accedi con ChainIntegrate Account". The first time: "Prepara i
-   dati del registro" (the data password, the 24 words written down); afterwards, the data password.
+   dati del registro" (the data password, the 24 words written down, both confirmed); afterwards, the data
+   password.
 2. **Settings**: the company's name and the supplier's e-mails. **Customers**: the customers and refill plants.
 3. **Phones**: the driver's app scans the setup QR, shows its code; authorize it; type the data password on the phone.
 
 ## 8. Version 2 of the contracts (on your computer, owner tools)
 
-The factory of version 2 ([DESIGN.md §10.1](DESIGN.md)) is deployed on its own, with its own config
-file: the version 1 factory and the demo register stay as they are. Nothing uses the new factory until
-the app, the pages, the relayer and the extension's catalog move to it; no register is created now.
+The factory of version 2 ([DESIGN.md §6](DESIGN.md)) was deployed on its own, with its own config file;
+the version 1 factory and the demo register stayed as they were.
 
 ```bash
 cd ~/gastrace-tools && git pull && npm ci
@@ -201,7 +212,8 @@ Done on LUKSO mainnet on 2026-11-17: factory [`0xd60146C03f288fCeEEdB90731f162fF
 ## 9. Version 2 online (on the server, then GitHub and the extension)
 
 The page, the app 0.3.0 and the relayer work with version 2 only: once the server is updated, the version
-1 demo register no longer opens in the page. In this order:
+1 demo register no longer opens in the page. Done on 2026-11-20 (steps 1 to 3; the configuration was
+copied to `config.json.v1` before the change). In this order:
 
 **1. The server**: the page and the relayer, with the version 2 factory.
 

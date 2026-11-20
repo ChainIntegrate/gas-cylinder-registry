@@ -19,7 +19,7 @@ require("module").Module._initPaths();
 const { URL } = require("url");
 const { Wallet, JsonRpcProvider, Contract, getAddress, isAddress, keccak256, formatEther, parseEther, getBytes, verifyMessage, hashMessage } =
   require("ethers");
-// Version 2 of the contracts (DESIGN.md 10.1).
+// Version 2 of the contracts (DESIGN.md §6).
 const REGISTRY_ABI = require("../shared/abi/GasCylinderRegistryV2.json");
 const FACTORY_ABI = require("../shared/abi/GasCylinderRegistryFactoryV2.json");
 const { validateMail, mailDigest, renderMail } = require("../shared/mail");
@@ -353,7 +353,7 @@ function createRelayer({ provider, wallet, config, sendMail = null, logger = nul
     }
   }
 
-  // --- handover alerts (DESIGN.md 10.1, review A01 / X-01) ---
+  // --- handover alerts (DESIGN.md §7, review A01 / X-01) ---
   // A register's ownership transfer can be accepted only 3 days after it starts. Whoever starts it (through
   // this relayer or with their own LYX), the relayer sees OwnershipTransferStarted on the chain and e-mails
   // the register's alert addresses (config.handoverAlerts: { "<registry>": ["mail", …] }, written by
