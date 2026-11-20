@@ -402,6 +402,9 @@ Universal Profile.
   (after a handover), N-05 (a phone taking a document number in advance), and the earlier A07, R02, A10,
   R-03, R-04, R-06, R-09: the list and their status in
   [docs/security-review-2026-11.md](docs/security-review-2026-11.md#verification-of-2026-11-20-version-2).
+  A second review of the same state (F01–F21) adds F04 (partly recorded documents' repair), F05 (the
+  manifest's guarantee), F17 (discovery and history reads), F18 (the app's lock and its read cache) and
+  F20 (descriptions, a version 2 demo register): same file, "Second review of 2026-11-20".
 
 ## 11. The external review's contract points
 

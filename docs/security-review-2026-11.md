@@ -80,6 +80,38 @@ To fix, in this repository:
 The others listed there are up-onboarding's (R-02 wording, R-05, R-08, U-09) or the owner's (P-01, X-04,
 X-05, unchanged).
 
+## Second review of 2026-11-20 (version 2, another reviewer)
+
+A second independent review of the same state (`eeda662`, extension 0.6.1), made with a different AI
+reviewer, so that version 2 was checked by two models (the report is kept privately by ChainIntegrate).
+It also checked the deployment: the version 2 implementation's runtime matches the local build, the
+factory's too (its immutable masked), `/gcr/info` serves the version 2 factory and app 0.3.0, the 0.3.0
+APK's SHA-256 is `3ec59de6…4bbf`, the extension's 28 package hashes match. Its findings, with this
+repository's assessment where it differs and the item of the first verification they repeat:
+
+| ID | Its priority | Our assessment | What | Same as | Status |
+|---|---|---|---|---|---|
+| F01 | High | Low to Medium | The owner's correction approved with a fixed sentence (one confirmation could mint and rewrite several cylinders). Needs a compromised or faulty admin page, which already holds the data key (X-03), and a real administrator confirmation; every change stays in the history and can be corrected again. To fix as N-01 | N-01 | Open |
+| F02 | Medium | Low | `SetData` confirmable without its values (the page always sends them; the extension's side) | R-03 | Open |
+| F03 | High | Medium | The phone's vault drops write errors; a migration or a data key change removes the old copy before the new one is proved written; unreadable entries are deleted at unlock: an offline document could be lost without notice | R02 | Open |
+| F04 | Medium | Low to Medium | A multi-part document applies each part when recorded: an interruption leaves it partly recorded (shown as incomplete); no reconciliation queue or repair for the missing parts | | Open |
+| F05 | Medium | Low | The contract checks that the parts share one manifest, not that each part belongs to it; readers do not recompute it. DESIGN to describe it as the manifest's consistency | | Open |
+| F06 | Medium | Medium | The relayer journals after broadcasting; receipts reconciled only at restart; an e-mail can be lost, or sent twice after a restart | A07 (rest) | Open |
+| F07 | Medium | Low | Handover alerts: the watch's position in memory, no pending check, overlapping runs, alert addresses by hand | N-03 | Open |
+| F08 | Medium | Low | A password change re-wraps the same key; after a key change, identifiers stay linked and documents signed before it (old key) can still be published by a phone not revoked. DESIGN's "reads nothing written after" to be corrected | N-02 | Open |
+| F09 | Medium | Owner | Privacy package: public register names and symbols (to keep neutral), phone addresses and times, the relayer's journal and e-mails in plaintext, retention, roles and agreements | P-01 | Open (owner) |
+| F10 | Medium | Low | The e-mail's facts and recipients are the phone's, not checked against the customer list | R-04 | Open |
+| F11 | Medium | Info | An authorized phone can record false or unreadable states within its authority: an operational limit (issued phones, revocation, reconciliation) | N-05 | Documented limit |
+| F12 | Medium | Owner | Release integrity: APK signer and provenance not established, distribution outside a store | R-06, X-04 | Open |
+| F13 | Medium | Info | Recovery and handover need a company process: who keeps each recovery item; after a handover, phones and data key carried over | N-04, U-09 | Open |
+| F16 | Low | Low | A document's year from the phone's time zone | A10 (rest) | Open |
+| F17 | Medium | Low | Register discovery and history reads scan logs with unbounded batches; one node failure stops the view; growth | DESIGN §10 "Scale" | Open |
+| F18 | Low | Low | The app's lock clears the keys but not the register's read cache; late reads after a lock | | Open |
+| F19 | Low | Info | Rate limits and client identity rely on the reverse proxy and loopback-only services (as configured) | | Operational |
+| F20 | Medium | Low | Descriptions: no version 2 demo register yet; test-date warnings to be presented as an aid, the 10-year default not as a verified expiry | | Open |
+
+F14, F15 and F21 are up-onboarding's (profile uploads, access-key wording, public profile retention).
+
 ## Handled in up-onboarding
 
 The extension's and the account service's findings: A01 · X-01 (access keys), A13 · U-01 (upload
