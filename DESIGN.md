@@ -367,6 +367,9 @@ supplier's register:
 - Putting it online: the server (page, relayer configuration with the handover alert addresses), the
   app's release and its announcement (DEPLOY.md, "Version 2 online").
 - Advised: an external review of the version 2 contract before real data, since it cannot be changed.
+- Next app update: at start, check that the phone's register is one of the factory in use; when it is
+  not (a phone set up on the version 1 demo, or a register no longer used), say so and offer "Set up
+  again", which erases the phone's key and data (today: clear the app's data in Android's settings).
 
 How the rest works:
 
